@@ -605,8 +605,9 @@
     if (document.getElementById('cfg-pedir-pin-inicio')) {
       document.getElementById('cfg-pedir-pin-inicio').checked = Boolean(cfg.pedir_pin_inicio);
     }
-    document.getElementById('cfg-supabase-url').value = cfg.supabase_url || '';
-    document.getElementById('cfg-supabase-key').value = cfg.supabase_anon_key || '';
+    const creds = global.SupabaseSync ? global.SupabaseSync.obtenerCredenciales(store) : { url: '', anonKey: '' };
+    document.getElementById('cfg-supabase-url').value = cfg.supabase_url || creds.url || '';
+    document.getElementById('cfg-supabase-key').value = cfg.supabase_anon_key || creds.anonKey || '';
   }
 
   // =========================================================================

@@ -8,22 +8,53 @@
   let lastCloudTimestamp = null;
   let isPulling = false;
 
+  function limpiarSupabaseUrl(rawUrl) {
+    return (rawUrl || '')
+      .trim()
+      .replace(/\/+$/, '')
+      .replace(/\/rest\/v1$/i, '');
+  }
+
   function obtenerCredenciales(store) {
     const cloudCfg = global.GYM_CLOUD_CONFIG || {};
     const localCfg = store?.state?.configuracion || {};
     return {
-      url: (cloudCfg.SUPABASE_URL || localCfg.supabase_url || '').trim().replace(/\/+$/, ''),
+      url: limpiarSupabaseUrl(cloudCfg.SUPABASE_URL || localCfg.supabase_url || ''),
       anonKey: (cloudCfg.SUPABASE_ANON_KEY || localCfg.supabase_anon_key || '').trim()
     };
   }
 
-  function getHeaders(anonKey) {
-    return {
+  function getHeaders(anonKey, includeBearer = true) {
+    const headers = {
       apikey: anonKey,
-      Authorization: `Bearer ${anonKey}`,
       'Content-Type': 'application/json',
       Prefer: 'resolution=merge-duplicates,return=representation'
     };
+    if (includeBearer) {
+      headers.Authorization = `Bearer ${anonKey}`;
+    }
+    return headers;
+  }
+
+  async function supabaseFetch(url, anonKey, options = {}) {
+    let res = await fetch(url, {
+      ...options,
+      headers: {
+        ...getHeaders(anonKey, true),
+        ...(options.headers || {})
+      }
+    });
+    // Si la llave es formato nuevo sb_publishable_ y PostgREST rechaza el header Authorization no-JWT, reintentar solo con apikey
+    if (!res.ok && (res.status === 401 || res.status === 400) && String(anonKey).startsWith('sb_')) {
+      res = await fetch(url, {
+        ...options,
+        headers: {
+          ...getHeaders(anonKey, false),
+          ...(options.headers || {})
+        }
+      });
+    }
+    return res;
   }
 
   function actualizarIndicadorCloud(estado, texto) {
@@ -53,10 +84,9 @@
     if (!url || !anonKey) {
       throw new Error('Ingresa el Project URL y el Anon Key de tu proyecto Supabase.');
     }
-    const cleanUrl = url.replace(/\/+$/, '');
-    const res = await fetch(`${cleanUrl}/rest/v1/gym_cloud_state?select=id,updated_at&limit=1`, {
-      method: 'GET',
-      headers: getHeaders(anonKey)
+    const cleanUrl = limpiarSupabaseUrl(url);
+    const res = await supabaseFetch(`${cleanUrl}/rest/v1/gym_cloud_state?select=id,updated_at&limit=1`, anonKey, {
+      method: 'GET'
     });
     if (!res.ok) {
       const txt = await res.text();
@@ -91,9 +121,8 @@
         _updated_at: nowISO
       };
 
-      const res = await fetch(`${url}/rest/v1/gym_cloud_state`, {
+      const res = await supabaseFetch(`${url}/rest/v1/gym_cloud_state`, anonKey, {
         method: 'POST',
-        headers: getHeaders(anonKey),
         body: JSON.stringify([
           {
             id: 'main_gym',
@@ -131,9 +160,8 @@
 
     isPulling = true;
     try {
-      const res = await fetch(`${url}/rest/v1/gym_cloud_state?id=eq.main_gym&select=state_json,updated_at`, {
-        method: 'GET',
-        headers: getHeaders(anonKey)
+      const res = await supabaseFetch(`${url}/rest/v1/gym_cloud_state?id=eq.main_gym&select=state_json,updated_at`, anonKey, {
+        method: 'GET'
       });
 
       if (!res.ok) {

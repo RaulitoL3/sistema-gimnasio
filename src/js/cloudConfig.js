@@ -4,8 +4,8 @@
  * se conectará automáticamente a la misma base de datos en tiempo real sin configurar nada.
  */
 window.GYM_CLOUD_CONFIG = {
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://rmpsdddxlcltlsfklbdb.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_BsWDspv1GsHIv-cgU1mOsA_-8qLz3NQ',
   // Por seguridad en el link web, los dispositivos nuevos inician en Modo Recepción
   // hasta que tu papá ingrese su Clave de Administrador.
   DEFAULT_ROLE_NEW_DEVICE: 'RECEPCION'
