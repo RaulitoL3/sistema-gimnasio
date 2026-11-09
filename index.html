@@ -1,1081 +1,1458 @@
 <!DOCTYPE html>
-<html lang="es" class="dark">
+<html lang="es">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sistema de Gestión - Gimnasio de Artes Marciales</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
-            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
-          }
-        }
-      }
-    };
-  </script>
-  <!-- Google Fonts Inter -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Google Fonts: Inter + JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@600;700;800&display=swap"
+    rel="stylesheet"
+  />
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-
   <style>
     :root {
-      color-scheme: dark;
+      --brand-600: #dc2626;
+      --brand-500: #ef4444;
+      --brand-700: #b91c1c;
+      --brand-light-bg: rgba(220, 38, 38, 0.12);
+      --brand-light-border: rgba(220, 38, 38, 0.35);
+      --brand-text: #dc2626;
     }
+
+    body[data-brand="ROJO"] {
+      --brand-600: #dc2626;
+      --brand-500: #ef4444;
+      --brand-700: #b91c1c;
+      --brand-light-bg: rgba(220, 38, 38, 0.12);
+      --brand-light-border: rgba(220, 38, 38, 0.35);
+      --brand-text: #dc2626;
+    }
+    body[data-brand="AZUL"] {
+      --brand-600: #2563eb;
+      --brand-500: #3b82f6;
+      --brand-700: #1d4ed8;
+      --brand-light-bg: rgba(37, 99, 235, 0.12);
+      --brand-light-border: rgba(37, 99, 235, 0.35);
+      --brand-text: #2563eb;
+    }
+    body[data-brand="DORADO"] {
+      --brand-600: #d97706;
+      --brand-500: #f59e0b;
+      --brand-700: #b45309;
+      --brand-light-bg: rgba(217, 119, 6, 0.14);
+      --brand-light-border: rgba(217, 119, 6, 0.38);
+      --brand-text: #b45309;
+    }
+    body[data-brand="ESMERALDA"] {
+      --brand-600: #059669;
+      --brand-500: #10b981;
+      --brand-700: #047857;
+      --brand-light-bg: rgba(5, 150, 105, 0.12);
+      --brand-light-border: rgba(5, 150, 105, 0.35);
+      --brand-text: #059669;
+    }
+
     body {
       font-family: 'Inter', system-ui, -apple-system, sans-serif;
     }
-    .tabular-nums {
+    .font-mono, .tabular-nums {
       font-variant-numeric: tabular-nums;
     }
-    /* Scrollbar limpio */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+
+    .brand-bg {
+      background-color: var(--brand-600) !important;
+      color: #ffffff !important;
     }
-    ::-webkit-scrollbar-track {
-      background: #0f172a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #334155;
-      border-radius: 9999px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #475569;
+    .brand-bg:hover {
+      background-color: var(--brand-500) !important;
     }
 
-    /* Impresión exclusiva del comprobante */
+    /* ======================================================================
+       TEMA CLARO PROFESIONAL (POR DEFECTO PARA LECTURA FÁCIL Y NÍTIDA)
+       ====================================================================== */
+    body.light-theme {
+      background-color: #f1f5f9 !important;
+      color: #0f172a !important;
+    }
+
+    /* Área principal y modales en Tema Claro */
+    body.light-theme main .bg-slate-900,
+    body.light-theme .modal-surface.bg-slate-900 {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
+    }
+
+    body.light-theme main .bg-slate-950,
+    body.light-theme main .bg-slate-950\/60,
+    body.light-theme main .bg-slate-950\/90,
+    body.light-theme .modal-surface .bg-slate-950,
+    body.light-theme .modal-surface .bg-slate-950\/60,
+    body.light-theme .modal-surface .bg-slate-950\/90 {
+      background-color: #f8fafc !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    body.light-theme .modal-surface input,
+    body.light-theme .modal-surface select,
+    body.light-theme main input,
+    body.light-theme main select,
+    body.light-theme #global-search-input {
+      background-color: #ffffff !important;
+      border-color: #94a3b8 !important;
+      color: #0f172a !important;
+      font-weight: 600;
+    }
+    body.light-theme .modal-surface input::placeholder,
+    body.light-theme main input::placeholder,
+    body.light-theme #global-search-input::placeholder {
+      color: #64748b !important;
+      font-weight: 400;
+    }
+
+    body.light-theme main .text-white,
+    body.light-theme .modal-surface .text-white,
+    body.light-theme #global-search-results .text-white {
+      color: #0f172a !important;
+    }
+
+    body.light-theme main .text-slate-200,
+    body.light-theme main .text-slate-300,
+    body.light-theme .modal-surface .text-slate-200,
+    body.light-theme .modal-surface .text-slate-300 {
+      color: #1e293b !important;
+    }
+
+    body.light-theme main .text-slate-400,
+    body.light-theme .modal-surface .text-slate-400 {
+      color: #475569 !important;
+    }
+
+    body.light-theme main .border-slate-800,
+    body.light-theme main .border-slate-800\/80,
+    body.light-theme main .border-slate-800\/90,
+    body.light-theme main .border-slate-700,
+    body.light-theme .modal-surface .border-slate-800,
+    body.light-theme .modal-surface .border-slate-800\/80,
+    body.light-theme .modal-surface .border-slate-800\/90,
+    body.light-theme .modal-surface .border-slate-700 {
+      border-color: #e2e8f0 !important;
+    }
+
+    body.light-theme main .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
+    body.light-theme main .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) {
+      border-color: #e2e8f0 !important;
+    }
+
+    /* Colores de texto de alto contraste en modo claro */
+    body.light-theme main .text-emerald-400,
+    body.light-theme main .text-emerald-300,
+    body.light-theme .modal-surface .text-emerald-400,
+    body.light-theme .modal-surface .text-emerald-300 {
+      color: #047857 !important;
+    }
+    body.light-theme main .text-amber-400,
+    body.light-theme main .text-amber-300,
+    body.light-theme .modal-surface .text-amber-400,
+    body.light-theme .modal-surface .text-amber-300 {
+      color: #b45309 !important;
+    }
+    body.light-theme main .text-red-400,
+    body.light-theme main .text-red-300,
+    body.light-theme .modal-surface .text-red-400,
+    body.light-theme .modal-surface .text-red-300 {
+      color: #b91c1c !important;
+    }
+    body.light-theme main .text-sky-400,
+    body.light-theme main .text-sky-300,
+    body.light-theme .modal-surface .text-sky-400,
+    body.light-theme .modal-surface .text-sky-300 {
+      color: #0369a1 !important;
+    }
+
+    /* Botones secundarios en modo claro */
+    body.light-theme main .bg-slate-800,
+    body.light-theme .modal-surface .bg-slate-800 {
+      background-color: #e2e8f0 !important;
+      color: #0f172a !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme main .bg-slate-800:hover,
+    body.light-theme .modal-surface .bg-slate-800:hover {
+      background-color: #cbd5e1 !important;
+    }
+
+    body.light-theme main tr.hover\:bg-slate-800\/40:hover,
+    body.light-theme main div.hover\:bg-slate-800\/40:hover {
+      background-color: #f1f5f9 !important;
+    }
+
+    body.light-theme #topbar-surface {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+    }
+    body.light-theme #global-search-results {
+      background-color: #ffffff !important;
+      border-color: #cbd5e1 !important;
+    }
+
+    /* Mantener texto blanco en botones sólidos de acción */
+    body.light-theme .keep-white-text,
+    body.light-theme .keep-white-text * {
+      color: #ffffff !important;
+    }
+
     @media print {
       body * {
-        visibility: hidden !important;
+        visibility: hidden;
       }
-      #print-receipt-area,
-      #print-receipt-area * {
-        visibility: visible !important;
+      #print-receipt-area, #print-receipt-area * {
+        visibility: visible;
       }
       #print-receipt-area {
-        position: fixed !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        display: flex !important;
-        justify-content: center !important;
-        background: white !important;
-        padding: 10px !important;
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: white;
       }
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-red-600 selection:text-white">
+<body class="light-theme bg-slate-950 text-slate-100 min-h-screen selection:bg-red-600 selection:text-white" data-brand="ROJO">
 
-  <!-- BARRA SUPERIOR DE NAVEGACIÓN Y BUSCADOR DE RECEPCIÓN -->
-  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
-      <!-- Identidad Academia -->
-      <div class="flex items-center gap-3">
-        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center shadow-lg shadow-red-900/30 border border-red-500/30 text-xl select-none">
-          🥋
-        </div>
-        <div>
-          <div class="flex items-center gap-2">
-            <h1 id="header-gym-name" class="font-black text-base sm:text-lg tracking-tight text-white uppercase">
+  <!-- LAYOUT GENERAL CON MENÚ LATERAL IZQUIERDO FIJO -->
+  <div class="min-h-screen flex flex-col lg:flex-row">
+
+    <!-- ==================================================================== -->
+    <!-- MENÚ LATERAL IZQUIERDO FIJO (SIDEBAR EJECUTIVO DE ALTA LEGIBILIDAD)  -->
+    <!-- ==================================================================== -->
+    <aside class="w-full lg:w-72 bg-slate-900 text-white border-b lg:border-b-0 lg:border-r border-slate-800 flex-shrink-0 flex flex-col justify-between lg:sticky lg:top-0 lg:h-screen z-40">
+      <div>
+        <!-- Identidad del Gimnasio + Logo -->
+        <div class="p-5 border-b border-slate-800 flex items-center gap-3.5">
+          <div class="relative w-14 h-14 rounded-2xl brand-bg flex items-center justify-center shadow-lg flex-shrink-0 overflow-hidden border-2 border-white/20">
+            <img id="header-gym-logo-img" src="" alt="Logo" class="hidden w-full h-full object-cover bg-white" />
+            <span id="header-gym-logo-fallback" class="text-3xl select-none">🥋</span>
+          </div>
+          <div class="min-w-0 flex-1">
+            <h1 id="header-gym-name" class="font-black text-base tracking-tight text-white truncate">
               ACADEMIA ARTES MARCIALES
             </h1>
-            <button
-              id="btn-cambiar-rol"
-              type="button"
-              title="Cambiar entre Modo Administrador y Modo Recepción / Bloquear"
-              class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center gap-1 transition cursor-pointer"
-            >
-              <i data-lucide="shield" class="w-3 h-3"></i>
-              <span id="badge-rol-actual">ADMIN</span>
-            </button>
-          </div>
-          <p id="header-gym-subtitle" class="text-xs text-slate-400 hidden sm:block">
-            Muay Thai • Boxeo • Jiu-Jitsu • MMA
-          </p>
-        </div>
-      </div>
-
-      <!-- Buscador Instantáneo de Recepción (Verificar Vigencia o Recibo en 1 seg) -->
-      <div class="relative flex-1 max-w-md mx-2">
-        <div class="relative">
-          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
-          <input
-            id="global-search-input"
-            type="search"
-            autocomplete="off"
-            placeholder="Verificar alumno en recepción o buscar N° de recibo..."
-            class="w-full bg-slate-950/90 border border-slate-700/80 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-400 outline-none transition"
-          />
-        </div>
-        <!-- Dropdown de Resultados Instantáneos de Recepción -->
-        <div
-          id="global-search-results"
-          class="hidden absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto"
-        ></div>
-      </div>
-
-      <!-- Acciones Principales Rápidas -->
-      <div class="flex items-center gap-2.5">
-        <span
-          id="cloud-sync-indicator"
-          class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border bg-slate-800 text-slate-400 border-slate-700"
-        >
-          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
-          <span>Modo Local</span>
-        </span>
-        <button
-          id="btn-open-nuevo-pago"
-          type="button"
-          class="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-red-900/40 border border-red-500/30 transition active:scale-95 cursor-pointer"
-        >
-          <i data-lucide="plus-circle" class="w-4 h-4"></i>
-          <span>Nuevo Recibo / Inscripción</span>
-        </button>
-      </div>
-    </div>
-
-    <!-- Pestañas de Navegación -->
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto border-t border-slate-800/70 bg-slate-900/60">
-      <button data-tab="dashboard" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 border-red-500 text-red-400 whitespace-nowrap transition cursor-pointer">
-        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
-        <span>Inicio / Recepción</span>
-      </button>
-      <button data-tab="recibos" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
-        <i data-lucide="receipt" class="w-4 h-4"></i>
-        <span>Recibos y Caja</span>
-        <span id="nav-badge-recibos" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 tabular-nums">0</span>
-      </button>
-      <button data-tab="alumnos" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
-        <i data-lucide="users" class="w-4 h-4"></i>
-        <span>Alumnos y Vigencias</span>
-        <span id="nav-badge-alumnos" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 tabular-nums">0</span>
-      </button>
-      <button data-tab="planes" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
-        <i data-lucide="swords" class="w-4 h-4"></i>
-        <span>Planes y Disciplinas</span>
-      </button>
-      <button data-tab="configuracion" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
-        <i data-lucide="settings" class="w-4 h-4"></i>
-        <span>Configuración y Nube</span>
-      </button>
-    </div>
-  </header>
-
-  <!-- CONTENIDO PRINCIPAL -->
-  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
-
-    <!-- ================================================================== -->
-    <!-- VISTA 1: DASHBOARD OPERATIVO Y CONTROL DE RECEPCIÓN                -->
-    <!-- ================================================================== -->
-    <section id="view-dashboard" class="space-y-6">
-      <!-- Tarjetas KPI Superiores -->
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- KPI 1: Ingresos de Hoy -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Caja de Hoy</span>
-            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-              <i data-lucide="wallet" class="w-5 h-5"></i>
-            </div>
-          </div>
-          <p id="kpi-ingresos-hoy" class="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">S/ 0.00</p>
-          <p id="kpi-ingresos-hoy-detalle" class="text-xs text-slate-400 mt-1.5 tabular-nums">0 recibos emitidos hoy</p>
-        </div>
-
-        <!-- KPI 2: Ingresos del Mes -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Ingresos del Mes</span>
-            <div class="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
-              <i data-lucide="trending-up" class="w-5 h-5"></i>
-            </div>
-          </div>
-          <p id="kpi-ingresos-mes" class="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">S/ 0.00</p>
-          <p id="kpi-ingresos-mes-detalle" class="text-xs text-slate-400 mt-1.5 tabular-nums">Efectivo: S/ 0 • Yape/Plin: S/ 0</p>
-        </div>
-
-        <!-- KPI 3: Saldos Pendientes por Cobrar -->
-        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-lg">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Saldos por Cobrar</span>
-            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
-              <i data-lucide="clock" class="w-5 h-5"></i>
-            </div>
-          </div>
-          <p id="kpi-saldos-pendientes" class="text-2xl sm:text-3xl font-black text-amber-400 mt-2 tabular-nums">S/ 0.00</p>
-          <p id="kpi-saldos-detalle" class="text-xs text-slate-400 mt-1.5 tabular-nums">0 alumnos con pago parcial</p>
-        </div>
-
-        <!-- KPI 4: Alumnos Activos y Por Vencer -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Estado de Alumnos</span>
-            <div class="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
-              <i data-lucide="shield-check" class="w-5 h-5"></i>
-            </div>
-          </div>
-          <p id="kpi-alumnos-activos" class="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">0 Activos</p>
-          <p id="kpi-alumnos-alertas" class="text-xs text-slate-400 mt-1.5 tabular-nums">0 por vencer • 0 vencidos</p>
-        </div>
-      </div>
-
-      <!-- Dos Columnas Operativas: 1) Alertas de Vencimiento y Renovación | 2) Alumnos con Saldo Pendiente -->
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Bandeja 1: Membresías por Vencer y Vencidas -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
-          <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/70">
-            <div class="flex items-center gap-2.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
-              <h2 class="font-bold text-base text-white">Alertas de Vencimiento (Por Vencer y Vencidos)</h2>
-            </div>
-            <span id="badge-count-vencimientos" class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-300 tabular-nums">0</span>
-          </div>
-          <div id="dashboard-lista-vencimientos" class="divide-y divide-slate-800/80 max-h-96 overflow-y-auto"></div>
-        </div>
-
-        <!-- Bandeja 2: Alumnos con Saldo Pendiente (Adelantos) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
-          <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/70">
-            <div class="flex items-center gap-2.5">
-              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
-              <h2 class="font-bold text-base text-white">Cuentas por Cobrar (Adelantos / Pagos Parciales)</h2>
-            </div>
-            <span id="badge-count-saldos" class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 tabular-nums">0</span>
-          </div>
-          <div id="dashboard-lista-saldos" class="divide-y divide-slate-800/80 max-h-96 overflow-y-auto"></div>
-        </div>
-      </div>
-
-      <!-- Tabla Rápida: Últimos Recibos Emitidos -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-        <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <h2 class="font-bold text-base text-white">Últimos Recibos y Membresías Registradas</h2>
-            <p class="text-xs text-slate-400">Vista rápida de nombres y apellidos, N° de recibo, total a pagar, fechas de inicio y finalización</p>
-          </div>
-          <button
-            type="button"
-            onclick="window.AppUI.cambiarTab('recibos')"
-            class="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
-          >
-            <span>Ver todos los recibos y caja</span>
-            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
-          </button>
-        </div>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/50">
-                <th class="py-3 px-4">N° Recibo</th>
-                <th class="py-3 px-4">Nombres y Apellidos</th>
-                <th class="py-3 px-4">Plan / Disciplina</th>
-                <th class="py-3 px-4">Fecha Inicio</th>
-                <th class="py-3 px-4">Fecha Finalización</th>
-                <th class="py-3 px-4 text-right">Total a Pagar</th>
-                <th class="py-3 px-4 text-right">Abonado</th>
-                <th class="py-3 px-4 text-right">Saldo</th>
-                <th class="py-3 px-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="dashboard-ultimos-recibos" class="divide-y divide-slate-800/70 text-sm"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================================================================== -->
-    <!-- VISTA 2: MÓDULO DE RECIBOS Y CUADRE DE CAJA                        -->
-    <!-- ================================================================== -->
-    <section id="view-recibos" class="hidden space-y-6">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-black text-white">Historial de Recibos y Cuadre de Caja</h2>
-            <p class="text-xs text-slate-400">Filtra por fecha, método de pago o busca por N° de recibo y nombre del alumno</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2.5">
-            <button
-              id="btn-exportar-recibos-excel"
-              type="button"
-              class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer"
-            >
-              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-              <span>Exportar Recibos a Excel (.xls)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- Filtros de Recibos -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Buscar Recibo o Alumno</label>
-            <input
-              id="filtro-recibos-texto"
-              type="search"
-              placeholder="Ej: 000104 o Carlos Mendoza..."
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-            />
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Periodo de Caja</label>
-            <select
-              id="filtro-recibos-periodo"
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-            >
-              <option value="TODOS">Todos los recibos</option>
-              <option value="HOY">Emitidos Hoy</option>
-              <option value="MES">Este Mes</option>
-              <option value="CON_SALDO">Membresías con Saldo Pendiente</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-semibold text-slate-400 mb-1">Método de Pago</label>
-            <select
-              id="filtro-recibos-metodo"
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-            >
-              <option value="TODOS">Todos los métodos</option>
-              <option value="EFECTIVO">Efectivo</option>
-              <option value="YAPE_PLIN">Yape / Plin</option>
-              <option value="TRANSFERENCIA">Transferencia</option>
-              <option value="TARJETA">Tarjeta POS</option>
-            </select>
-          </div>
-          <div class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 flex flex-col justify-center">
-            <span class="text-[11px] font-semibold text-slate-400 uppercase">Total Filtrado en Caja</span>
-            <span id="recibos-total-filtrado" class="text-lg font-black text-emerald-400 tabular-nums">S/ 0.00</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabla Completa de Recibos -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">
-                <th class="py-3.5 px-4">N° Recibo</th>
-                <th class="py-3.5 px-4">Fecha Pago</th>
-                <th class="py-3.5 px-4">Nombres y Apellidos</th>
-                <th class="py-3.5 px-4">Concepto</th>
-                <th class="py-3.5 px-4">Fecha Inicio</th>
-                <th class="py-3.5 px-4">Fecha Finalización</th>
-                <th class="py-3.5 px-4 text-right">Total a Pagar</th>
-                <th class="py-3.5 px-4 text-right">Abonado</th>
-                <th class="py-3.5 px-4 text-right">Saldo</th>
-                <th class="py-3.5 px-4 text-center">Método</th>
-                <th class="py-3.5 px-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-recibos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================================================================== -->
-    <!-- VISTA 3: PADRÓN DE ALUMNOS Y VIGENCIAS                             -->
-    <!-- ================================================================== -->
-    <section id="view-alumnos" class="hidden space-y-6">
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
-        <div class="flex flex-wrap items-center justify-between gap-4">
-          <div>
-            <h2 class="text-xl font-black text-white">Padrón de Alumnos y Estado de Membresías</h2>
-            <p class="text-xs text-slate-400">Consulta la vigencia, grado/cinturón, apoderado e historial de recibos de cada deportista</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2.5">
-            <button
-              id="btn-exportar-alumnos-excel"
-              type="button"
-              class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer"
-            >
-              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
-              <span>Exportar Padrón a Excel (.xls)</span>
-            </button>
-          </div>
-        </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div class="sm:col-span-2">
-            <input
-              id="filtro-alumnos-texto"
-              type="search"
-              placeholder="Buscar por nombres, apellidos, WhatsApp o cinturón..."
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-            />
-          </div>
-          <div>
-            <select
-              id="filtro-alumnos-estado"
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-            >
-              <option value="TODOS">Todos los estados</option>
-              <option value="ACTIVO">🟢 Activos</option>
-              <option value="SOLO_INSCRITO">🎓 Solo Inscritos (Pendiente 1ra Mensualidad)</option>
-              <option value="POR_VENCER">🟡 Por vencer (≤ 5 días)</option>
-              <option value="VENCIDO">🔴 Vencidos</option>
-              <option value="CON_DEUDA">⚠️ Con Saldo Pendiente</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- Tabla de Alumnos -->
-      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
-        <div class="overflow-x-auto">
-          <table class="w-full text-left border-collapse">
-            <thead>
-              <tr class="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">
-                <th class="py-3.5 px-4">Nombres y Apellidos</th>
-                <th class="py-3.5 px-4">Grado / Cinturón</th>
-                <th class="py-3.5 px-4">WhatsApp / Emergencia</th>
-                <th class="py-3.5 px-4">Último Plan</th>
-                <th class="py-3.5 px-4">Fecha Inicio</th>
-                <th class="py-3.5 px-4">Fecha Finalización</th>
-                <th class="py-3.5 px-4 text-center">Vigencia</th>
-                <th class="py-3.5 px-4 text-right">Saldo Pendiente</th>
-                <th class="py-3.5 px-4 text-center">Acciones</th>
-              </tr>
-            </thead>
-            <tbody id="tabla-alumnos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
-          </table>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================================================================== -->
-    <!-- VISTA 4: CATÁLOGO DE PLANES Y DISCIPLINAS                          -->
-    <!-- ================================================================== -->
-    <section id="view-planes" class="hidden space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <!-- Formulario Crear / Editar Plan -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 h-fit">
-          <h3 id="form-plan-titulo" class="text-base font-black text-white mb-1">Agregar Plan / Disciplina</h3>
-          <p class="text-xs text-slate-400 mb-4">Predefine tus planes para autocompletar precios y fechas al registrar recibos.</p>
-          <form id="form-plan" class="space-y-3.5">
-            <input type="hidden" id="plan-id" />
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Plan *</label>
-              <input
-                id="plan-nombre"
-                type="text"
-                required
-                placeholder="Ej: Mensual Muay Thai"
-                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Disciplina *</label>
-              <input
-                id="plan-disciplina"
-                type="text"
-                required
-                placeholder="Ej: Muay Thai, Boxeo, BJJ, MMA..."
-                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-              />
-            </div>
-            <div class="grid grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Duración (Días) *</label>
-                <input
-                  id="plan-duracion"
-                  type="number"
-                  min="1"
-                  value="30"
-                  required
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white tabular-nums outline-none focus:border-red-500"
-                />
-                <span class="text-[11px] text-slate-400">30 = 1 mes, 90 = 3 meses</span>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Total a Pagar Sugerido *</label>
-                <input
-                  id="plan-precio"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  placeholder="120.00"
-                  required
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white tabular-nums outline-none focus:border-red-500"
-                />
-              </div>
-            </div>
-            <div class="flex items-center gap-2 pt-2">
-              <button
-                type="submit"
-                class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-2.5 rounded-xl transition cursor-pointer"
-              >
-                Guardar Plan
-              </button>
-              <button
-                id="btn-cancelar-plan"
-                type="button"
-                class="hidden px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 cursor-pointer"
-              >
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </div>
-
-        <!-- Lista de Planes -->
-        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5">
-          <h3 class="text-base font-black text-white mb-4">Catálogo de Planes Activos</h3>
-          <div id="lista-planes-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
-        </div>
-      </div>
-    </section>
-
-    <!-- ================================================================== -->
-    <!-- VISTA 5: CONFIGURACIÓN, CORRELATIVO DE RECIBOS Y NUBE SUPABASE     -->
-    <!-- ================================================================== -->
-    <section id="view-configuracion" class="hidden space-y-6">
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Datos de la Academia y Talonario -->
-        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <div class="flex items-center gap-2.5">
-            <i data-lucide="building-2" class="w-5 h-5 text-red-400"></i>
-            <h3 class="text-lg font-black text-white">Datos de la Academia y Numeración de Recibos</h3>
-          </div>
-          <form id="form-configuracion" class="space-y-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Gimnasio / Academia</label>
-              <input
-                id="cfg-nombre"
-                type="text"
-                required
-                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-              />
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Subtítulo / Disciplinas (Aparece en el recibo digital)</label>
-              <input
-                id="cfg-subtitulo"
-                type="text"
-                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-              />
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Teléfono / WhatsApp del Gimnasio</label>
-                <input
-                  id="cfg-telefono"
-                  type="text"
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-                />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Símbolo de Moneda</label>
-                <input
-                  id="cfg-moneda"
-                  type="text"
-                  value="S/"
-                  required
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-                />
-              </div>
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-300 mb-1">Dirección del Local</label>
-              <input
-                id="cfg-direccion"
-                type="text"
-                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
-              />
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
-              <div>
-                <label class="block text-xs font-semibold text-emerald-400 mb-1">🎓 Precio de Inscripción</label>
-                <input
-                  id="cfg-precio-inscripcion"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  value="30.00"
-                  required
-                  class="w-full bg-slate-950 border border-emerald-500/40 rounded-xl px-3.5 py-2 text-sm font-bold text-emerald-300 tabular-nums outline-none focus:border-emerald-400"
-                />
-                <span class="text-[11px] text-slate-400">Matrícula por defecto</span>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Próximo N° de Recibo</label>
-                <input
-                  id="cfg-proximo-recibo"
-                  type="number"
-                  min="1"
-                  required
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm font-mono text-emerald-400 font-bold tabular-nums outline-none focus:border-red-500"
-                />
-                <span class="text-[11px] text-slate-400">Secuencia automática</span>
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Alerta Vencimiento (días)</label>
-                <input
-                  id="cfg-dias-alerta"
-                  type="number"
-                  min="1"
-                  max="30"
-                  required
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white tabular-nums outline-none focus:border-red-500"
-                />
-              </div>
-            </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800 items-center">
-              <div>
-                <label class="block text-xs font-semibold text-amber-400 mb-1">🔑 Clave / PIN de Administrador (Papá)</label>
-                <input
-                  id="cfg-pin-admin"
-                  type="text"
-                  placeholder="Ej: 1234"
-                  required
-                  class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-amber-300 outline-none focus:border-amber-400"
-                />
-                <span class="text-[11px] text-slate-400">Para desbloquear el modo Admin</span>
-              </div>
-              <div class="pt-3">
-                <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                  <input id="cfg-pedir-pin-inicio" type="checkbox" class="w-4 h-4 accent-red-600 rounded" />
-                  <span class="text-xs font-semibold text-slate-200">Pedir Clave al abrir el sistema</span>
-                </label>
-                <p class="text-[11px] text-slate-400 mt-1">Protege la caja y configuración si otra persona usa la PC</p>
-              </div>
-            </div>
-            <button
-              type="submit"
-              class="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-2.5 rounded-xl transition cursor-pointer"
-            >
-              Guardar Configuración del Gimnasio
-            </button>
-          </form>
-        </div>
-
-        <!-- Conexión Nube (Supabase) y Respaldos -->
-        <div class="space-y-6">
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <i data-lucide="cloud" class="w-5 h-5 text-sky-400"></i>
-                <h3 class="text-lg font-black text-white">Base de Datos en la Nube (Supabase)</h3>
-              </div>
-              <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold">
-                Esquema SQL Listo
-              </span>
-            </div>
-            <p class="text-xs text-slate-400 leading-relaxed">
-              El esquema relacional completo se encuentra en <code class="text-sky-300 bg-slate-950 px-1.5 py-0.5 rounded">supabase/schema.sql</code>.
-              Pega aquí las credenciales de tu proyecto Supabase para sincronizar en la nube:
+            <p id="header-gym-subtitle" class="text-xs text-slate-300 truncate mt-0.5">
+              Muay Thai • Boxeo • Jiu-Jitsu
             </p>
-            <div class="space-y-3">
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Supabase Project URL</label>
-                <input
-                  id="cfg-supabase-url"
-                  type="url"
-                  placeholder="https://xyzcompany.supabase.co"
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono outline-none focus:border-sky-500"
-                />
-              </div>
-              <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Supabase Anon Public Key</label>
-                <input
-                  id="cfg-supabase-key"
-                  type="password"
-                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono outline-none focus:border-sky-500"
-                />
-              </div>
-              <div class="flex flex-wrap gap-2 pt-1">
-                <button
-                  id="btn-test-supabase"
-                  type="button"
-                  class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
-                >
-                  Guardar y Probar Conexión Cloud
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Respaldo Local y Limpieza de Datos de Prueba -->
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
-            <div class="flex items-center gap-2.5">
-              <i data-lucide="database-backup" class="w-5 h-5 text-amber-400"></i>
-              <h3 class="text-base font-black text-white">Respaldo de Seguridad y Datos de Prueba</h3>
-            </div>
-            <div class="flex flex-wrap gap-2.5">
+            <div class="mt-2 flex items-center gap-1.5 flex-wrap">
               <button
-                id="btn-backup-json"
+                id="btn-cambiar-rol"
                 type="button"
-                class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                title="Cambiar entre Modo Administrador (Papá) y Modo Recepción"
+                class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center gap-1 transition cursor-pointer"
               >
-                <i data-lucide="download" class="w-4 h-4"></i>
-                <span>Descargar Copia de Seguridad (.JSON)</span>
+                <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
+                <span id="badge-rol-actual">ADMIN (PAPÁ)</span>
               </button>
-              <label class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer">
-                <i data-lucide="upload" class="w-4 h-4"></i>
-                <span>Restaurar Copia (.JSON)</span>
-                <input id="input-restore-json" type="file" accept=".json" class="hidden" />
-              </label>
-            </div>
-            <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
-              <p class="text-xs text-slate-400">¿Listo para empezar desde cero sin los 4 alumnos de ejemplo?</p>
-              <div class="flex gap-2">
-                <button
-                  id="btn-limpiar-produccion"
-                  type="button"
-                  class="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-2 rounded-xl transition cursor-pointer"
-                >
-                  Iniciar en Limpio (Recibo #000001)
-                </button>
-                <button
-                  id="btn-restaurar-demo"
-                  type="button"
-                  class="text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 px-3 py-2 rounded-xl transition cursor-pointer"
-                >
-                  Restaurar Ejemplos
-                </button>
-              </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
 
-  </main>
+        <!-- Menú de Navegación Principal (Botones Grandes y Claros) -->
+        <div class="p-3.5">
+          <p class="px-3 text-[11px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">
+            Menú Principal
+          </p>
+          <nav class="flex lg:flex-col gap-1.5 overflow-x-auto pb-1 lg:pb-0" aria-label="Navegación Principal">
+            <button
+              type="button"
+              data-tab="dashboard"
+              class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-extrabold bg-red-600 text-white shadow-md whitespace-nowrap transition cursor-pointer"
+            >
+              <span class="flex items-center gap-3">
+                <i data-lucide="home" class="w-5 h-5"></i>
+                <span>1. Inicio y Cobros</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              data-tab="alumnos"
+              class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer"
+            >
+              <span class="flex items-center gap-3">
+                <i data-lucide="users" class="w-5 h-5"></i>
+                <span>2. Alumnos Inscritos</span>
+              </span>
+              <span id="nav-badge-alumnos" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 font-extrabold">0</span>
+            </button>
+
+            <button
+              type="button"
+              data-tab="recibos"
+              class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer"
+            >
+              <span class="flex items-center gap-3">
+                <i data-lucide="receipt" class="w-5 h-5"></i>
+                <span>3. Recibos y Caja</span>
+              </span>
+              <span id="nav-badge-recibos" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 font-extrabold">0</span>
+            </button>
+
+            <button
+              type="button"
+              data-tab="planes"
+              class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer"
+            >
+              <span class="flex items-center gap-3">
+                <i data-lucide="swords" class="w-5 h-5"></i>
+                <span>4. Planes y Precios</span>
+              </span>
+            </button>
+
+            <button
+              type="button"
+              data-tab="configuracion"
+              class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer"
+            >
+              <span class="flex items-center gap-3">
+                <i data-lucide="settings" class="w-5 h-5"></i>
+                <span>5. Ajustes y Logo</span>
+              </span>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      <!-- Pie del Menú Lateral: Modo Claro/Oscuro + Estado de Nube -->
+      <div class="p-4 border-t border-slate-800 space-y-2.5 hidden lg:block">
+        <button
+          id="btn-toggle-tema"
+          type="button"
+          class="w-full py-2.5 px-3.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs flex items-center justify-between transition cursor-pointer border border-slate-700"
+        >
+          <span id="texto-toggle-tema">☀️ Modo Claro (Fácil lectura)</span>
+          <span class="text-[11px] px-2 py-0.5 rounded bg-slate-900 text-sky-300">Cambiar</span>
+        </button>
+
+        <div class="flex items-center justify-between px-2 pt-1">
+          <span class="text-[11px] text-slate-400">Sincronización Web:</span>
+          <span
+            id="badge-cloud-sync"
+            class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1"
+          >
+            ☁️ Conectado
+          </span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ==================================================================== -->
+    <!-- CONTENIDO DERECHO: BUSCADOR GIGANTE ARRIBA + ÁREA DE TRABAJO         -->
+    <!-- ==================================================================== -->
+    <div class="flex-1 flex flex-col min-w-0">
+
+      <!-- BARRA SUPERIOR CON BUSCADOR GIGANTE -->
+      <header id="topbar-surface" class="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 px-4 sm:px-8 py-3.5 shadow-sm">
+        <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
+          <!-- Buscador Instantáneo Gigante -->
+          <div class="relative flex-1 min-w-[260px] max-w-2xl">
+            <i data-lucide="search" class="w-5 h-5 text-slate-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+            <input
+              id="global-search-input"
+              type="search"
+               autocomplete="off"
+              placeholder="🔍 Buscar alumno por nombre, celular o N° de recibo (Ej: Carlos o 000105)..."
+              class="w-full bg-slate-950 border-2 border-slate-700 focus:border-red-500 rounded-2xl pl-12 pr-4 py-3 text-sm sm:text-base text-white placeholder-slate-400 outline-none transition shadow-inner"
+            />
+            <!-- Resultados desplegables del buscador rápido -->
+            <div
+              id="global-search-results"
+              class="hidden absolute left-0 right-0 mt-2 bg-slate-900 border-2 border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto"
+            ></div>
+          </div>
+
+          <!-- Botones rápidos en barra superior -->
+          <div class="flex items-center gap-2.5">
+            <button
+              id="btn-toggle-tema-mobile"
+              type="button"
+              title="Cambiar entre Tema Claro y Oscuro"
+              class="lg:hidden p-3 rounded-xl bg-slate-800 text-slate-200 border border-slate-700 cursor-pointer"
+            >
+              ☀️/🌙
+            </button>
+            <button
+              id="btn-open-nuevo-pago"
+              type="button"
+              class="keep-white-text brand-bg font-black text-sm px-5 py-3 rounded-2xl shadow-lg flex items-center gap-2 transition active:scale-95 cursor-pointer"
+            >
+              <i data-lucide="plus-circle" class="w-5 h-5"></i>
+              <span>Registrar Cobro Rápido</span>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- CONTENEDOR PRINCIPAL DE VISTAS -->
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+
+        <!-- ================================================================== -->
+        <!-- VISTA 1: INICIO Y RECEPCIÓN (BOTONES DIRECTOS + RESUMEN CLARO)     -->
+        <!-- ================================================================== -->
+        <section id="view-dashboard" class="space-y-6">
+
+          <!-- BLOQUE PRINCIPAL: 3 BOTONES GIGANTES Y SEPARADOS PARA NO CONFUNDIRSE -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <div>
+                <h2 class="text-lg sm:text-xl font-black text-white">¿Qué deseas registrar en este momento?</h2>
+                <p class="text-xs sm:text-sm text-slate-400">Haz clic en el botón que corresponda para abrir la ventana exacta:</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <!-- BOTÓN 1: INSCRIBIR ALUMNO NUEVO -->
+              <button
+                type="button"
+                onclick="window.AppUI.abrirModalAccionDirecta('INSCRIBIR_NUEVO')"
+                class="keep-white-text group text-left rounded-2xl p-5 bg-gradient-to-br from-emerald-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white shadow-lg transition transform hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between gap-3"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-3xl bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center">🎓</span>
+                  <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20">Paso 1 • Nuevos</span>
+                </div>
+                <div>
+                  <h3 class="text-lg font-black tracking-tight">1. Inscribir Alumno Nuevo</h3>
+                  <p class="text-xs text-emerald-100 mt-1 leading-relaxed">
+                    Para alumnos que ingresan por primera vez. Cobra su <b>Inscripción + 1er Mes</b> o <b>Solo su Inscripción</b>.
+                  </p>
+                </div>
+              </button>
+
+              <!-- BOTÓN 2: COBRAR MENSUALIDAD (ALUMNO YA INSCRITO) -->
+              <button
+                type="button"
+                onclick="window.AppUI.abrirModalAccionDirecta('COBRAR_MENSUALIDAD')"
+                class="keep-white-text group text-left rounded-2xl p-5 bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white shadow-lg transition transform hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between gap-3"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-3xl bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center">🥊</span>
+                  <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20">Paso 2 • Mensualidad</span>
+                </div>
+                <div>
+                  <h3 class="text-lg font-black tracking-tight">2. Cobrar Mensualidad</h3>
+                  <p class="text-xs text-red-100 mt-1 leading-relaxed">
+                    Para alumnos que <b>ya están inscritos</b> en el sistema y vienen a pagar o renovar su mes de clases.
+                  </p>
+                </div>
+              </button>
+
+              <!-- BOTÓN 3: COBRAR LO QUE DEBE (SALDO PENDIENTE) -->
+              <button
+                type="button"
+                onclick="window.AppUI.abrirModalAccionDirecta('COBRAR_SALDO')"
+                class="keep-white-text group text-left rounded-2xl p-5 bg-gradient-to-br from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-white shadow-lg transition transform hover:-translate-y-0.5 cursor-pointer flex flex-col justify-between gap-3"
+              >
+                <div class="flex items-center justify-between">
+                  <span class="text-3xl bg-white/20 w-12 h-12 rounded-2xl flex items-center justify-center">💰</span>
+                  <span class="text-xs font-extrabold uppercase tracking-wider px-3 py-1 rounded-full bg-white/20">Deudas / Adelantos</span>
+                </div>
+                <div>
+                  <h3 class="text-lg font-black tracking-tight">3. Cobrar Saldo ("Lo que debe")</h3>
+                  <p class="text-xs text-amber-50 mt-1 leading-relaxed">
+                    Para alumnos que dejaron un adelanto a cuenta y hoy vienen a <b>cancelar lo que les faltaba pagar</b>.
+                  </p>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          <!-- 4 TARJETAS DE RESUMEN CON NÚMEROS GRANDES Y LENGUAJE SENCILLO -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <!-- Dinero Recibido Hoy -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">💵 Dinero Recibido Hoy</span>
+                <div class="w-9 h-9 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center">
+                  <i data-lucide="wallet" class="w-5 h-5"></i>
+                </div>
+              </div>
+              <p id="kpi-ingresos-hoy" class="text-3xl font-black text-emerald-400 tabular-nums">S/ 0.00</p>
+              <p id="kpi-ingresos-hoy-detalle" class="text-xs font-medium text-slate-400 mt-1.5">0 recibos cobrados hoy</p>
+            </div>
+
+            <!-- Total del Mes -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">📊 Total de Este Mes</span>
+                <div class="w-9 h-9 rounded-xl bg-sky-500/15 text-sky-400 flex items-center justify-center">
+                  <i data-lucide="trending-up" class="w-5 h-5"></i>
+                </div>
+              </div>
+              <p id="kpi-ingresos-mes" class="text-3xl font-black text-white tabular-nums">S/ 0.00</p>
+              <p id="kpi-ingresos-mes-detalle" class="text-xs font-medium text-slate-400 mt-1.5">Efectivo vs Yape/Plin</p>
+            </div>
+
+            <!-- Lo que nos deben (Saldos) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">⚠️ Total que nos Deben</span>
+                <div class="w-9 h-9 rounded-xl bg-amber-500/15 text-amber-400 flex items-center justify-center">
+                  <i data-lucide="coins" class="w-5 h-5"></i>
+                </div>
+              </div>
+              <p id="kpi-saldos-pendientes" class="text-3xl font-black text-amber-400 tabular-nums">S/ 0.00</p>
+              <p id="kpi-saldos-detalle" class="text-xs font-medium text-slate-400 mt-1.5">0 alumnos con deuda pendiente</p>
+            </div>
+
+            <!-- Alumnos al Día -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5">
+              <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400">🥋 Alumnos al Día</span>
+                <div class="w-9 h-9 rounded-xl bg-red-500/15 text-red-400 flex items-center justify-center">
+                  <i data-lucide="users" class="w-5 h-5"></i>
+                </div>
+              </div>
+              <p id="kpi-alumnos-activos" class="text-3xl font-black text-white tabular-nums">0 Activos</p>
+              <p id="kpi-alumnos-alertas" class="text-xs font-medium text-slate-400 mt-1.5">0 por vencer • 0 vencidos</p>
+            </div>
+          </div>
+
+          <!-- BANDEJAS DE ATENCIÓN RÁPIDA: VENCIMIENTOS Y DEUDAS ("LO QUE DEBEN") -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Columna 1: Alumnos por Vencer o Vencidos -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+              <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></span>
+                  <h3 class="font-extrabold text-sm sm:text-base text-white">Alumnos con Mensualidad Vencida o por Vencer</h3>
+                </div>
+                <span id="badge-count-vencimientos" class="text-xs font-black px-3 py-1 rounded-full bg-red-500/15 text-red-400">0</span>
+              </div>
+              <div id="dashboard-lista-vencimientos" class="divide-y divide-slate-800 max-h-96 overflow-y-auto"></div>
+            </div>
+
+            <!-- Columna 2: Alumnos que deben saldo -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+              <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                  <span class="w-3 h-3 rounded-full bg-amber-400"></span>
+                  <h3 class="font-extrabold text-sm sm:text-base text-white">Alumnos que Deben Saldo (Dejaron Adelanto)</h3>
+                </div>
+                <span id="badge-count-saldos" class="text-xs font-black px-3 py-1 rounded-full bg-amber-500/15 text-amber-300">0</span>
+              </div>
+              <div id="dashboard-lista-saldos" class="divide-y divide-slate-800 max-h-96 overflow-y-auto"></div>
+            </div>
+          </div>
+
+          <!-- Últimos Recibos Emitidos -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 class="font-extrabold text-base text-white">Últimos Recibos Registrados</h3>
+                <p class="text-xs text-slate-400">Haz clic en "Recibo Digital" para enviarlo por WhatsApp o imprimirlo</p>
+              </div>
+              <button
+                type="button"
+                onclick="window.AppUI.cambiarTab('recibos')"
+                class="text-xs font-extrabold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
+              >
+                <span>Ver todos los recibos</span>
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-xs font-extrabold uppercase tracking-wider text-slate-400 bg-slate-950/60">
+                    <th class="py-3.5 px-4">N° Recibo</th>
+                    <th class="py-3.5 px-4">Alumno</th>
+                    <th class="py-3.5 px-4">Qué pagó (Concepto)</th>
+                    <th class="py-3.5 px-4">Día que Inicia</th>
+                    <th class="py-3.5 px-4">Día que Vence</th>
+                    <th class="py-3.5 px-4 text-right">Total a Pagar</th>
+                    <th class="py-3.5 px-4 text-right">Pagó Hoy</th>
+                    <th class="py-3.5 px-4 text-right">Lo que debe</th>
+                    <th class="py-3.5 px-4 text-center">Comprobante</th>
+                  </tr>
+                </thead>
+                <tbody id="dashboard-ultimos-recibos" class="divide-y divide-slate-800/70 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- VISTA 2: ALUMNOS INSCRITOS (TARJETAS VISUALES GRANDES + TABLA)     -->
+        <!-- ================================================================== -->
+        <section id="view-alumnos" class="hidden space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-xl sm:text-2xl font-black text-white">Padrón de Alumnos Inscritos</h2>
+                <p class="text-xs sm:text-sm text-slate-400">Revisa de un vistazo quién está AL DÍA, quién solo pagó Inscripción y quién tiene mensualidad VENCIDA</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <!-- Selector de Vista: Tarjetas Grandes vs Tabla -->
+                <div class="inline-flex rounded-xl p-1 bg-slate-950 border border-slate-800">
+                  <button
+                    id="btn-vista-alumnos-tarjetas"
+                    type="button"
+                    class="px-3 py-1.5 rounded-lg text-xs font-extrabold bg-red-600 text-white keep-white-text cursor-pointer"
+                  >
+                    🪪 Tarjetas Grandes
+                  </button>
+                  <button
+                    id="btn-vista-alumnos-tabla"
+                    type="button"
+                    class="px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer"
+                  >
+                    📋 Tabla Clásica
+                  </button>
+                </div>
+
+                <button
+                  id="btn-exportar-alumnos-excel"
+                  type="button"
+                  class="keep-white-text inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                  <span>Descargar Excel (.xls)</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div class="sm:col-span-2">
+                <label class="block text-xs font-bold text-slate-400 mb-1">Buscar Alumno</label>
+                <input
+                  id="filtro-alumnos-texto"
+                  type="search"
+                  placeholder="Escribe nombre, apellido, WhatsApp o cinturón..."
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Filtrar por Situación</label>
+                <select
+                  id="filtro-alumnos-estado"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                >
+                  <option value="TODOS">Todos los alumnos</option>
+                  <option value="ACTIVO">🟢 Al Día (Activos)</option>
+                  <option value="SOLO_INSCRITO">🎓 Solo Inscritos (Falta pagar 1er Mes)</option>
+                  <option value="POR_VENCER">🟡 Por vencer pronto (≤ 5 días)</option>
+                  <option value="VENCIDO">🔴 Mensualidad Vencida</option>
+                  <option value="CON_DEUDA">⚠️ Con Deuda ("Lo que debe")</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Vista 2A: Cuadrícula de Tarjetas Visuales con Color de Cinturón y Estado Gigante -->
+          <div id="contenedor-alumnos-tarjetas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+          <!-- Vista 2B: Tabla Completa de Alumnos -->
+          <div id="contenedor-alumnos-tabla" class="hidden bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-xs font-extrabold uppercase tracking-wider text-slate-400 bg-slate-950/60">
+                    <th class="py-3.5 px-4">Alumno / Inscripción</th>
+                    <th class="py-3.5 px-4">Grado / Cinturón</th>
+                    <th class="py-3.5 px-4">WhatsApp / Emergencia</th>
+                    <th class="py-3.5 px-4">Último Plan</th>
+                    <th class="py-3.5 px-4">Día que Inicia</th>
+                    <th class="py-3.5 px-4">Día que Vence</th>
+                    <th class="py-3.5 px-4 text-center">Estado</th>
+                    <th class="py-3.5 px-4 text-right">Lo que debe</th>
+                    <th class="py-3.5 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-alumnos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- VISTA 3: HISTORIAL DE RECIBOS Y CUADRE DE CAJA                     -->
+        <!-- ================================================================== -->
+        <section id="view-recibos" class="hidden space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-xl sm:text-2xl font-black text-white">Historial de Recibos y Cuadre de Caja</h2>
+                <p class="text-xs sm:text-sm text-slate-400">Revisa todos los recibos emitidos, filtra por Efectivo o Yape/Plin y descarga tu reporte en Excel</p>
+              </div>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <button
+                  id="btn-exportar-recibos-excel"
+                  type="button"
+                  class="keep-white-text inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+                  <span>Exportar Caja a Excel (.xls)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Filtros de Recibos -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+              <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Buscar N° Recibo o Alumno</label>
+                <input
+                  id="filtro-recibos-texto"
+                  type="search"
+                  placeholder="Ej: 000104 o Carlos Mendoza..."
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Fecha / Periodo</label>
+                <select
+                  id="filtro-recibos-periodo"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                >
+                  <option value="TODOS">Todos los recibos</option>
+                  <option value="HOY">Cobrados Hoy</option>
+                  <option value="MES">Cobrados Este Mes</option>
+                  <option value="CON_SALDO">Recibos que aún deben saldo</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">Forma de Pago</label>
+                <select
+                  id="filtro-recibos-metodo"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                >
+                  <option value="TODOS">Todas las formas de pago</option>
+                  <option value="EFECTIVO">💵 Efectivo</option>
+                  <option value="YAPE_PLIN">📱 Yape / Plin</option>
+                  <option value="TRANSFERENCIA">🏦 Transferencia</option>
+                  <option value="TARJETA">💳 Tarjeta POS</option>
+                </select>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 flex flex-col justify-center">
+                <span class="text-[11px] font-bold text-slate-400 uppercase">Total Dinero en Lista</span>
+                <span id="recibos-total-filtrado" class="text-xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabla Completa de Recibos -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+            <div class="overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-xs font-extrabold uppercase tracking-wider text-slate-400 bg-slate-950/60">
+                    <th class="py-3.5 px-4">N° Recibo</th>
+                    <th class="py-3.5 px-4">Fecha Cobro</th>
+                    <th class="py-3.5 px-4">Alumno</th>
+                    <th class="py-3.5 px-4">Qué pagó (Concepto)</th>
+                    <th class="py-3.5 px-4">Día que Inicia</th>
+                    <th class="py-3.5 px-4">Día que Vence</th>
+                    <th class="py-3.5 px-4 text-right">Total a Pagar</th>
+                    <th class="py-3.5 px-4 text-right">Pagó Hoy</th>
+                    <th class="py-3.5 px-4 text-right">Lo que debe</th>
+                    <th class="py-3.5 px-4 text-center">Medio Pago</th>
+                    <th class="py-3.5 px-4 text-center">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-recibos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- VISTA 4: CATÁLOGO DE PLANES Y DISCIPLINAS                          -->
+        <!-- ================================================================== -->
+        <section id="view-planes" class="hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Formulario Crear / Editar Plan -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit">
+              <h3 id="form-plan-titulo" class="text-lg font-black text-white mb-1">Agregar Plan o Mensualidad</h3>
+              <p class="text-xs text-slate-400 mb-4">Configura los precios de tus disciplinas para cobrar rápido sin escribir todo cada vez.</p>
+              <form id="form-plan" class="space-y-4">
+                <input type="hidden" id="plan-id" />
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Nombre del Plan *</label>
+                  <input
+                    id="plan-nombre"
+                    type="text"
+                    required
+                    placeholder="Ej: Mensual Muay Thai"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Disciplina *</label>
+                  <input
+                    id="plan-disciplina"
+                    type="text"
+                    required
+                    placeholder="Ej: Muay Thai, Boxeo, BJJ, MMA..."
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Duración (Días) *</label>
+                    <input
+                      id="plan-duracion"
+                      type="number"
+                      min="1"
+                      value="30"
+                      required
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                    />
+                    <span class="text-[11px] text-slate-400">30 = 1 mes, 90 = 3 meses</span>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Precio del Plan *</label>
+                    <input
+                      id="plan-precio"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      placeholder="130.00"
+                      required
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+                <div class="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    class="keep-white-text flex-1 brand-bg font-bold text-sm py-3 rounded-xl transition cursor-pointer"
+                  >
+                    Guardar Plan
+                  </button>
+                  <button
+                    id="btn-cancelar-plan"
+                    type="button"
+                    class="hidden px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Lista de Planes -->
+            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6">
+              <h3 class="text-lg font-black text-white mb-4">Catálogo de Planes y Precios Activos</h3>
+              <div id="lista-planes-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- VISTA 5: CONFIGURACIÓN, LOGO, COLORES Y NUBE SUPABASE              -->
+        <!-- ================================================================== -->
+        <section id="view-configuracion" class="hidden space-y-6">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <!-- Datos de la Academia, Logo, Colores y Talonario -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-5">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="building-2" class="w-6 h-6 text-red-400"></i>
+                <div>
+                  <h3 class="text-lg font-black text-white">Identidad del Gimnasio, Logo y Precios</h3>
+                  <p class="text-xs text-slate-400">Personaliza el nombre, logo, colores y el precio de inscripción</p>
+                </div>
+              </div>
+
+              <form id="form-configuracion" class="space-y-4">
+                <!-- Subir Logo del Gimnasio -->
+                <div class="bg-slate-950 border border-slate-800 rounded-2xl p-4 flex flex-wrap items-center justify-between gap-4">
+                  <div class="flex items-center gap-3.5">
+                    <div class="w-16 h-16 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      <img id="cfg-logo-preview" src="" alt="Vista previa del logo" class="hidden w-full h-full object-cover bg-white" />
+                      <span id="cfg-logo-fallback" class="text-3xl">🥋</span>
+                    </div>
+                    <div>
+                      <span class="text-sm font-extrabold text-white block">Logo Oficial del Gimnasio</span>
+                      <span class="text-xs text-slate-400">Saldrá en la esquina del sistema y en los recibos digitales</span>
+                    </div>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <label class="keep-white-text brand-bg text-xs font-bold px-3.5 py-2.5 rounded-xl cursor-pointer inline-flex items-center gap-1.5">
+                      <i data-lucide="image-plus" class="w-4 h-4"></i>
+                      <span>Subir Logo</span>
+                      <input id="input-subir-logo" type="file" accept="image/*" class="hidden" />
+                    </label>
+                    <button
+                      id="btn-quitar-logo"
+                      type="button"
+                      class="px-3 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Color Principal y Tema Visual -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">🎨 Color Principal del Gimnasio</label>
+                    <select
+                      id="cfg-color-tema"
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                    >
+                      <option value="ROJO">🔴 Rojo Artes Marciales (Clásico)</option>
+                      <option value="AZUL">🔵 Azul Olímpico / Deportivo</option>
+                      <option value="DORADO">🟡 Dorado Campeón / Élite</option>
+                      <option value="ESMERALDA">🟢 Verde Dojo / Esmeralda</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">☀️ Iluminación de Pantalla</label>
+                    <select
+                      id="cfg-tema-visual"
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                    >
+                      <option value="CLARO">☀️ Tema Claro Profesional (Recomendado)</option>
+                      <option value="OSCURO">🌙 Tema Oscuro Nocturno</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Nombre del Gimnasio / Academia</label>
+                  <input
+                    id="cfg-nombre"
+                    type="text"
+                    required
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Subtítulo / Disciplinas (Aparece en el recibo digital)</label>
+                  <input
+                    id="cfg-subtitulo"
+                    type="text"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Teléfono / WhatsApp del Gimnasio</label>
+                    <input
+                      id="cfg-telefono"
+                      type="text"
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Símbolo de Moneda</label>
+                    <input
+                      id="cfg-moneda"
+                      type="text"
+                      value="S/"
+                      required
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Dirección del Local</label>
+                  <input
+                    id="cfg-direccion"
+                    type="text"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
+                  <div>
+                    <label class="block text-xs font-bold text-emerald-400 mb-1">🎓 Precio de Inscripción</label>
+                    <input
+                      id="cfg-precio-inscripcion"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value="30.00"
+                      required
+                      class="w-full bg-slate-950 border border-emerald-500/40 rounded-xl px-3.5 py-2.5 text-sm font-bold text-emerald-300 tabular-nums outline-none focus:border-emerald-400"
+                    />
+                    <span class="text-[11px] text-slate-400">Matrícula por defecto</span>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Próximo N° de Recibo</label>
+                    <input
+                      id="cfg-proximo-recibo"
+                      type="number"
+                      min="1"
+                      required
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm font-mono text-emerald-400 font-bold tabular-nums outline-none focus:border-red-500"
+                    />
+                    <span class="text-[11px] text-slate-400">Secuencia automática</span>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Aviso Vencimiento (días)</label>
+                    <input
+                      id="cfg-dias-alerta"
+                      type="number"
+                      min="1"
+                      max="30"
+                      required
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800 items-center">
+                  <div>
+                    <label class="block text-xs font-bold text-amber-400 mb-1">🔑 Clave / PIN de Administrador (Papá)</label>
+                    <input
+                      id="cfg-pin-admin"
+                      type="text"
+                      placeholder="Ej: 1234"
+                      required
+                      class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-amber-300 outline-none focus:border-amber-400"
+                    />
+                    <span class="text-[11px] text-slate-400">Para desbloquear el modo Admin</span>
+                  </div>
+                  <div class="pt-3">
+                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                      <input id="cfg-pedir-pin-inicio" type="checkbox" class="w-4 h-4 accent-red-600 rounded" />
+                      <span class="text-xs font-bold text-slate-200">Pedir Clave al abrir el sistema</span>
+                    </label>
+                    <p class="text-[11px] text-slate-400 mt-1">Protege la caja si otra persona usa la PC</p>
+                  </div>
+                </div>
+                <button
+                  type="submit"
+                  class="keep-white-text w-full brand-bg font-black text-sm py-3 rounded-xl transition cursor-pointer shadow-md"
+                >
+                  Guardar Cambios de Configuración
+                </button>
+              </form>
+            </div>
+
+            <!-- Conexión Nube (Supabase) y Respaldos -->
+            <div class="space-y-6">
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center gap-2.5">
+                    <i data-lucide="cloud" class="w-5 h-5 text-sky-400"></i>
+                    <h3 class="text-lg font-black text-white">Base de Datos en la Nube (Supabase)</h3>
+                  </div>
+                  <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-bold">
+                    Sincronización Activa
+                  </span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  Todos los cobros e inscripciones se guardan automáticamente en la nube para que tu papá y sus ayudantes vean lo mismo en tiempo real.
+                </p>
+                <div class="space-y-3">
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Supabase Project URL</label>
+                    <input
+                      id="cfg-supabase-url"
+                      type="url"
+                      placeholder="https://xyzcompany.supabase.co"
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono outline-none focus:border-sky-500"
+                    />
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-slate-300 mb-1">Supabase Anon Public Key</label>
+                    <input
+                      id="cfg-supabase-key"
+                      type="password"
+                      placeholder="sb_publishable_..."
+                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono outline-none focus:border-sky-500"
+                    />
+                  </div>
+                  <div class="flex flex-wrap gap-2 pt-1">
+                    <button
+                      id="btn-test-supabase"
+                      type="button"
+                      class="keep-white-text flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+                    >
+                      Guardar y Sincronizar con la Nube Ahora
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Respaldo Local y Limpieza de Datos de Prueba -->
+              <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+                <div class="flex items-center gap-2.5">
+                  <i data-lucide="database-backup" class="w-5 h-5 text-amber-400"></i>
+                  <h3 class="text-base font-black text-white">Copia de Seguridad y Limpieza</h3>
+                </div>
+                <div class="flex flex-wrap gap-2.5">
+                  <button
+                    id="btn-backup-json"
+                    type="button"
+                    class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                  >
+                    <i data-lucide="download" class="w-4 h-4"></i>
+                    <span>Descargar Copia de Seguridad (.JSON)</span>
+                  </button>
+                  <label class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer">
+                    <i data-lucide="upload" class="w-4 h-4"></i>
+                    <span>Restaurar Copia (.JSON)</span>
+                    <input id="input-restore-json" type="file" accept=".json" class="hidden" />
+                  </label>
+                </div>
+                <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+                  <p class="text-xs text-slate-400">¿Deseas borrar los 4 alumnos de ejemplo para empezar desde el Recibo #000001?</p>
+                  <div class="flex gap-2">
+                    <button
+                      id="btn-limpiar-produccion"
+                      type="button"
+                      class="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-2 rounded-xl transition cursor-pointer"
+                    >
+                      Iniciar en Limpio (Recibo #000001)
+                    </button>
+                    <button
+                      id="btn-restaurar-demo"
+                      type="button"
+                      class="text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 px-3 py-2 rounded-xl transition cursor-pointer"
+                    >
+                      Restaurar Ejemplos
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </main>
+    </div>
+  </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 1: NUEVO RECIBO / INSCRIPCIÓN / RENOVACIÓN                     -->
+  <!-- MODAL 1: INSCRIBIR ALUMNO NUEVO / COBRAR MENSUALIDAD                 -->
   <!-- ==================================================================== -->
   <div
     id="modal-nuevo-pago"
     class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
   >
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-auto">
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-auto">
       <!-- Cabecera Modal -->
-      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-900 to-red-950/60 border-b border-slate-800 flex items-center justify-between">
+      <div class="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
         <div class="flex items-center gap-3">
-          <div class="w-9 h-9 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
+          <div class="w-10 h-10 rounded-xl brand-bg flex items-center justify-center text-white keep-white-text">
             <i data-lucide="file-plus-2" class="w-5 h-5"></i>
           </div>
           <div>
-            <h3 id="modal-pago-titulo" class="font-black text-base sm:text-lg text-white">Registrar Nuevo Recibo / Inscripción</h3>
-            <p class="text-xs text-slate-400">Completa los datos del alumno, N° de recibo, total a pagar y fechas de vigencia</p>
+            <h3 id="modal-pago-titulo" class="font-black text-base sm:text-xl text-white">Inscribir Alumno Nuevo</h3>
+            <p id="modal-pago-subtitulo" class="text-xs sm:text-sm text-slate-400">Completa los datos de manera sencilla</p>
           </div>
         </div>
         <button type="button" data-close-modal="modal-nuevo-pago" class="text-slate-400 hover:text-white p-1.5 rounded-lg cursor-pointer">
-          <i data-lucide="x" class="w-5 h-5"></i>
+          <i data-lucide="x" class="w-6 h-6"></i>
         </button>
       </div>
 
       <form id="form-nuevo-pago" class="p-5 sm:p-6 space-y-5 max-h-[82vh] overflow-y-auto">
-        <!-- Selector Modo: Nuevo Alumno vs Alumno Existente / Renovación -->
-        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+        <!-- Conmutador Alumno Nuevo vs Existente (Se oculta cuando abres desde un botón directo específico, pero permite cambiar si lo necesitan) -->
+        <div id="contenedor-switch-modo-alumno" class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
           <button
             type="button"
             id="btn-modo-alumno-nuevo"
-            class="py-2 px-3 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer"
+            class="py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold bg-red-600 text-white keep-white-text transition cursor-pointer"
           >
-            👤 Alumno Nuevo
+            🎓 Alumno Nuevo (1ra Vez)
           </button>
           <button
             type="button"
             id="btn-modo-alumno-existente"
-            class="py-2 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+            class="py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer"
           >
-            🔄 Alumno Registrado / Renovar
+            🥊 Alumno Ya Inscrito (Cobrar Mes)
           </button>
         </div>
 
-        <!-- Buscador de Alumno Existente (Oculto cuando es Alumno Nuevo) -->
-        <div id="bloque-selector-existente" class="hidden bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2">
-          <label class="block text-xs font-bold text-slate-300">Seleccionar Alumno Registrado</label>
+        <!-- Buscador de Alumno Existente (Visible al cobrar mensualidad a alumno registrado) -->
+        <div id="bloque-selector-existente" class="hidden bg-slate-950/90 border-2 border-red-500/30 rounded-2xl p-4 space-y-3">
+          <label class="block text-sm font-extrabold text-white">🔍 1. Elige al Alumno Registrado:</label>
           <select
             id="pago-select-alumno"
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm sm:text-base text-white outline-none focus:border-red-500"
           >
-            <option value="">-- Selecciona un alumno --</option>
+            <option value="">-- Selecciona aquí el nombre del alumno --</option>
           </select>
           <!-- Banner de Renovación Flexible -->
-          <div id="banner-renovacion-flexible" class="hidden pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <span id="texto-vencimiento-anterior" class="text-slate-300">Último vencimiento: —</span>
-            <div class="flex items-center gap-1.5">
+          <div id="banner-renovacion-flexible" class="hidden pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
+            <span id="texto-vencimiento-anterior" class="text-slate-300 font-semibold">Último vencimiento: —</span>
+            <div class="flex items-center gap-2">
               <button
                 type="button"
                 id="btn-renovar-continuar"
-                class="px-2.5 py-1 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 font-semibold hover:bg-red-600/30 cursor-pointer"
+                class="keep-white-text px-3 py-1.5 rounded-lg bg-red-600 text-white font-bold hover:bg-red-500 cursor-pointer"
               >
-                Continuar desde vencimiento
+                Seguir desde su fecha de vencimiento
               </button>
               <button
                 type="button"
                 id="btn-renovar-hoy"
-                class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 font-semibold hover:bg-slate-700 cursor-pointer"
+                class="px-3 py-1.5 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 font-bold hover:bg-slate-700 cursor-pointer"
               >
-                Iniciar desde Hoy
+                Empezar desde Hoy
               </button>
             </div>
           </div>
         </div>
 
-        <!-- 1. NOMBRES Y APELLIDOS DEL ALUMNO + DATOS COMPLEMENTARIOS -->
-        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
+        <!-- 1. DATOS DEL ALUMNO -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 space-y-3.5">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">1. Datos del Alumno</span>
-            <span class="text-[11px] text-slate-400">* Campos obligatorios</span>
+            <span class="text-xs sm:text-sm font-black uppercase tracking-wider text-red-400">Datos del Alumno</span>
+            <span class="text-xs text-slate-400">* Nombres y Apellidos obligatorios</span>
           </div>
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">Nombres *</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">Nombres del Alumno *</label>
               <input
                 id="pago-nombres"
                 type="text"
                 required
                 placeholder="Ej: Carlos Andrés"
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white outline-none"
               />
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">Apellidos *</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">Apellidos del Alumno *</label>
               <input
                 id="pago-apellidos"
                 type="text"
                 required
                 placeholder="Ej: Mendoza Vargas"
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white outline-none"
               />
             </div>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
             <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Teléfono / WhatsApp</label>
+              <label class="block text-xs font-bold text-slate-400 mb-1">Celular / WhatsApp</label>
               <input
                 id="pago-whatsapp"
                 type="tel"
                 placeholder="Ej: 987654321"
-                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none"
               />
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Grado / Cinturón</label>
+              <label class="block text-xs font-bold text-slate-400 mb-1">Cinturón / Categoría</label>
               <select
                 id="pago-grado"
-                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none"
               >
-                <option value="Principiante / Blanco">Principiante / Blanco</option>
-                <option value="Intermedio / Cinturón Azul">Intermedio / Cinturón Azul</option>
-                <option value="Avanzado / Cinturón Morado">Avanzado / Cinturón Morado</option>
-                <option value="Cinturón Marrón">Cinturón Marrón</option>
-                <option value="Cinturón Negro">Cinturón Negro</option>
-                <option value="Competidor">Competidor</option>
-                <option value="Infantil / Kids">Infantil / Kids</option>
+                <option value="Principiante / Blanco">⚪ Principiante / Blanco</option>
+                <option value="Intermedio / Cinturón Azul">🔵 Intermedio / Cinturón Azul</option>
+                <option value="Avanzado / Cinturón Morado">🟣 Avanzado / Cinturón Morado</option>
+                <option value="Cinturón Marrón">🟤 Cinturón Marrón</option>
+                <option value="Cinturón Negro">⚫ Cinturón Negro</option>
+                <option value="Competidor">🔴 Competidor</option>
+                <option value="Infantil / Kids">🟢 Infantil / Kids</option>
               </select>
             </div>
             <div>
-              <label class="block text-xs font-medium text-slate-400 mb-1">Apoderado / Emergencia</label>
+              <label class="block text-xs font-bold text-slate-400 mb-1">Padre / Contacto Emergencia</label>
               <input
                 id="pago-emergencia"
                 type="text"
-                placeholder="Nombre y/o Celular"
-                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+                placeholder="Opcional"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none"
               />
             </div>
           </div>
         </div>
 
-        <!-- 2. INSCRIPCIÓN, PLAN, FECHA DE INICIO Y FECHA DE FINALIZACIÓN -->
-        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3.5">
+        <!-- 2. QUÉ SE ESTÁ COBRANDO Y FECHAS -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div class="flex items-center gap-2">
-              <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">2. Inscripción y Mensualidad</span>
-              <span id="badge-estado-inscripcion-modal" class="hidden text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+              <span class="text-xs sm:text-sm font-black uppercase tracking-wider text-red-400">¿Qué va a pagar hoy?</span>
+              <span id="badge-estado-inscripcion-modal" class="hidden text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                 🎓 Ya tiene Inscripción pagada
               </span>
             </div>
             <div id="botones-duracion-rapida" class="flex gap-1.5">
-              <button type="button" data-quick-duration="30" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+1 Mes</button>
-              <button type="button" data-quick-duration="90" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+3 Meses</button>
-              <button type="button" data-quick-duration="15" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+15 Días</button>
+              <button type="button" data-quick-duration="30" class="quick-dur-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+1 Mes</button>
+              <button type="button" data-quick-duration="90" class="quick-dur-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+3 Meses</button>
+              <button type="button" data-quick-duration="15" class="quick-dur-btn text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+15 Días</button>
             </div>
           </div>
 
-          <!-- Selector de Modalidad de Cobro (Inscripción + Mensualidad | Solo Inscripción | Solo Mensualidad) -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+          <!-- Selector de Modalidad de Cobro -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1.5 bg-slate-900 rounded-xl border border-slate-800">
             <button
               type="button"
               data-tipo-op="INSCRIPCION_Y_MENSUALIDAD"
-              class="btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer"
+              class="btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-extrabold bg-red-600 text-white keep-white-text transition cursor-pointer"
             >
-              🎓 Inscripción + Mensualidad
+              🎓 Inscripción + 1er Mes
             </button>
             <button
               type="button"
               data-tipo-op="SOLO_INSCRIPCION"
-              class="btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+              class="btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
             >
               📝 Solo Inscripción (Matrícula)
             </button>
             <button
               type="button"
               data-tipo-op="MENSUALIDAD"
-              class="btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+              class="btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
             >
               🥊 Solo Mensualidad
             </button>
           </div>
 
-          <!-- Recuadro de Costo de Inscripción (Visible cuando se cobra Inscripción) -->
-          <div id="bloque-costo-inscripcion" class="bg-emerald-950/25 border border-emerald-500/30 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
+          <!-- Recuadro de Costo de Inscripción -->
+          <div id="bloque-costo-inscripcion" class="bg-emerald-500/10 border border-emerald-500/30 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <span class="text-xs font-bold text-emerald-300 block">🎓 Derecho de Inscripción / Matrícula</span>
-              <span id="subtexto-costo-inscripcion" class="text-[11px] text-slate-400">Pago para dar de alta al alumno en el sistema (editable si hay promoción)</span>
+              <span class="text-xs sm:text-sm font-extrabold text-emerald-400 block">🎓 Pago de Inscripción (Matrícula)</span>
+              <span id="subtexto-costo-inscripcion" class="text-xs text-slate-400">Para registrar al alumno en el sistema (puedes cambiar el monto si hay promoción)</span>
             </div>
             <div class="flex items-center gap-2">
-              <span class="text-xs font-bold text-slate-300">Costo Inscripción:</span>
+              <span class="text-xs font-bold text-slate-300">Monto Inscripción:</span>
               <input
                 id="pago-monto-inscripcion"
                 type="number"
                 step="0.01"
                 min="0"
                 value="30.00"
-                class="w-28 bg-slate-900 border border-emerald-500/50 focus:border-emerald-400 rounded-xl px-3 py-1.5 text-sm font-black text-emerald-400 tabular-nums text-right outline-none"
+                class="w-28 bg-slate-900 border-2 border-emerald-500/50 focus:border-emerald-400 rounded-xl px-3 py-1.5 text-base font-black text-emerald-400 tabular-nums text-right outline-none"
               />
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div id="bloque-select-plan">
-              <label class="block text-xs font-semibold text-slate-200 mb-1">Plantilla de Plan / Mensualidad</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">Elegir Plan / Mensualidad</label>
               <select
                 id="pago-select-plan"
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white outline-none"
               ></select>
             </div>
             <div id="bloque-concepto-recibo">
-              <label class="block text-xs font-semibold text-slate-200 mb-1">Concepto en el Recibo *</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">Descripción para el Recibo *</label>
               <input
                 id="pago-concepto"
                 type="text"
                 required
                 placeholder="Ej: Inscripción + Mensual Muay Thai"
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white outline-none"
               />
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
             <div>
-              <label id="label-pago-fecha-inicio" class="block text-xs font-semibold text-slate-200 mb-1">📅 Fecha de Inicio *</label>
+              <label id="label-pago-fecha-inicio" class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">📅 Día que Inicia *</label>
               <input
                 id="pago-fecha-inicio"
                 type="date"
                 required
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white font-semibold tabular-nums outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white font-bold tabular-nums outline-none"
               />
             </div>
             <div id="bloque-fecha-fin">
-              <label class="block text-xs font-semibold text-red-300 mb-1">🏁 Fecha de Finalización (Vencimiento) *</label>
+              <label class="block text-xs sm:text-sm font-bold text-red-400 mb-1">🏁 Día que Vence (Finaliza) *</label>
               <input
                 id="pago-fecha-fin"
                 type="date"
                 required
-                class="w-full bg-slate-900 border border-red-500/50 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white font-semibold tabular-nums outline-none"
+                class="w-full bg-slate-900 border border-red-500/50 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white font-bold tabular-nums outline-none"
               />
             </div>
           </div>
         </div>
 
-        <!-- 3. NÚMERO DE RECIBO, TOTAL A PAGAR Y ABONO -->
-        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
+        <!-- 3. NÚMERO DE RECIBO Y CUÁNTO ESTÁ PAGANDO HOY -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 space-y-3.5">
           <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">3. Número de Recibo y Montos</span>
-            <span id="aviso-recibo-duplicado" class="hidden text-xs font-bold text-amber-400">⚠️ Este N° de recibo ya fue registrado</span>
+            <span class="text-xs sm:text-sm font-black uppercase tracking-wider text-red-400">N° de Recibo y Dinero Recibido</span>
+            <span id="aviso-recibo-duplicado" class="hidden text-xs font-bold text-amber-400">⚠️ Este N° de recibo ya existe</span>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
             <!-- Número de Recibo -->
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">🧾 Número de Recibo *</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">🧾 N° de Recibo *</label>
               <input
                 id="pago-numero-recibo"
                 type="text"
                 required
                 placeholder="000105"
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-emerald-400 tabular-nums outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-base font-mono font-black text-emerald-400 tabular-nums outline-none"
               />
-              <span class="text-[11px] text-slate-400">Auto o escribe el de tu talonario</span>
+              <span class="text-[11px] text-slate-400">Automático o de tu talonario</span>
             </div>
 
             <!-- Total a Pagar -->
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">💰 Total a Pagar (Membresía) *</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">💰 Total que debe pagar *</label>
               <input
                 id="pago-total-pagar"
                 type="number"
                 step="0.01"
                 min="0"
                 required
-                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm font-bold text-white tabular-nums outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-base font-black text-white tabular-nums outline-none"
               />
-              <span class="text-[11px] text-slate-400">Costo total acordado</span>
+              <span class="text-[11px] text-slate-400">Precio total acordado</span>
             </div>
 
             <!-- Monto Abonado Hoy -->
             <div>
-              <label class="block text-xs font-semibold text-emerald-400 mb-1">✅ Monto que Abona Hoy *</label>
+              <label class="block text-xs sm:text-sm font-bold text-emerald-400 mb-1">✅ Cuánto paga HOY *</label>
               <input
                 id="pago-monto-abonado"
                 type="number"
                 step="0.01"
                 min="0.1"
                 required
-                class="w-full bg-slate-900 border border-emerald-500/60 focus:border-emerald-400 rounded-xl px-3.5 py-2 text-sm font-black text-emerald-400 tabular-nums outline-none"
+                class="w-full bg-slate-900 border-2 border-emerald-500/60 focus:border-emerald-400 rounded-xl px-3.5 py-2.5 text-base font-black text-emerald-400 tabular-nums outline-none"
               />
-              <span class="text-[11px] text-slate-400">Si deja adelanto, pon lo que paga hoy</span>
+              <span class="text-[11px] text-slate-400">Si deja adelanto, pon lo que entrega</span>
             </div>
           </div>
 
-          <!-- Resumen en vivo de Saldo Pendiente + Método de Pago -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 items-center">
+          <!-- Resumen en vivo de "Lo que debe" + Método de Pago -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 items-center">
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">Método de Pago</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">¿Cómo pagó?</label>
               <select
                 id="pago-metodo"
-                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white outline-none focus:border-red-500"
               >
-                <option value="EFECTIVO">💵 Efectivo</option>
-                <option value="YAPE_PLIN">📱 Yape / Plin</option>
+                <option value="EFECTIVO">💵 En Efectivo</option>
+                <option value="YAPE_PLIN">📱 Por Yape / Plin</option>
                 <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
                 <option value="TARJETA">💳 Tarjeta POS</option>
               </select>
             </div>
 
-            <div id="caja-resumen-saldo" class="rounded-xl p-3 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+            <div id="caja-resumen-saldo" class="rounded-xl p-3.5 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
               <div>
-                <span class="block text-[11px] font-bold uppercase text-slate-300">Saldo Pendiente</span>
+                <span class="block text-xs font-extrabold uppercase text-slate-300">Lo que resta por pagar:</span>
                 <span id="pago-estado-texto" class="text-xs font-bold text-emerald-400">PAGADO COMPLETO</span>
               </div>
-              <span id="pago-saldo-preview" class="text-xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
+              <span id="pago-saldo-preview" class="text-2xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
             </div>
           </div>
 
           <div>
-            <label class="block text-xs font-medium text-slate-400 mb-1">Observación (Opcional)</label>
+            <label class="block text-xs font-bold text-slate-400 mb-1">Nota u Observación (Opcional)</label>
             <input
               id="pago-observacion"
               type="text"
               placeholder="Ej: Dejó adelanto, cancela el viernes / Descuento hermano..."
-              class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-1.5 text-xs text-white outline-none focus:border-red-500"
+              class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none focus:border-red-500"
             />
           </div>
         </div>
@@ -1085,24 +1462,24 @@
           <button
             type="button"
             data-close-modal="modal-nuevo-pago"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+            class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm font-bold text-slate-300 cursor-pointer"
           >
             Cancelar
           </button>
           <button
             type="submit"
             data-submit-mode="interno"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-white transition cursor-pointer"
+            class="px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs sm:text-sm font-bold text-white transition cursor-pointer"
           >
-            Guardar (Solo Control Interno)
+            Solo Guardar
           </button>
           <button
             type="submit"
             data-submit-mode="digital"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-xs font-black text-white shadow-lg shadow-red-900/40 transition cursor-pointer"
+            class="keep-white-text inline-flex items-center gap-2 px-6 py-3 rounded-xl brand-bg text-xs sm:text-sm font-black text-white shadow-lg transition cursor-pointer"
           >
-            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
-            <span>Guardar y Ver Comprobante Digital</span>
+            <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+            <span>Guardar y Ver Recibo Digital</span>
           </button>
         </div>
       </form>
@@ -1110,17 +1487,17 @@
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 2: COBRAR SALDO PENDIENTE (EMITE NUEVO RECIBO EN CAJA HOY)     -->
+  <!-- MODAL 2: COBRAR SALDO PENDIENTE ("LO QUE DEBE")                      -->
   <!-- ==================================================================== -->
   <div
     id="modal-cobrar-saldo"
     class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
   >
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
-      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 to-amber-950/50 border-b border-slate-800 flex items-center justify-between">
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
         <div class="flex items-center gap-2.5">
-          <i data-lucide="coins" class="w-5 h-5 text-amber-400"></i>
-          <h3 class="font-black text-base text-white">Cobrar Saldo Pendiente</h3>
+          <i data-lucide="coins" class="w-6 h-6 text-amber-400"></i>
+          <h3 class="font-black text-lg text-white">Cobrar Saldo ("Lo que debe")</h3>
         </div>
         <button type="button" data-close-modal="modal-cobrar-saldo" class="text-slate-400 hover:text-white cursor-pointer">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -1129,43 +1506,53 @@
 
       <form id="form-cobrar-saldo" class="p-6 space-y-4">
         <input type="hidden" id="saldo-membresia-id" />
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
-          <p id="saldo-alumno-nombre" class="font-black text-base text-white">—</p>
+
+        <!-- Selector rápido si se abrió desde el botón general del Inicio -->
+        <div id="bloque-selector-deudor" class="hidden">
+          <label class="block text-xs font-bold text-slate-300 mb-1">Elegir Alumno que tiene deuda pendiente:</label>
+          <select
+            id="saldo-select-membresia"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+          ></select>
+        </div>
+
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-1.5">
+          <p id="saldo-alumno-nombre" class="font-black text-lg text-white">—</p>
           <p id="saldo-membresia-detalle" class="text-xs text-slate-400">—</p>
-          <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 mt-2 text-xs">
-            <span class="text-slate-400">Deuda / Saldo Actual:</span>
-            <span id="saldo-monto-actual" class="text-base font-black text-amber-400 tabular-nums">S/ 0.00</span>
+          <div class="flex items-center justify-between pt-2.5 border-t border-slate-800/80 mt-2 text-sm">
+            <span class="font-bold text-slate-400">Lo que debe actualmente:</span>
+            <span id="saldo-monto-actual" class="text-xl font-black text-amber-400 tabular-nums">S/ 0.00</span>
           </div>
         </div>
 
         <div class="grid grid-cols-2 gap-3">
           <div>
-            <label class="block text-xs font-semibold text-slate-200 mb-1">Nuevo N° de Recibo *</label>
+            <label class="block text-xs font-bold text-slate-200 mb-1">Nuevo N° de Recibo *</label>
             <input
               id="saldo-numero-recibo"
               type="text"
               required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-emerald-400 tabular-nums outline-none focus:border-amber-500"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-base font-mono font-bold text-emerald-400 tabular-nums outline-none focus:border-amber-500"
             />
           </div>
           <div>
-            <label class="block text-xs font-semibold text-emerald-400 mb-1">Monto que Abona Hoy *</label>
+            <label class="block text-xs font-bold text-emerald-400 mb-1">Cuánto paga HOY *</label>
             <input
               id="saldo-monto-abonar"
               type="number"
               step="0.01"
               min="0.1"
               required
-              class="w-full bg-slate-950 border border-emerald-500/60 rounded-xl px-3.5 py-2 text-sm font-black text-emerald-400 tabular-nums outline-none"
+              class="w-full bg-slate-950 border-2 border-emerald-500/60 rounded-xl px-3.5 py-2.5 text-base font-black text-emerald-400 tabular-nums outline-none"
             />
           </div>
         </div>
 
         <div>
-          <label class="block text-xs font-semibold text-slate-200 mb-1">Método de Pago</label>
+          <label class="block text-xs font-bold text-slate-200 mb-1">¿Cómo pagó?</label>
           <select
             id="saldo-metodo-pago"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
           >
             <option value="EFECTIVO">💵 Efectivo</option>
             <option value="YAPE_PLIN">📱 Yape / Plin</option>
@@ -1175,7 +1562,7 @@
         </div>
 
         <div>
-          <label class="block text-xs font-medium text-slate-400 mb-1">Observación</label>
+          <label class="block text-xs font-bold text-slate-400 mb-1">Observación</label>
           <input
             id="saldo-observacion"
             type="text"
@@ -1194,10 +1581,10 @@
           </button>
           <button
             type="submit"
-            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer"
+            class="keep-white-text inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-black text-xs sm:text-sm transition cursor-pointer"
           >
             <i data-lucide="check" class="w-4 h-4"></i>
-            <span>Registrar Recibo de Saldo</span>
+            <span>Registrar Pago de Saldo</span>
           </button>
         </div>
       </form>
@@ -1211,11 +1598,11 @@
     id="modal-comprobante"
     class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
   >
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden my-auto">
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden my-auto">
       <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
         <div class="flex items-center gap-2">
           <i data-lucide="award" class="w-5 h-5 text-red-400"></i>
-          <h3 class="font-black text-sm sm:text-base text-white">Comprobante Digital Oficial</h3>
+          <h3 class="font-black text-base text-white">Recibo Digital Listo para Enviar</h3>
         </div>
         <button type="button" data-close-modal="modal-comprobante" class="text-slate-400 hover:text-white cursor-pointer">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -1223,19 +1610,17 @@
       </div>
 
       <div class="p-4 sm:p-5 space-y-4">
-        <!-- Área del Canvas imprimible -->
         <div id="print-receipt-area" class="bg-slate-950 rounded-xl p-2 border border-slate-800 flex justify-center">
           <canvas id="canvas-comprobante" class="w-full max-w-[380px] h-auto rounded-lg shadow-lg"></canvas>
         </div>
 
-        <!-- Botones de Acción de Comprobante -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <a
             id="btn-whatsapp-recibo"
             href="#"
             target="_blank"
             rel="noopener"
-            class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer"
+            class="keep-white-text inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl transition cursor-pointer"
           >
             <i data-lucide="send" class="w-4 h-4"></i>
             <span>Enviar por WhatsApp</span>
@@ -1243,10 +1628,10 @@
           <button
             id="btn-copiar-imagen-recibo"
             type="button"
-            class="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer"
+            class="keep-white-text inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl transition cursor-pointer"
           >
             <i data-lucide="copy" class="w-4 h-4"></i>
-            <span>Copiar Imagen (Pegar en WhatsApp)</span>
+            <span>Copiar Imagen (Ctrl+V)</span>
           </button>
           <button
             id="btn-descargar-png-recibo"
@@ -1262,7 +1647,7 @@
             class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
           >
             <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>Imprimir Comprobante</span>
+            <span>Imprimir Recibo</span>
           </button>
         </div>
       </div>
@@ -1276,11 +1661,11 @@
     id="modal-historial-alumno"
     class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
   >
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto">
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto">
       <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <div>
-          <h3 id="hist-alumno-nombre" class="font-black text-lg text-white">Ficha del Alumno</h3>
-          <p id="hist-alumno-subtitulo" class="text-xs text-slate-400">Historial de membresías y recibos emitidos</p>
+          <h3 id="hist-alumno-nombre" class="font-black text-lg sm:text-xl text-white">Ficha del Alumno</h3>
+          <p id="hist-alumno-subtitulo" class="text-xs sm:text-sm text-slate-400">Historial de pagos y recibos</p>
         </div>
         <button type="button" data-close-modal="modal-historial-alumno" class="text-slate-400 hover:text-white cursor-pointer">
           <i data-lucide="x" class="w-5 h-5"></i>
@@ -1291,23 +1676,23 @@
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 5: ACCESO ADMINISTRADOR / CAMBIO DE ROL (ADMIN vs RECEPCIÓN)   -->
+  <!-- MODAL 5: ACCESO ADMINISTRADOR / CAMBIO DE ROL                        -->
   <!-- ==================================================================== -->
   <div
     id="modal-login-admin"
     class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
   >
-    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
-      <div class="px-6 py-5 bg-gradient-to-r from-slate-900 to-red-950/60 border-b border-slate-800 text-center">
-        <div class="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-2xl mx-auto mb-2">
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-slate-800 text-center">
+        <div class="w-12 h-12 rounded-2xl brand-bg flex items-center justify-center text-2xl mx-auto mb-2 keep-white-text">
           🥋
         </div>
-        <h3 class="font-black text-base text-white">Control de Acceso del Gimnasio</h3>
-        <p class="text-xs text-slate-400 mt-0.5">Selecciona el modo de uso o ingresa la clave de Administrador</p>
+        <h3 class="font-black text-base text-white">Modo de Uso del Sistema</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Elige Administrador (Papá) o Modo Recepción</p>
       </div>
       <form id="form-login-admin" class="p-6 space-y-4">
         <div>
-          <label class="block text-xs font-bold text-slate-300 mb-1.5">🔑 Clave / PIN de Administrador</label>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">🔑 Clave de Administrador</label>
           <input
             id="login-input-pin"
             type="password"
@@ -1317,7 +1702,7 @@
         </div>
         <button
           type="submit"
-          class="w-full bg-red-600 hover:bg-red-500 text-white font-black text-xs py-3 rounded-xl shadow-lg shadow-red-900/40 transition cursor-pointer"
+          class="keep-white-text w-full brand-bg font-black text-xs sm:text-sm py-3 rounded-xl shadow-lg transition cursor-pointer"
         >
           🔓 Entrar como Administrador (Acceso Total)
         </button>
@@ -1331,7 +1716,7 @@
           type="button"
           class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
         >
-          🔒 Usar en Modo Recepción (Solo registrar pagos)
+          🔒 Usar en Modo Recepción (Solo cobrar)
         </button>
       </form>
     </div>
@@ -1341,11 +1726,11 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
-  <script src="./src/js/cloudConfig.js?v=3"></script>
-  <script src="./src/js/store.js?v=3"></script>
-  <script src="./src/js/receiptGenerator.js?v=3"></script>
-  <script src="./src/js/excelExporter.js?v=3"></script>
-  <script src="./src/js/supabaseSync.js?v=3"></script>
-  <script src="./src/js/app.js?v=3"></script>
+  <script src="./src/js/cloudConfig.js?v=4"></script>
+  <script src="./src/js/store.js?v=4"></script>
+  <script src="./src/js/receiptGenerator.js?v=4"></script>
+  <script src="./src/js/excelExporter.js?v=4"></script>
+  <script src="./src/js/supabaseSync.js?v=4"></script>
+  <script src="./src/js/app.js?v=4"></script>
 </body>
 </html>

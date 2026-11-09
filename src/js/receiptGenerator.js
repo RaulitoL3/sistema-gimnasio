@@ -11,6 +11,13 @@
     TARJETA: 'TARJETA POS'
   };
 
+  const BRAND_PALETTES = {
+    ROJO: { gradEnd: '#991b1b', accent: '#dc2626', subtext: '#fca5a5' },
+    AZUL: { gradEnd: '#1e40af', accent: '#2563eb', subtext: '#93c5fd' },
+    DORADO: { gradEnd: '#92400e', accent: '#d97706', subtext: '#fde68a' },
+    ESMERALDA: { gradEnd: '#065f46', accent: '#059669', subtext: '#6ee7b7' }
+  };
+
   /**
    * Dibuja el comprobante digital en un elemento <canvas> en alta resolución
    */
@@ -22,6 +29,7 @@
     canvas.width = W;
     canvas.height = H;
 
+    const palette = BRAND_PALETTES[config.color_tema] || BRAND_PALETTES.ROJO;
     const moneda = config.moneda || 'S/';
     const { alumno, membresia } = detalleRecibo;
     const nombreCompleto = `${alumno.nombres || ''} ${alumno.apellidos || ''}`.trim();
@@ -43,23 +51,23 @@
     roundRect(ctx, cardX, cardY, cardW, cardH, 24);
     ctx.fill();
 
-    // Cabecera oscura deportiva (Rojo/Negro Artes Marciales)
+    // Cabecera oscura deportiva con el color personalizado de la academia
     const headerGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + 190);
-    headerGrad.addColorStop(0, '#111827');
-    headerGrad.addColorStop(0.65, '#1e293b');
-    headerGrad.addColorStop(1, '#991b1b');
+    headerGrad.addColorStop(0, '#0f172a');
+    headerGrad.addColorStop(0.6, '#1e293b');
+    headerGrad.addColorStop(1, palette.gradEnd);
     ctx.fillStyle = headerGrad;
     roundRectTop(ctx, cardX, cardY, cardW, 195, 24);
     ctx.fill();
 
-    // Franja dorada/roja decorativa inferior del header
-    ctx.fillStyle = '#dc2626';
+    // Franja decorativa inferior del header
+    ctx.fillStyle = palette.accent;
     ctx.fillRect(cardX, cardY + 190, cardW, 6);
 
     // Icono/Emblema circular en cabecera
-    ctx.fillStyle = '#dc2626';
+    ctx.fillStyle = palette.accent;
     ctx.beginPath();
-    ctx.arc(cardX + 68, cardY + 80, 34, 0, Math.PI * 2);
+    ctx.arc(cardX + 68, cardY + 80, 36, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.fillStyle = '#ffffff';
@@ -67,13 +75,30 @@
     ctx.textAlign = 'center';
     ctx.fillText('🥋', cardX + 68, cardY + 90);
 
+    // Si hay logo_url cargado, dibujarlo encima del círculo
+    if (config.logo_url) {
+      const img = new Image();
+      img.onload = () => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cardX + 68, cardY + 80, 34, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(cardX + 34, cardY + 46, 68, 68);
+        ctx.drawImage(img, cardX + 34, cardY + 46, 68, 68);
+        ctx.restore();
+      };
+      img.src = config.logo_url;
+    }
+
     // Nombre de la Academia
     ctx.textAlign = 'left';
     ctx.fillStyle = '#ffffff';
     ctx.font = '800 26px "Inter", system-ui, sans-serif';
     ctx.fillText((config.nombre_academia || 'GIMNASIO ARTES MARCIALES').toUpperCase(), cardX + 118, cardY + 68);
 
-    ctx.fillStyle = '#fca5a5';
+    ctx.fillStyle = palette.subtext;
     ctx.font = '600 15px "Inter", system-ui, sans-serif';
     ctx.fillText(config.subtitulo || 'Centro de Entrenamiento & Artes Marciales', cardX + 118, cardY + 95);
 

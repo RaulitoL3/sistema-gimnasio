@@ -294,6 +294,9 @@ function crearDatosIniciales() {
     direccion: 'Av. Principal 123 - Lima, Perú',
     moneda: 'S/',
     precio_inscripcion: 30.00,
+    color_tema: 'ROJO', // ROJO | AZUL | DORADO | ESMERALDA
+    tema_visual: 'CLARO', // CLARO | OSCURO
+    logo_url: '',
     serie_recibo: '001',
     proximo_nro_recibo: 105,
     dias_alerta_vencimiento: 5,
@@ -344,6 +347,12 @@ class GymStore {
         if (parsed && parsed.configuracion && Array.isArray(parsed.alumnos)) {
           if (parsed.configuracion.precio_inscripcion === undefined) {
             parsed.configuracion.precio_inscripcion = 30.00;
+          }
+          if (!parsed.configuracion.color_tema) {
+            parsed.configuracion.color_tema = 'ROJO';
+          }
+          if (!parsed.configuracion.tema_visual) {
+            parsed.configuracion.tema_visual = 'CLARO';
           }
           const savedRole = localStorage.getItem('dojo_gym_device_role');
           if (savedRole) parsed.configuracion.rol_actual = savedRole;

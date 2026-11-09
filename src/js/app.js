@@ -7,8 +7,7 @@
     getLocalDateISO,
     formatDatePE,
     formatDateTimePE,
-    calcularFechaFin,
-    addDaysISO
+    calcularFechaFin
   } = global.GymStore;
 
   const {
@@ -29,6 +28,7 @@
   const { probarConexionSupabase, subirDatosASupabase } = global.SupabaseSync;
 
   let tabActual = 'dashboard';
+  let vistaAlumnosModo = 'TARJETAS'; // 'TARJETAS' | 'TABLA'
   let modoModalPago = 'NUEVO'; // 'NUEVO' | 'EXISTENTE'
   let tipoOperacionPago = 'INSCRIPCION_Y_MENSUALIDAD'; // 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
   let reciboActualEnVisor = null;
@@ -38,10 +38,10 @@
     const container = document.getElementById('toast-container');
     if (!container) return;
     const colores = {
-      success: 'bg-emerald-600 border-emerald-400 text-white',
+      success: 'bg-emerald-600 border-emerald-400 text-white keep-white-text',
       warning: 'bg-amber-500 border-amber-300 text-slate-950',
-      error: 'bg-red-600 border-red-400 text-white',
-      info: 'bg-sky-600 border-sky-400 text-white'
+      error: 'bg-red-600 border-red-400 text-white keep-white-text',
+      info: 'bg-sky-600 border-sky-400 text-white keep-white-text'
     };
     const toast = document.createElement('div');
     toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all duration-300 ${colores[tipo] || colores.success}`;
@@ -64,6 +64,81 @@
     return (store.state.configuracion.rol_actual || 'ADMIN') === 'ADMIN';
   }
 
+  /**
+   * Devuelve colores e iniciales según el cinturón/grado del alumno
+   */
+  function obtenerEstiloCinturon(grado = '') {
+    const g = grado.toLowerCase();
+    if (g.includes('azul')) {
+      return { bg: 'bg-blue-600 text-white border-blue-400', label: '🔵 Cinturón Azul' };
+    }
+    if (g.includes('morado')) {
+      return { bg: 'bg-purple-600 text-white border-purple-400', label: '🟣 Cinturón Morado' };
+    }
+    if (g.includes('marrón') || g.includes('marron')) {
+      return { bg: 'bg-amber-800 text-white border-amber-600', label: '🟤 Cinturón Marrón' };
+    }
+    if (g.includes('negro')) {
+      return { bg: 'bg-slate-950 text-amber-400 border-amber-400', label: '⚫ Cinturón Negro' };
+    }
+    if (g.includes('competidor')) {
+      return { bg: 'bg-red-600 text-white border-red-400', label: '🔴 Competidor' };
+    }
+    if (g.includes('infantil') || g.includes('kids')) {
+      return { bg: 'bg-emerald-600 text-white border-emerald-400', label: '🟢 Infantil / Kids' };
+    }
+    return { bg: 'bg-slate-200 text-slate-800 border-slate-400', label: '⚪ Principiante / Blanco' };
+  }
+
+  function obtenerIniciales(nombres = '', apellidos = '') {
+    const n = (nombres || '').trim().charAt(0).toUpperCase();
+    const a = (apellidos || '').trim().charAt(0).toUpperCase();
+    return (n + a) || '🥋';
+  }
+
+  /**
+   * Aplica tema Claro/Oscuro, color de marca y logo de la academia
+   */
+  function aplicarIdentidadVisual() {
+    const cfg = store.state.configuracion;
+    const colorTema = cfg.color_tema || 'ROJO';
+    const temaVisual = cfg.tema_visual || 'CLARO';
+
+    document.body.setAttribute('data-brand', colorTema);
+    document.body.classList.toggle('light-theme', temaVisual === 'CLARO');
+
+    const txtToggle = document.getElementById('texto-toggle-tema');
+    if (txtToggle) {
+      txtToggle.textContent =
+        temaVisual === 'CLARO' ? '☀️ Modo Claro (Fácil lectura)' : '🌙 Modo Oscuro Activo';
+    }
+
+    // Logo en menú lateral y en vista previa de configuración
+    const logoUrl = cfg.logo_url || '';
+    const headerImg = document.getElementById('header-gym-logo-img');
+    const headerFallback = document.getElementById('header-gym-logo-fallback');
+    const cfgImg = document.getElementById('cfg-logo-preview');
+    const cfgFallback = document.getElementById('cfg-logo-fallback');
+
+    if (logoUrl) {
+      if (headerImg) {
+        headerImg.src = logoUrl;
+        headerImg.classList.remove('hidden');
+      }
+      if (headerFallback) headerFallback.classList.add('hidden');
+      if (cfgImg) {
+        cfgImg.src = logoUrl;
+        cfgImg.classList.remove('hidden');
+      }
+      if (cfgFallback) cfgFallback.classList.add('hidden');
+    } else {
+      if (headerImg) headerImg.classList.add('hidden');
+      if (headerFallback) headerFallback.classList.remove('hidden');
+      if (cfgImg) cfgImg.classList.add('hidden');
+      if (cfgFallback) cfgFallback.classList.remove('hidden');
+    }
+  }
+
   function cambiarTab(tabName) {
     if ((tabName === 'configuracion' || tabName === 'planes') && !esAdmin()) {
       mostrarToast('Se requiere clave de Administrador para entrar a esta sección', 'warning');
@@ -81,8 +156,8 @@
     document.querySelectorAll('.nav-tab-btn').forEach((btn) => {
       const isSelected = btn.getAttribute('data-tab') === tabName;
       btn.className = isSelected
-        ? 'nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 border-red-500 text-red-400 whitespace-nowrap transition cursor-pointer'
-        : 'nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer';
+        ? 'nav-tab-btn keep-white-text w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-extrabold brand-bg text-white shadow-md whitespace-nowrap transition cursor-pointer'
+        : 'nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer';
     });
 
     renderTodo();
@@ -105,7 +180,9 @@
     const cfg = store.state.configuracion;
     const moneda = cfg.moneda || 'S/';
 
-    // Cabecera
+    aplicarIdentidadVisual();
+
+    // Cabecera / Sidebar
     document.getElementById('header-gym-name').textContent = cfg.nombre_academia || 'GIMNASIO ARTES MARCIALES';
     document.getElementById('header-gym-subtitle').textContent = cfg.subtitulo || 'Artes Marciales & Deportes de Contacto';
     document.getElementById('nav-badge-recibos').textContent = store.state.recibos.filter((r) => !r.anulado).length;
@@ -117,11 +194,11 @@
       if (esAdmin()) {
         badgeRol.textContent = 'ADMIN (PAPÁ)';
         btnRol.className =
-          'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center gap-1 transition cursor-pointer';
+          'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center gap-1 transition cursor-pointer';
       } else {
         badgeRol.textContent = 'MODO RECEPCIÓN 🔒';
         btnRol.className =
-          'text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center gap-1 transition cursor-pointer';
+          'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center gap-1 transition cursor-pointer';
       }
     }
 
@@ -134,7 +211,7 @@
   }
 
   // =========================================================================
-  // 1. RENDER DASHBOARD
+  // 1. RENDER DASHBOARD (INICIO Y RECEPCIÓN)
   // =========================================================================
   function renderDashboard(moneda) {
     const hoyISO = getLocalDateISO();
@@ -147,7 +224,7 @@
     const totalHoy = recibosHoy.reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
 
     document.getElementById('kpi-ingresos-hoy').textContent = `${moneda} ${totalHoy.toFixed(2)}`;
-    document.getElementById('kpi-ingresos-hoy-detalle').textContent = `${recibosHoy.length} recibo(s) emitido(s) hoy`;
+    document.getElementById('kpi-ingresos-hoy-detalle').textContent = `${recibosHoy.length} recibo(s) cobrado(s) hoy`;
 
     // Ingresos del Mes
     const recibosMes = recibosValidos.filter((r) => getLocalDateISO(new Date(r.fecha_pago)).startsWith(mesActualPrefix));
@@ -165,12 +242,12 @@
       document.getElementById('kpi-ingresos-mes-detalle').textContent = 'Protegido en Modo Recepción';
     }
 
-    // Saldos Pendientes
+    // Saldos Pendientes ("Lo que nos deben")
     const membresiasConSaldo = store.state.membresias.filter((m) => Number(m.saldo_pendiente) > 0 && m.estado_pago !== 'ANULADO');
     const totalSaldos = membresiasConSaldo.reduce((acc, m) => acc + Number(m.saldo_pendiente || 0), 0);
 
     document.getElementById('kpi-saldos-pendientes').textContent = `${moneda} ${totalSaldos.toFixed(2)}`;
-    document.getElementById('kpi-saldos-detalle').textContent = `${membresiasConSaldo.length} membresía(s) con pago parcial`;
+    document.getElementById('kpi-saldos-detalle').textContent = `${membresiasConSaldo.length} alumno(s) con saldo por pagar`;
 
     // Estado de Alumnos
     const alumnosConEstado = store.getAlumnosConEstado();
@@ -178,7 +255,7 @@
     const porVencer = alumnosConEstado.filter((a) => a.estado_vigencia === 'POR_VENCER');
     const vencidos = alumnosConEstado.filter((a) => a.estado_vigencia === 'VENCIDO');
 
-    document.getElementById('kpi-alumnos-activos').textContent = `${activos.length} Activos`;
+    document.getElementById('kpi-alumnos-activos').textContent = `${activos.length} Al Día`;
     document.getElementById('kpi-alumnos-alertas').textContent = `${porVencer.length} por vencer • ${vencidos.length} vencidos`;
 
     // Bandeja 1: Alertas de Vencimiento
@@ -188,8 +265,8 @@
     const contenedorVenc = document.getElementById('dashboard-lista-vencimientos');
     if (alertasVencimiento.length === 0) {
       contenedorVenc.innerHTML = `
-        <div class="p-8 text-center text-slate-400 text-sm">
-          🎉 ¡Excelente! Todos los alumnos están al día con sus fechas de membresía.
+        <div class="p-8 text-center text-slate-400 text-sm font-medium">
+          🎉 ¡Excelente! Todos los alumnos están al día con sus mensualidades.
         </div>`;
     } else {
       contenedorVenc.innerHTML = alertasVencimiento
@@ -197,22 +274,22 @@
           const mem = alu.ultima_membresia;
           const esVencido = alu.dias_restantes < 0;
           const badgeHtml = esVencido
-            ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">Venció hace ${Math.abs(alu.dias_restantes)} día(s)</span>`
+            ? `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">🔴 Venció hace ${Math.abs(alu.dias_restantes)} día(s)</span>`
             : alu.dias_restantes === 0
-            ? `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Vence HOY</span>`
-            : `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">Vence en ${alu.dias_restantes} día(s)</span>`;
+            ? `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">🟡 Vence HOY</span>`
+            : `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">🟡 Vence en ${alu.dias_restantes} día(s)</span>`;
 
           const waLink = generarLinkWhatsAppRecordatorio(alu, store.state.configuracion, 'VENCIMIENTO');
 
           return `
             <div class="p-4 hover:bg-slate-800/40 transition flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-sm text-white">${alu.nombre_completo}</span>
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-extrabold text-sm sm:text-base text-white">${alu.nombre_completo}</span>
                   ${badgeHtml}
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${mem ? `${mem.concepto} • Del ${formatDatePE(mem.fecha_inicio)} al <b class="text-slate-200">${formatDatePE(mem.fecha_fin)}</b>` : ''}
+                  ${mem ? `${mem.concepto} • Vence el: <b class="text-slate-200">${formatDatePE(mem.fecha_fin)}</b>` : ''}
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -221,17 +298,17 @@
                   target="_blank"
                   rel="noopener"
                   title="Enviar recordatorio por WhatsApp"
-                  class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  class="keep-white-text px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
-                  <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-                  <span>WhatsApp</span>
+                  <i data-lucide="message-circle" class="w-4 h-4"></i>
+                  <span>Avisar</span>
                 </a>
                 <button
                   type="button"
                   onclick="window.AppUI.abrirModalRenovar('${alu.id}')"
-                  class="px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 text-white text-xs font-bold cursor-pointer"
+                  class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-white text-xs font-extrabold cursor-pointer"
                 >
-                  Renovar
+                  Cobrar Mes
                 </button>
               </div>
             </div>`;
@@ -239,14 +316,14 @@
         .join('');
     }
 
-    // Bandeja 2: Alumnos con Saldo Pendiente
+    // Bandeja 2: Alumnos con Saldo Pendiente ("Lo que deben")
     document.getElementById('badge-count-saldos').textContent = membresiasConSaldo.length;
     const contenedorSaldos = document.getElementById('dashboard-lista-saldos');
 
     if (membresiasConSaldo.length === 0) {
       contenedorSaldos.innerHTML = `
-        <div class="p-8 text-center text-slate-400 text-sm">
-          ✅ Ningún alumno tiene saldos pendientes por pagar.
+        <div class="p-8 text-center text-slate-400 text-sm font-medium">
+          ✅ Ningún alumno debe saldo pendiente en este momento.
         </div>`;
     } else {
       contenedorSaldos.innerHTML = membresiasConSaldo
@@ -262,14 +339,14 @@
           return `
             <div class="p-4 hover:bg-slate-800/40 transition flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-bold text-sm text-white">${alu.nombre_completo}</span>
-                  <span class="text-xs font-black px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">
-                    Debe ${moneda} ${Number(mem.saldo_pendiente).toFixed(2)}
+                <div class="flex items-center gap-2 flex-wrap">
+                  <span class="font-extrabold text-sm sm:text-base text-white">${alu.nombre_completo}</span>
+                  <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">
+                    ⚠️ Debe ${moneda} ${Number(mem.saldo_pendiente).toFixed(2)}
                   </span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${mem.concepto} • Total: ${moneda} ${Number(mem.total_a_pagar).toFixed(2)} (Abonó: ${moneda} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
+                  ${mem.concepto} • Total: ${moneda} ${Number(mem.total_a_pagar).toFixed(2)} (Ya pagó: ${moneda} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -277,15 +354,15 @@
                   href="${waLink}"
                   target="_blank"
                   rel="noopener"
-                  class="px-2.5 py-1.5 rounded-lg bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 text-emerald-300 text-xs font-bold flex items-center gap-1 cursor-pointer"
+                  class="keep-white-text px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
                 >
-                  <i data-lucide="message-circle" class="w-3.5 h-3.5"></i>
-                  <span>Avisar</span>
+                  <i data-lucide="message-circle" class="w-4 h-4"></i>
+                  <span>WhatsApp</span>
                 </a>
                 <button
                   type="button"
                   onclick="window.AppUI.abrirModalCobrarSaldo('${mem.id}')"
-                  class="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 text-xs font-black cursor-pointer"
+                  class="keep-white-text px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer"
                 >
                   Cobrar Saldo
                 </button>
@@ -311,54 +388,54 @@
     const badgeSaldo = r.anulado
       ? `<span class="text-xs font-bold text-red-400">ANULADO</span>`
       : saldo > 0
-      ? `<span class="inline-flex items-center gap-1 text-xs font-bold text-amber-400 tabular-nums">${moneda} ${saldo.toFixed(2)}</span>`
-      : `<span class="text-xs font-semibold text-emerald-400 tabular-nums">${moneda} 0.00</span>`;
+      ? `<span class="inline-flex items-center gap-1 text-xs font-black text-amber-400 tabular-nums">Debe ${moneda} ${saldo.toFixed(2)}</span>`
+      : `<span class="text-xs font-bold text-emerald-400 tabular-nums">No debe nada</span>`;
 
     return `
       <tr class="${claseAnulado} transition">
-        <td class="py-3 px-4 font-mono font-bold text-emerald-400 tabular-nums">
+        <td class="py-3.5 px-4 font-mono font-black text-emerald-400 tabular-nums">
           #${r.numero_recibo}
         </td>
         ${
           !compacto
-            ? `<td class="py-3 px-4 text-xs text-slate-300 tabular-nums whitespace-nowrap">${formatDateTimePE(r.fecha_pago)}</td>`
+            ? `<td class="py-3.5 px-4 text-xs font-medium text-slate-300 tabular-nums whitespace-nowrap">${formatDateTimePE(r.fecha_pago)}</td>`
             : ''
         }
-        <td class="py-3 px-4">
+        <td class="py-3.5 px-4">
           <button
             type="button"
             onclick="window.AppUI.abrirHistorialAlumno('${r.alumno_id}')"
-            class="font-bold text-white hover:text-red-400 text-left transition cursor-pointer"
+            class="font-extrabold text-white hover:text-red-400 text-left transition cursor-pointer"
           >
             ${r.nombre_completo}
           </button>
         </td>
-        <td class="py-3 px-4 text-xs text-slate-300">${m.concepto || 'Membresía'}</td>
-        <td class="py-3 px-4 text-xs font-semibold text-slate-200 tabular-nums whitespace-nowrap">${formatDatePE(m.fecha_inicio)}</td>
-        <td class="py-3 px-4 text-xs font-semibold text-red-300 tabular-nums whitespace-nowrap">${
+        <td class="py-3.5 px-4 text-xs font-semibold text-slate-300">${m.concepto || 'Membresía'}</td>
+        <td class="py-3.5 px-4 text-xs font-bold text-slate-200 tabular-nums whitespace-nowrap">${formatDatePE(m.fecha_inicio)}</td>
+        <td class="py-3.5 px-4 text-xs font-bold text-red-300 tabular-nums whitespace-nowrap">${
           m.tipo_operacion === 'SOLO_INSCRIPCION'
-            ? `<span class="text-xs font-bold text-emerald-400">PAGO ÚNICO (ALTA)</span>`
+            ? `<span class="text-xs font-extrabold text-emerald-400">PAGO ÚNICO (INSCRITO)</span>`
             : formatDatePE(m.fecha_fin)
         }</td>
-        <td class="py-3 px-4 text-right font-semibold text-slate-200 tabular-nums whitespace-nowrap">${moneda} ${Number(m.total_a_pagar || 0).toFixed(2)}</td>
-        <td class="py-3 px-4 text-right font-black text-emerald-400 tabular-nums whitespace-nowrap">${moneda} ${Number(r.monto_abonado || 0).toFixed(2)}</td>
-        <td class="py-3 px-4 text-right tabular-nums whitespace-nowrap">${badgeSaldo}</td>
+        <td class="py-3.5 px-4 text-right font-bold text-slate-200 tabular-nums whitespace-nowrap">${moneda} ${Number(m.total_a_pagar || 0).toFixed(2)}</td>
+        <td class="py-3.5 px-4 text-right font-black text-emerald-400 tabular-nums whitespace-nowrap">${moneda} ${Number(r.monto_abonado || 0).toFixed(2)}</td>
+        <td class="py-3.5 px-4 text-right tabular-nums whitespace-nowrap">${badgeSaldo}</td>
         ${
           !compacto
-            ? `<td class="py-3 px-4 text-center">
-                <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-slate-800 text-slate-200 border border-slate-700">
+            ? `<td class="py-3.5 px-4 text-center">
+                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
                   ${METODO_LABELS[r.metodo_pago] || r.metodo_pago}
                 </span>
               </td>`
             : ''
         }
-        <td class="py-3 px-4 text-center whitespace-nowrap">
+        <td class="py-3.5 px-4 text-center whitespace-nowrap">
           <div class="inline-flex items-center gap-1.5">
             <button
               type="button"
               onclick="window.AppUI.verComprobanteDigital('${r.id}')"
               title="Ver Comprobante Digital / Enviar por WhatsApp"
-              class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-300 border border-slate-700 cursor-pointer"
+              class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
             >
               Recibo Digital
             </button>
@@ -367,8 +444,8 @@
                 ? `<button
                     type="button"
                     onclick="window.AppUI.abrirModalCobrarSaldo('${m.id}')"
-                    title="Cobrar el saldo restante de esta membresía"
-                    class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-xs font-bold text-amber-300 border border-amber-500/30 cursor-pointer"
+                    title="Cobrar lo que debe de esta membresía"
+                    class="keep-white-text px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white cursor-pointer"
                   >
                     Cobrar Saldo
                   </button>`
@@ -380,7 +457,7 @@
                     type="button"
                     onclick="window.AppUI.anularOReactivarRecibo('${r.id}')"
                     title="${r.anulado ? 'Reactivar recibo' : 'Anular recibo'}"
-                    class="px-2 py-1 rounded-lg bg-slate-800 hover:bg-red-950/60 text-xs text-slate-400 hover:text-red-300 cursor-pointer"
+                    class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 text-xs font-bold text-slate-400 hover:text-red-300 cursor-pointer"
                   >
                     ${r.anulado ? 'Reactivar' : 'Anular'}
                   </button>`
@@ -437,8 +514,8 @@
     if (filtrados.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="11" class="py-10 text-center text-slate-400 text-sm">
-            No se encontraron recibos con los filtros seleccionados.
+          <td colspan="11" class="py-10 text-center text-slate-400 text-sm font-medium">
+            No se encontraron recibos con esos filtros.
           </td>
         </tr>`;
       return;
@@ -448,7 +525,7 @@
   }
 
   // =========================================================================
-  // 3. RENDER PADRÓN DE ALUMNOS Y VIGENCIAS
+  // 3. RENDER PADRÓN DE ALUMNOS (TARJETAS VISUALES + TABLA)
   // =========================================================================
   function getAlumnosFiltrados() {
     const texto = (document.getElementById('filtro-alumnos-texto')?.value || '').trim().toLowerCase();
@@ -472,92 +549,242 @@
     });
   }
 
+  function setModoVistaAlumnos(modo) {
+    vistaAlumnosModo = modo;
+    const btnTarjetas = document.getElementById('btn-vista-alumnos-tarjetas');
+    const btnTabla = document.getElementById('btn-vista-alumnos-tabla');
+    const contTarjetas = document.getElementById('contenedor-alumnos-tarjetas');
+    const contTabla = document.getElementById('contenedor-alumnos-tabla');
+
+    if (modo === 'TARJETAS') {
+      if (btnTarjetas) btnTarjetas.className = 'px-3 py-1.5 rounded-lg text-xs font-extrabold brand-bg text-white keep-white-text cursor-pointer';
+      if (btnTabla) btnTabla.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer';
+      contTarjetas?.classList.remove('hidden');
+      contTabla?.classList.add('hidden');
+    } else {
+      if (btnTabla) btnTabla.className = 'px-3 py-1.5 rounded-lg text-xs font-extrabold brand-bg text-white keep-white-text cursor-pointer';
+      if (btnTarjetas) btnTarjetas.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer';
+      contTabla?.classList.remove('hidden');
+      contTarjetas?.classList.add('hidden');
+    }
+  }
+
   function renderTablaAlumnos(moneda) {
     const tbody = document.getElementById('tabla-alumnos-body');
-    if (!tbody) return;
+    const gridTarjetas = document.getElementById('contenedor-alumnos-tarjetas');
     const alumnos = getAlumnosFiltrados();
 
     if (alumnos.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="9" class="py-10 text-center text-slate-400 text-sm">
-            No se encontraron alumnos con ese criterio.
-          </td>
-        </tr>`;
+      if (gridTarjetas) {
+        gridTarjetas.innerHTML = `
+          <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center text-slate-400 text-sm font-medium">
+            No se encontraron alumnos con ese criterio de búsqueda.
+          </div>`;
+      }
+      if (tbody) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="9" class="py-10 text-center text-slate-400 text-sm">
+              No se encontraron alumnos con ese criterio.
+            </td>
+          </tr>`;
+      }
       return;
     }
 
-    tbody.innerHTML = alumnos
-      .map((a) => {
-        const mem = a.ultima_membresia;
-        let badgeVigencia = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Sin membresía</span>`;
-        if (a.estado_vigencia === 'ACTIVO') {
-          badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tabular-nums">🟢 Activo (${a.dias_restantes}d)</span>`;
-        } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
-          badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">🎓 Inscrito (Falta 1ra Mensualidad)</span>`;
-        } else if (a.estado_vigencia === 'POR_VENCER') {
-          badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">🟡 Vence en ${a.dias_restantes}d</span>`;
-        } else if (a.estado_vigencia === 'VENCIDO') {
-          badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 tabular-nums">🔴 Vencido (${Math.abs(a.dias_restantes)}d)</span>`;
-        }
+    // 1. Renderizar Tarjetas Visuales Grandes con Avatar de Cinturón y Estado Gigante
+    if (gridTarjetas) {
+      gridTarjetas.innerHTML = alumnos
+        .map((a) => {
+          const mem = a.ultima_membresia;
+          const belt = obtenerEstiloCinturon(a.grado_cinturon);
+          const iniciales = obtenerIniciales(a.nombres, a.apellidos);
 
-        const badgeInscrito =
-          a.inscripcion_pagada !== false
-            ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🎓 Inscrito</span>`
-            : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">⚠️ Sin inscripción</span>`;
+          let estadoBannerClass = 'bg-slate-800 text-slate-300 border-slate-700';
+          let estadoBannerTexto = '⚪ SIN MENSUALIDAD ACTIVA';
 
-        const saldoHtml =
-          a.saldo_total_pendiente > 0
-            ? `<span class="font-black text-amber-400 tabular-nums">${moneda} ${a.saldo_total_pendiente.toFixed(2)}</span>`
-            : `<span class="text-slate-400 tabular-nums">${moneda} 0.00</span>`;
+          if (a.estado_vigencia === 'ACTIVO') {
+            estadoBannerClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
+            estadoBannerTexto = `🟢 AL DÍA • Quedan ${a.dias_restantes} día(s)`;
+          } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
+            estadoBannerClass = 'bg-sky-500/15 text-sky-400 border-sky-500/30';
+            estadoBannerTexto = `🎓 INSCRITO • FALTA PAGAR 1ER MES`;
+          } else if (a.estado_vigencia === 'POR_VENCER') {
+            estadoBannerClass = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
+            estadoBannerTexto = `🟡 POR VENCER • En ${a.dias_restantes} día(s)`;
+          } else if (a.estado_vigencia === 'VENCIDO') {
+            estadoBannerClass = 'bg-red-500/15 text-red-400 border-red-500/30';
+            estadoBannerTexto = `🔴 MENSUALIDAD VENCIDA • Hace ${Math.abs(a.dias_restantes)} día(s)`;
+          }
 
-        return `
-          <tr class="hover:bg-slate-800/40 transition">
-            <td class="py-3.5 px-4">
-              <div class="flex items-center gap-1.5 flex-wrap">
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
-                  class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
-                >
-                  ${a.nombre_completo}
-                </button>
-                ${badgeInscrito}
+          const memConDeuda = a.membresias_historial?.find((m) => Number(m.saldo_pendiente) > 0);
+
+          return `
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition">
+              <div class="space-y-3.5">
+                <!-- Estado Gigante Arriba -->
+                <div class="flex items-center justify-between gap-2">
+                  <span class="text-xs font-black px-3 py-1 rounded-full border ${estadoBannerClass}">
+                    ${estadoBannerTexto}
+                  </span>
+                  <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
+                    ${a.inscripcion_pagada !== false ? '🎓 Inscrito' : '⚠️ Sin Inscripción'}
+                  </span>
+                </div>
+
+                <!-- Avatar de color de cinturón + Nombre Grande -->
+                <div class="flex items-center gap-3.5">
+                  <div class="w-14 h-14 rounded-2xl border-2 flex items-center justify-center font-black text-lg flex-shrink-0 shadow-sm ${belt.bg}">
+                    ${iniciales}
+                  </div>
+                  <div class="min-w-0 flex-1">
+                    <button
+                      type="button"
+                      onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                      class="font-black text-base sm:text-lg text-white hover:text-red-400 text-left truncate block w-full cursor-pointer"
+                    >
+                      ${a.nombre_completo}
+                    </button>
+                    <p class="text-xs font-bold text-slate-400 mt-0.5">${belt.label}</p>
+                    ${
+                      a.telefono_whatsapp
+                        ? `<p class="text-xs text-slate-400 tabular-nums mt-0.5">📱 WhatsApp: <b>${a.telefono_whatsapp}</b></p>`
+                        : ''
+                    }
+                  </div>
+                </div>
+
+                <!-- Caja de Fechas y "Lo que debe" en lenguaje sencillo -->
+                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2 text-xs">
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400 font-semibold">Último Plan:</span>
+                    <span class="font-extrabold text-white">${mem ? mem.concepto : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Matrícula / Inscripción' : '—'}</span>
+                  </div>
+                  <div class="flex items-center justify-between">
+                    <span class="text-slate-400 font-semibold">Vigencia del Mes:</span>
+                    <span class="font-bold text-slate-200 tabular-nums">
+                      ${mem ? `${formatDatePE(mem.fecha_inicio)} al <b class="text-red-400">${formatDatePE(mem.fecha_fin)}</b>` : 'Pendiente de iniciar mes'}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between pt-1.5 border-t border-slate-800">
+                    <span class="text-slate-400 font-bold">Lo que debe (Saldo):</span>
+                    ${
+                      a.saldo_total_pendiente > 0
+                        ? `<span class="text-sm font-black text-amber-400 tabular-nums">⚠️ Debe ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</span>`
+                        : `<span class="font-extrabold text-emerald-400">✅ No debe nada (${moneda} 0.00)</span>`
+                    }
+                  </div>
+                </div>
               </div>
-              <span class="text-[11px] text-slate-400">${a.total_membresias} membresía(s) registrada(s)</span>
-            </td>
-            <td class="py-3.5 px-4 text-xs text-slate-300">${a.grado_cinturon || 'Principiante'}</td>
-            <td class="py-3.5 px-4 text-xs text-slate-300 tabular-nums">
-              <div>${a.telefono_whatsapp || '—'}</div>
-              ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${a.contacto_emergencia}</div>` : ''}
-            </td>
-            <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? mem.concepto : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : '—'}</td>
-            <td class="py-3.5 px-4 text-xs font-semibold text-slate-200 tabular-nums">${mem ? formatDatePE(mem.fecha_inicio) : '—'}</td>
-            <td class="py-3.5 px-4 text-xs font-semibold text-red-300 tabular-nums">${mem ? formatDatePE(mem.fecha_fin) : '—'}</td>
-            <td class="py-3.5 px-4 text-center whitespace-nowrap">${badgeVigencia}</td>
-            <td class="py-3.5 px-4 text-right whitespace-nowrap">${saldoHtml}</td>
-            <td class="py-3.5 px-4 text-center whitespace-nowrap">
-              <div class="inline-flex items-center gap-1.5">
+
+              <!-- Botones Grandes de Acción en la Tarjeta -->
+              <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
                   onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
-                  class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
+                  class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
                 >
-                  Ficha / Pagos
+                  📄 Ver Ficha (${a.total_membresias})
                 </button>
+                ${
+                  memConDeuda
+                    ? `<button
+                        type="button"
+                        onclick="window.AppUI.abrirModalCobrarSaldo('${memConDeuda.id}')"
+                        class="keep-white-text py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-black text-white cursor-pointer"
+                      >
+                        💰 Cobrar Deuda
+                      </button>`
+                    : ''
+                }
                 <button
                   type="button"
                   onclick="window.AppUI.abrirModalRenovar('${a.id}')"
-                  class="px-2.5 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-xs font-bold text-red-300 cursor-pointer"
+                  class="keep-white-text flex-1 py-2.5 px-3 rounded-xl brand-bg text-xs font-black text-white cursor-pointer"
                 >
-                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1ra Mensualidad' : 'Renovar'}
+                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '🥊 Cobrar 1er Mes' : '🥊 Cobrar Mes'}
                 </button>
               </div>
-            </td>
-          </tr>
-        `;
-      })
-      .join('');
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    // 2. Renderizar también la Tabla Clásica
+    if (tbody) {
+      tbody.innerHTML = alumnos
+        .map((a) => {
+          const mem = a.ultima_membresia;
+          let badgeVigencia = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Sin membresía</span>`;
+          if (a.estado_vigencia === 'ACTIVO') {
+            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tabular-nums">🟢 Al Día (${a.dias_restantes}d)</span>`;
+          } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
+            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">🎓 Inscrito (Falta 1er Mes)</span>`;
+          } else if (a.estado_vigencia === 'POR_VENCER') {
+            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">🟡 Vence en ${a.dias_restantes}d</span>`;
+          } else if (a.estado_vigencia === 'VENCIDO') {
+            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 tabular-nums">🔴 Vencido (${Math.abs(a.dias_restantes)}d)</span>`;
+          }
+
+          const badgeInscrito =
+            a.inscripcion_pagada !== false
+              ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🎓 Inscrito</span>`
+              : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">⚠️ Sin inscripción</span>`;
+
+          const saldoHtml =
+            a.saldo_total_pendiente > 0
+              ? `<span class="font-black text-amber-400 tabular-nums">Debe ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</span>`
+              : `<span class="text-emerald-400 font-bold tabular-nums">No debe nada</span>`;
+
+          return `
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-3.5 px-4">
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                    class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
+                  >
+                    ${a.nombre_completo}
+                  </button>
+                  ${badgeInscrito}
+                </div>
+                <span class="text-[11px] text-slate-400">${a.total_membresias} registro(s)</span>
+              </td>
+              <td class="py-3.5 px-4 text-xs font-semibold text-slate-300">${a.grado_cinturon || 'Principiante'}</td>
+              <td class="py-3.5 px-4 text-xs text-slate-300 tabular-nums">
+                <div>${a.telefono_whatsapp || '—'}</div>
+                ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${a.contacto_emergencia}</div>` : ''}
+              </td>
+              <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? mem.concepto : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : '—'}</td>
+              <td class="py-3.5 px-4 text-xs font-semibold text-slate-200 tabular-nums">${mem ? formatDatePE(mem.fecha_inicio) : '—'}</td>
+              <td class="py-3.5 px-4 text-xs font-semibold text-red-300 tabular-nums">${mem ? formatDatePE(mem.fecha_fin) : '—'}</td>
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">${badgeVigencia}</td>
+              <td class="py-3.5 px-4 text-right whitespace-nowrap">${saldoHtml}</td>
+              <td class="py-3.5 px-4 text-center whitespace-nowrap">
+                <div class="inline-flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
+                  >
+                    Ver Ficha
+                  </button>
+                  <button
+                    type="button"
+                    onclick="window.AppUI.abrirModalRenovar('${a.id}')"
+                    class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
+                  >
+                    ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
+                  </button>
+                </div>
+              </td>
+            </tr>
+          `;
+        })
+        .join('');
+    }
   }
 
   // =========================================================================
@@ -570,29 +797,29 @@
     grid.innerHTML = store.state.planes
       .map(
         (p) => `
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-col justify-between gap-3">
+        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between gap-3">
           <div>
             <div class="flex items-center justify-between gap-2">
-              <span class="text-[11px] font-bold uppercase px-2 py-0.5 rounded bg-red-500/15 text-red-400 border border-red-500/30">
+              <span class="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
                 ${p.disciplina}
               </span>
-              <span class="text-xs text-slate-400 tabular-nums">${p.duracion_dias} días</span>
+              <span class="text-xs font-bold text-slate-400 tabular-nums">${p.duracion_dias} días</span>
             </div>
-            <h4 class="font-bold text-base text-white mt-2">${p.nombre}</h4>
-            <p class="text-xl font-black text-emerald-400 mt-1 tabular-nums">${moneda} ${Number(p.precio_sugerido).toFixed(2)}</p>
+            <h4 class="font-black text-base text-white mt-2.5">${p.nombre}</h4>
+            <p class="text-2xl font-black text-emerald-400 mt-1 tabular-nums">${moneda} ${Number(p.precio_sugerido).toFixed(2)}</p>
           </div>
-          <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-800/80">
+          <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
             <button
               type="button"
               onclick="window.AppUI.editarPlan('${p.id}')"
-              class="text-xs font-semibold text-sky-400 hover:text-sky-300 px-2 py-1 cursor-pointer"
+              class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
             >
-              Editar
+              Editar Precio
             </button>
             <button
               type="button"
               onclick="window.AppUI.eliminarPlan('${p.id}')"
-              class="text-xs font-semibold text-red-400 hover:text-red-300 px-2 py-1 cursor-pointer"
+              class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
             >
               Eliminar
             </button>
@@ -613,6 +840,12 @@
     document.getElementById('cfg-telefono').value = cfg.telefono || '';
     document.getElementById('cfg-moneda').value = cfg.moneda || 'S/';
     document.getElementById('cfg-direccion').value = cfg.direccion || '';
+    if (document.getElementById('cfg-color-tema')) {
+      document.getElementById('cfg-color-tema').value = cfg.color_tema || 'ROJO';
+    }
+    if (document.getElementById('cfg-tema-visual')) {
+      document.getElementById('cfg-tema-visual').value = cfg.tema_visual || 'CLARO';
+    }
     if (document.getElementById('cfg-precio-inscripcion')) {
       document.getElementById('cfg-precio-inscripcion').value = Number(cfg.precio_inscripcion ?? 30).toFixed(2);
     }
@@ -630,7 +863,7 @@
   }
 
   // =========================================================================
-  // FLUJO MODAL 1: NUEVO RECIBO / INSCRIPCIÓN / RENOVACIÓN
+  // FLUJO MODAL 1: INSCRIPCIÓN / MENSUALIDAD / BOTONES DE ACCIÓN SEPARADOS
   // =========================================================================
   function poblarSelectoresModalPago() {
     const selectPlan = document.getElementById('pago-select-plan');
@@ -641,14 +874,14 @@
       planes
         .map(
           (p) =>
-            `<option value="${p.id}">${p.nombre} — ${moneda} ${Number(p.precio_sugerido).toFixed(2)} (${p.duracion_dias}d)</option>`
+            `<option value="${p.id}">${p.nombre} — ${moneda} ${Number(p.precio_sugerido).toFixed(2)} (${p.duracion_dias} días)</option>`
         )
-        .join('') + `<option value="PERSONALIZADO">✍️ Otro / Plan Personalizado</option>`;
+        .join('') + `<option value="PERSONALIZADO">✍️ Otro monto / Plan personalizado</option>`;
 
     const selectAlumno = document.getElementById('pago-select-alumno');
     const alumnos = store.getAlumnosConEstado();
     selectAlumno.innerHTML =
-      `<option value="">-- Seleccionar alumno registrado --</option>` +
+      `<option value="">-- Haz clic aquí para elegir al alumno --</option>` +
       alumnos
         .map(
           (a) =>
@@ -656,8 +889,8 @@
               a.ultima_membresia
                 ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
                 : a.estado_vigencia === 'SOLO_INSCRITO'
-                ? '🎓 Inscrito - Falta 1ra Mensualidad'
-                : 'Sin membresía'
+                ? '🎓 Inscrito - Falta pagar 1er Mes'
+                : 'Sin mensualidad'
             })</option>`
         )
         .join('');
@@ -671,17 +904,18 @@
     const badgeInscripcion = document.getElementById('badge-estado-inscripcion-modal');
 
     if (modo === 'NUEVO') {
-      btnNuevo.className = 'py-2 px-3 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer';
-      btnExistente.className = 'py-2 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
+      btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
+      btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer';
       bloqueExistente.classList.add('hidden');
       document.getElementById('pago-select-alumno').value = '';
       document.getElementById('banner-renovacion-flexible').classList.add('hidden');
       if (badgeInscripcion) badgeInscripcion.classList.add('hidden');
       setTipoOperacionModal('INSCRIPCION_Y_MENSUALIDAD');
     } else {
-      btnExistente.className = 'py-2 px-3 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer';
-      btnNuevo.className = 'py-2 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
+      btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
+      btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer';
       bloqueExistente.classList.remove('hidden');
+      setTipoOperacionModal('MENSUALIDAD');
     }
   }
 
@@ -690,8 +924,8 @@
     document.querySelectorAll('.btn-tipo-operacion').forEach((btn) => {
       const esActivo = btn.getAttribute('data-tipo-op') === tipo;
       btn.className = esActivo
-        ? 'btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer'
-        : 'btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
+        ? 'btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-extrabold brand-bg text-white keep-white-text transition cursor-pointer'
+        : 'btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
     });
 
     const incluyeInscripcion = tipo === 'INSCRIPCION_Y_MENSUALIDAD' || tipo === 'SOLO_INSCRIPCION';
@@ -704,7 +938,7 @@
 
     const lblFechaInicio = document.getElementById('label-pago-fecha-inicio');
     if (lblFechaInicio) {
-      lblFechaInicio.textContent = soloInscripcion ? '📅 Fecha de Inscripción *' : '📅 Fecha de Inicio *';
+      lblFechaInicio.textContent = soloInscripcion ? '📅 Fecha de Inscripción *' : '📅 Día que Inicia *';
     }
 
     aplicarPlanSeleccionado();
@@ -757,31 +991,62 @@
     txtSaldo.textContent = `${moneda} ${saldo.toFixed(2)}`;
 
     if (saldo <= 0.009) {
-      caja.className = 'rounded-xl p-3 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between';
-      txtEstado.className = 'text-xs font-bold text-emerald-400';
-      txtEstado.textContent = 'PAGADO COMPLETO';
-      txtSaldo.className = 'text-xl font-black text-emerald-400 tabular-nums';
+      caja.className = 'rounded-xl p-3.5 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between';
+      txtEstado.className = 'text-xs font-extrabold text-emerald-400';
+      txtEstado.textContent = 'PAGADO COMPLETO (NO DEBE NADA)';
+      txtSaldo.className = 'text-2xl font-black text-emerald-400 tabular-nums';
     } else {
-      caja.className = 'rounded-xl p-3 border border-amber-500/40 bg-amber-500/10 flex items-center justify-between';
-      txtEstado.className = 'text-xs font-bold text-amber-300';
-      txtEstado.textContent = 'QUEDA SALDO PENDIENTE';
-      txtSaldo.className = 'text-xl font-black text-amber-400 tabular-nums';
+      caja.className = 'rounded-xl p-3.5 border border-amber-500/40 bg-amber-500/10 flex items-center justify-between';
+      txtEstado.className = 'text-xs font-extrabold text-amber-400';
+      txtEstado.textContent = 'QUEDA DEBIENDO SALDO';
+      txtSaldo.className = 'text-2xl font-black text-amber-400 tabular-nums';
     }
 
-    // Validar número de recibo duplicado
     const nroRecibo = document.getElementById('pago-numero-recibo').value;
     const duplicado = store.existeNumeroRecibo(nroRecibo);
     document.getElementById('aviso-recibo-duplicado').classList.toggle('hidden', !duplicado);
   }
 
-  function abrirModalNuevoPago() {
+  /**
+   * Abre la ventana correspondiente a los 3 botones grandes del inicio:
+   * - 'INSCRIBIR_NUEVO'
+   * - 'COBRAR_MENSUALIDAD'
+   * - 'COBRAR_SALDO'
+   */
+  function abrirModalAccionDirecta(tipoAccion) {
+    if (tipoAccion === 'COBRAR_SALDO') {
+      const memsConDeuda = store.state.membresias.filter(
+        (m) => Number(m.saldo_pendiente) > 0 && m.estado_pago !== 'ANULADO'
+      );
+      if (memsConDeuda.length === 0) {
+        mostrarToast('🎉 ¡Excelente! Ningún alumno tiene deudas o saldos pendientes por cobrar.', 'info');
+        return;
+      }
+      const selectorBloque = document.getElementById('bloque-selector-deudor');
+      const selectDeudor = document.getElementById('saldo-select-membresia');
+      const moneda = store.state.configuracion.moneda || 'S/';
+
+      if (selectorBloque && selectDeudor) {
+        selectorBloque.classList.remove('hidden');
+        selectDeudor.innerHTML = memsConDeuda
+          .map((m) => {
+            const alu = store.state.alumnos.find((a) => a.id === m.alumno_id);
+            const nombre = alu ? `${alu.nombres} ${alu.apellidos}` : 'Alumno';
+            return `<option value="${m.id}">${nombre} — Debe ${moneda} ${Number(m.saldo_pendiente).toFixed(2)} (${m.concepto})</option>`;
+          })
+          .join('');
+      }
+      cargarMembresiaEnModalSaldo(memsConDeuda[0].id);
+      abrirModal('modal-cobrar-saldo');
+      return;
+    }
+
     poblarSelectoresModalPago();
     const precioInscDefault = Number(store.state.configuracion.precio_inscripcion ?? 30).toFixed(2);
     if (document.getElementById('pago-monto-inscripcion')) {
       document.getElementById('pago-monto-inscripcion').value = precioInscDefault;
     }
 
-    document.getElementById('modal-pago-titulo').textContent = 'Registrar Nuevo Recibo / Inscripción';
     document.getElementById('pago-nombres').value = '';
     document.getElementById('pago-apellidos').value = '';
     document.getElementById('pago-whatsapp').value = '';
@@ -789,14 +1054,26 @@
     document.getElementById('pago-emergencia').value = '';
     document.getElementById('pago-observacion').value = '';
     document.getElementById('pago-metodo').value = 'EFECTIVO';
-
-    const hoy = getLocalDateISO();
-    document.getElementById('pago-fecha-inicio').value = hoy;
+    document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
     document.getElementById('pago-numero-recibo').value = store.getProximoNumeroReciboFormateado();
 
-    setModoAlumnoModal('NUEVO');
-    abrirModal('modal-nuevo-pago');
-    setTimeout(() => document.getElementById('pago-nombres')?.focus(), 80);
+    if (tipoAccion === 'COBRAR_MENSUALIDAD') {
+      document.getElementById('modal-pago-titulo').textContent = '🥊 2. Cobrar Mensualidad a Alumno Inscrito';
+      document.getElementById('modal-pago-subtitulo').textContent = 'Elige al alumno registrado para cobrar su mes de clases';
+      setModoAlumnoModal('EXISTENTE');
+      abrirModal('modal-nuevo-pago');
+      setTimeout(() => document.getElementById('pago-select-alumno')?.focus(), 80);
+    } else {
+      document.getElementById('modal-pago-titulo').textContent = '🎓 1. Inscribir Alumno Nuevo';
+      document.getElementById('modal-pago-subtitulo').textContent = 'Registra los datos del nuevo alumno y su pago de inscripción';
+      setModoAlumnoModal('NUEVO');
+      abrirModal('modal-nuevo-pago');
+      setTimeout(() => document.getElementById('pago-nombres')?.focus(), 80);
+    }
+  }
+
+  function abrirModalNuevoPago() {
+    abrirModalAccionDirecta('INSCRIBIR_NUEVO');
   }
 
   function abrirModalRenovar(alumnoId) {
@@ -807,7 +1084,8 @@
     }
     setModoAlumnoModal('EXISTENTE');
 
-    document.getElementById('modal-pago-titulo').textContent = 'Renovar Membresía / Nuevo Recibo';
+    document.getElementById('modal-pago-titulo').textContent = '🥊 Cobrar Mensualidad / Renovar';
+    document.getElementById('modal-pago-subtitulo').textContent = 'Verifica el plan, fechas de inicio/fin y el monto que abona hoy';
     document.getElementById('pago-select-alumno').value = alumnoId;
     cargarDatosAlumnoEnModal(alumnoId);
 
@@ -838,11 +1116,11 @@
       badgeInscripcion.classList.remove('hidden');
       if (yaTieneInscripcion) {
         badgeInscripcion.className =
-          'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+          'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
         badgeInscripcion.textContent = '🎓 Ya tiene Inscripción pagada';
       } else {
         badgeInscripcion.className =
-          'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+          'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
         badgeInscripcion.textContent = '⚠️ Aún no registra Inscripción';
       }
     }
@@ -851,13 +1129,12 @@
     if (mem) {
       banner.classList.remove('hidden');
       document.getElementById('texto-vencimiento-anterior').innerHTML =
-        `Último fin: <b class="text-white">${formatDatePE(mem.fecha_fin)}</b>`;
+        `Último vencimiento: <b class="text-white">${formatDatePE(mem.fecha_fin)}</b>`;
 
       if (mem.plan_id && store.state.planes.some((p) => p.id === mem.plan_id)) {
         document.getElementById('pago-select-plan').value = mem.plan_id;
       }
 
-      // Por defecto, continuar desde la fecha de finalización anterior
       document.getElementById('pago-fecha-inicio').value = mem.fecha_fin;
     } else {
       banner.classList.add('hidden');
@@ -868,9 +1145,9 @@
   }
 
   // =========================================================================
-  // FLUJO MODAL 2: COBRAR SALDO PENDIENTE
+  // FLUJO MODAL 2: COBRAR SALDO PENDIENTE ("LO QUE DEBE")
   // =========================================================================
-  function abrirModalCobrarSaldo(membresiaId) {
+  function cargarMembresiaEnModalSaldo(membresiaId) {
     const mem = store.state.membresias.find((m) => m.id === membresiaId);
     if (!mem) return;
     const alu = store.state.alumnos.find((a) => a.id === mem.alumno_id);
@@ -890,7 +1167,11 @@
     document.getElementById('saldo-monto-abonar').max = Number(mem.saldo_pendiente).toFixed(2);
     document.getElementById('saldo-metodo-pago').value = 'EFECTIVO';
     document.getElementById('saldo-observacion').value = '';
+  }
 
+  function abrirModalCobrarSaldo(membresiaId) {
+    document.getElementById('bloque-selector-deudor')?.classList.add('hidden');
+    cargarMembresiaEnModalSaldo(membresiaId);
     abrirModal('modal-cobrar-saldo');
   }
 
@@ -935,37 +1216,37 @@
         : alu.membresias_historial
             .map(
               (m) => `
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-sm text-white">${m.concepto}</span>
-                  <span class="text-[11px] font-bold px-2 py-0.5 rounded-full ${
+                  <span class="font-extrabold text-sm text-white">${m.concepto}</span>
+                  <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ${
                     m.estado_pago === 'PAGADO'
                       ? 'bg-emerald-500/20 text-emerald-400'
                       : 'bg-amber-500/20 text-amber-300'
-                  }">${m.estado_pago}</span>
+                  }">${m.estado_pago === 'PAGADO' ? 'PAGADO COMPLETO' : 'DEBE SALDO'}</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
                   ${
                     m.tipo_operacion === 'SOLO_INSCRIPCION'
-                      ? `Fecha de Alta: <b>${formatDatePE(m.fecha_inicio)}</b> • <b class="text-emerald-400">PAGO ÚNICO DE INSCRIPCIÓN</b>`
-                      : `Inicio: <b>${formatDatePE(m.fecha_inicio)}</b> • Finalización: <b class="text-red-300">${formatDatePE(m.fecha_fin)}</b>`
+                      ? `Fecha de Inscripción: <b>${formatDatePE(m.fecha_inicio)}</b> • <b class="text-emerald-400">PAGO ÚNICO DE INSCRIPCIÓN</b>`
+                      : `Día que inicia: <b>${formatDatePE(m.fecha_inicio)}</b> • Día que vence: <b class="text-red-300">${formatDatePE(m.fecha_fin)}</b>`
                   }
                 </p>
               </div>
               <div class="text-right tabular-nums">
                 <div class="text-xs text-slate-300">Total a Pagar: <b>${moneda} ${Number(m.total_a_pagar).toFixed(2)}</b></div>
-                <div class="text-xs ${Number(m.saldo_pendiente) > 0 ? 'text-amber-400 font-bold' : 'text-emerald-400'}">
-                  Saldo: ${moneda} ${Number(m.saldo_pendiente).toFixed(2)}
+                <div class="text-xs ${Number(m.saldo_pendiente) > 0 ? 'text-amber-400 font-black' : 'text-emerald-400 font-bold'}">
+                  Lo que debe: ${moneda} ${Number(m.saldo_pendiente).toFixed(2)}
                 </div>
                 ${
                   Number(m.saldo_pendiente) > 0
                     ? `<button
                         type="button"
                         onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalCobrarSaldo('${m.id}')"
-                        class="mt-1 px-2.5 py-1 rounded bg-amber-500 text-slate-950 font-black text-[11px] cursor-pointer"
+                        class="keep-white-text mt-1.5 px-3 py-1 rounded-lg bg-amber-600 text-white font-black text-xs cursor-pointer"
                       >
-                        Cobrar Saldo
+                        Cobrar lo que debe
                       </button>`
                     : ''
                 }
@@ -980,13 +1261,13 @@
         : recibosAlumno
             .map(
               (r) => `
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2 ${
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-2 ${
               r.anulado ? 'opacity-50 line-through' : ''
             }">
               <div class="flex items-center gap-3">
-                <span class="font-mono font-bold text-sm text-emerald-400 tabular-nums">#${r.numero_recibo}</span>
+                <span class="font-mono font-black text-sm text-emerald-400 tabular-nums">#${r.numero_recibo}</span>
                 <div>
-                  <p class="text-xs font-semibold text-white">${r.observacion || r.membresia?.concepto}</p>
+                  <p class="text-xs font-bold text-white">${r.observacion || r.membresia?.concepto}</p>
                   <p class="text-[11px] text-slate-400 tabular-nums">${formatDateTimePE(r.fecha_pago)} • ${METODO_LABELS[r.metodo_pago] || r.metodo_pago}</p>
                 </div>
               </div>
@@ -995,7 +1276,7 @@
                 <button
                   type="button"
                   onclick="window.AppUI.verComprobanteDigital('${r.id}')"
-                  class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-300 cursor-pointer"
+                  class="keep-white-text px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
                 >
                   Ver Recibo
                 </button>
@@ -1010,21 +1291,21 @@
           <button
             type="button"
             onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${alu.id}')"
-            class="px-3.5 py-2 rounded-xl bg-red-600 hover:bg-red-500 text-white font-bold text-xs cursor-pointer"
+            class="keep-white-text px-4 py-2.5 rounded-xl brand-bg text-white font-extrabold text-xs sm:text-sm cursor-pointer"
           >
-            + Nueva Renovación / Recibo
+            + Cobrar Nueva Mensualidad
           </button>
         </div>
         <button
           type="button"
           onclick="window.AppUI.eliminarAlumnoConfirm('${alu.id}')"
-          class="text-xs font-semibold text-red-400 hover:text-red-300 cursor-pointer"
+          class="text-xs font-bold text-red-400 hover:text-red-300 cursor-pointer"
         >
           Eliminar Alumno
         </button>
       </div>
       <div>
-        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">Historial de Membresías (${alu.membresias_historial.length})</h4>
+        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">Historial de Inscripción y Mensualidades (${alu.membresias_historial.length})</h4>
         <div class="space-y-2">${htmlMembresias}</div>
       </div>
       <div>
@@ -1037,12 +1318,12 @@
   }
 
   // =========================================================================
-  // ACCIONES DE PLANES Y RECIBOS
+  // ACCIONES DE PLANES, RECIBOS Y SUBIDA DE LOGO
   // =========================================================================
   function editarPlan(planId) {
     const p = store.state.planes.find((x) => x.id === planId);
     if (!p) return;
-    document.getElementById('form-plan-titulo').textContent = 'Editar Plan / Disciplina';
+    document.getElementById('form-plan-titulo').textContent = 'Editar Plan / Mensualidad';
     document.getElementById('plan-id').value = p.id;
     document.getElementById('plan-nombre').value = p.nombre;
     document.getElementById('plan-disciplina').value = p.disciplina;
@@ -1052,7 +1333,7 @@
   }
 
   function resetFormPlan() {
-    document.getElementById('form-plan-titulo').textContent = 'Agregar Plan / Disciplina';
+    document.getElementById('form-plan-titulo').textContent = 'Agregar Plan o Mensualidad';
     document.getElementById('plan-id').value = '';
     document.getElementById('form-plan').reset();
     document.getElementById('plan-duracion').value = 30;
@@ -1091,8 +1372,38 @@
     mostrarToast('Alumno eliminado correctamente', 'info');
   }
 
+  function procesarSubidaLogo(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const maxDim = 220;
+        let w = img.width;
+        let h = img.height;
+        if (w > h && w > maxDim) {
+          h = Math.round((h * maxDim) / w);
+          w = maxDim;
+        } else if (h > maxDim) {
+          w = Math.round((w * maxDim) / h);
+          h = maxDim;
+        }
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL('image/png', 0.9);
+        store.actualizarConfiguracion({ logo_url: dataUrl });
+        mostrarToast('¡Logo del gimnasio actualizado!');
+      };
+      img.src = ev.target.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
   // =========================================================================
-  // BUSCADOR INSTANTÁNEO DE RECEPCIÓN (BARRA SUPERIOR)
+  // BUSCADOR INSTANTÁNEO DE RECEPCIÓN (BARRA SUPERIOR GIGANTE)
   // =========================================================================
   function manejarBusquedaGlobal(query) {
     const resultsBox = document.getElementById('global-search-results');
@@ -1120,7 +1431,7 @@
       .slice(0, 4);
 
     if (alumnosMatch.length === 0 && recibosMatch.length === 0) {
-      resultsBox.innerHTML = `<div class="p-4 text-xs text-slate-400 text-center">Sin coincidencias para "${query}"</div>`;
+      resultsBox.innerHTML = `<div class="p-4 text-sm text-slate-400 text-center font-medium">Sin resultados para "${query}"</div>`;
       resultsBox.classList.remove('hidden');
       return;
     }
@@ -1128,15 +1439,15 @@
     let html = '';
 
     if (alumnosMatch.length > 0) {
-      html += `<div class="px-3.5 py-2 bg-slate-950 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Alumnos Encontrados</div>`;
+      html += `<div class="px-4 py-2 bg-slate-950 text-xs font-extrabold uppercase tracking-wider text-slate-400">Alumnos Encontrados</div>`;
       html += alumnosMatch
         .map((a) => {
           const mem = a.ultima_membresia;
           const semaforo =
             a.estado_vigencia === 'ACTIVO'
-              ? '🟢 ACTIVO'
+              ? '🟢 AL DÍA'
               : a.estado_vigencia === 'SOLO_INSCRITO'
-              ? '🎓 SOLO INSCRITO'
+              ? '🎓 SOLO INSCRITO (FALTA 1ER MES)'
               : a.estado_vigencia === 'POR_VENCER'
               ? `🟡 VENCE EN ${a.dias_restantes}D`
               : a.estado_vigencia === 'VENCIDO'
@@ -1144,31 +1455,31 @@
               : '⚪ SIN PLAN';
 
           return `
-            <div class="p-3 hover:bg-slate-800/70 border-b border-slate-800 flex items-center justify-between gap-2">
+            <div class="p-3.5 hover:bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-bold text-sm text-white">${a.nombre_completo}</span>
-                  <span class="text-[11px] font-bold">${semaforo}</span>
+                  <span class="font-extrabold text-sm sm:text-base text-white">${a.nombre_completo}</span>
+                  <span class="text-xs font-extrabold">${semaforo}</span>
                 </div>
-                <p class="text-xs text-slate-400 tabular-nums">
-                  ${mem ? `${mem.concepto} • Vence: ${formatDatePE(mem.fecha_fin)}` : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Inscrito (Falta 1ra Mensualidad)' : 'Sin membresía'}
-                  ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Debe ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
+                <p class="text-xs text-slate-400 tabular-nums mt-0.5">
+                  ${mem ? `${mem.concepto} • Vence: ${formatDatePE(mem.fecha_fin)}` : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Inscrito (Pendiente 1ra Mensualidad)' : 'Sin membresía'}
+                  ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Lo que debe: ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
                 </p>
               </div>
               <div class="flex items-center gap-1.5">
                 <button
                   type="button"
                   onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirHistorialAlumno('${a.id}')"
-                  class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white cursor-pointer"
+                  class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white cursor-pointer"
                 >
                   Ver Ficha
                 </button>
                 <button
                   type="button"
                   onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${a.id}')"
-                  class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white cursor-pointer"
+                  class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
                 >
-                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1ra Mensualidad' : 'Renovar'}
+                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
                 </button>
               </div>
             </div>`;
@@ -1177,22 +1488,22 @@
     }
 
     if (recibosMatch.length > 0) {
-      html += `<div class="px-3.5 py-2 bg-slate-950 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">Recibos por Número</div>`;
+      html += `<div class="px-4 py-2 bg-slate-950 text-xs font-extrabold uppercase tracking-wider text-slate-400">Recibos por Número</div>`;
       html += recibosMatch
         .map(
           (r) => `
-          <div class="p-3 hover:bg-slate-800/70 border-b border-slate-800 flex items-center justify-between gap-2">
+          <div class="p-3.5 hover:bg-slate-800/40 border-b border-slate-800 flex items-center justify-between gap-2">
             <div>
-              <span class="font-mono font-bold text-xs text-emerald-400">#${r.numero_recibo}</span>
-              <span class="text-xs font-bold text-white ml-2">${r.nombre_completo}</span>
-              <p class="text-[11px] text-slate-400 tabular-nums">
-                ${r.membresia?.concepto} • Abonó: ${moneda} ${Number(r.monto_abonado).toFixed(2)}
+              <span class="font-mono font-black text-sm text-emerald-400">#${r.numero_recibo}</span>
+              <span class="text-sm font-extrabold text-white ml-2">${r.nombre_completo}</span>
+              <p class="text-xs text-slate-400 tabular-nums">
+                ${r.membresia?.concepto} • Pagó: ${moneda} ${Number(r.monto_abonado).toFixed(2)}
               </p>
             </div>
             <button
               type="button"
               onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.verComprobanteDigital('${r.id}')"
-              class="px-2.5 py-1 rounded-lg bg-sky-600/20 border border-sky-500/30 text-sky-300 text-xs font-bold cursor-pointer"
+              class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold cursor-pointer"
             >
               Ver Recibo
             </button>
@@ -1209,12 +1520,35 @@
   // INICIALIZACIÓN DE EVENTOS DOM
   // =========================================================================
   function initEventListeners() {
-    // Suscribir cambios del store
     store.subscribe(() => renderTodo());
 
-    // Navegación por pestañas
+    // Navegación por menú lateral
     document.querySelectorAll('.nav-tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => cambiarTab(btn.getAttribute('data-tab')));
+    });
+
+    // Conmutar vista de alumnos: Tarjetas Grandes vs Tabla
+    document.getElementById('btn-vista-alumnos-tarjetas')?.addEventListener('click', () => setModoVistaAlumnos('TARJETAS'));
+    document.getElementById('btn-vista-alumnos-tabla')?.addEventListener('click', () => setModoVistaAlumnos('TABLA'));
+
+    // Botones de cambio rápido entre Modo Claro y Modo Oscuro
+    const toggleTemaFn = () => {
+      const actual = store.state.configuracion.tema_visual || 'CLARO';
+      const nuevo = actual === 'CLARO' ? 'OSCURO' : 'CLARO';
+      store.actualizarConfiguracion({ tema_visual: nuevo });
+      mostrarToast(nuevo === 'CLARO' ? '☀️ Modo Claro activado' : '🌙 Modo Oscuro activado', 'info');
+    };
+    document.getElementById('btn-toggle-tema')?.addEventListener('click', toggleTemaFn);
+    document.getElementById('btn-toggle-tema-mobile')?.addEventListener('click', toggleTemaFn);
+
+    // Subir o quitar Logo del Gimnasio
+    document.getElementById('input-subir-logo')?.addEventListener('change', (e) => {
+      const file = e.target.files?.[0];
+      if (file) procesarSubidaLogo(file);
+    });
+    document.getElementById('btn-quitar-logo')?.addEventListener('click', () => {
+      store.actualizarConfiguracion({ logo_url: '' });
+      mostrarToast('Logo quitado', 'info');
     });
 
     // Cerrar modales
@@ -1222,7 +1556,6 @@
       btn.addEventListener('click', () => cerrarModal(btn.getAttribute('data-close-modal')));
     });
 
-    // Cerrar modales con tecla Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         ['modal-nuevo-pago', 'modal-cobrar-saldo', 'modal-comprobante', 'modal-historial-alumno'].forEach(cerrarModal);
@@ -1230,7 +1563,7 @@
       }
     });
 
-    // Buscador global de recepción
+    // Buscador global gigante
     const globalSearchInput = document.getElementById('global-search-input');
     globalSearchInput?.addEventListener('input', (e) => manejarBusquedaGlobal(e.target.value));
     document.addEventListener('click', (e) => {
@@ -1240,14 +1573,14 @@
       }
     });
 
-    // Botón principal "+ Nuevo Recibo / Inscripción"
+    // Botón superior "Registrar Cobro Rápido"
     document.getElementById('btn-open-nuevo-pago')?.addEventListener('click', abrirModalNuevoPago);
 
     // Conmutador Alumno Nuevo vs Existente en Modal 1
     document.getElementById('btn-modo-alumno-nuevo')?.addEventListener('click', () => setModoAlumnoModal('NUEVO'));
     document.getElementById('btn-modo-alumno-existente')?.addEventListener('click', () => setModoAlumnoModal('EXISTENTE'));
 
-    // Conmutador de modalidad de operación (Inscripción + Mensualidad | Solo Inscripción | Solo Mensualidad)
+    // Conmutador de modalidad de operación
     document.querySelectorAll('.btn-tipo-operacion').forEach((btn) => {
       btn.addEventListener('click', () => setTipoOperacionModal(btn.getAttribute('data-tipo-op')));
     });
@@ -1258,7 +1591,11 @@
       cargarDatosAlumnoEnModal(e.target.value);
     });
 
-    // Botones de renovación flexible (Continuar desde vencimiento vs Iniciar desde Hoy)
+    document.getElementById('saldo-select-membresia')?.addEventListener('change', (e) => {
+      cargarMembresiaEnModalSaldo(e.target.value);
+    });
+
+    // Botones de renovación flexible
     document.getElementById('btn-renovar-continuar')?.addEventListener('click', () => {
       const aluId = document.getElementById('pago-select-alumno').value;
       const alu = store.getAlumnosConEstado().find((a) => a.id === aluId);
@@ -1315,6 +1652,12 @@
       const submitMode = e.submitter?.getAttribute('data-submit-mode') || 'digital';
       const alumnoId = modoModalPago === 'EXISTENTE' ? document.getElementById('pago-select-alumno').value : null;
 
+      if (modoModalPago === 'EXISTENTE' && !alumnoId) {
+        mostrarToast('Por favor selecciona primero al alumno registrado en la lista superior', 'warning');
+        document.getElementById('pago-select-alumno')?.focus();
+        return;
+      }
+
       const resultado = store.registrarInscripcionOPago({
         alumnoId,
         nombres: document.getElementById('pago-nombres').value,
@@ -1337,7 +1680,7 @@
       });
 
       cerrarModal('modal-nuevo-pago');
-      mostrarToast(`Recibo #${resultado.recibo.numero_recibo} registrado con éxito`);
+      mostrarToast(`Recibo #${resultado.recibo.numero_recibo} guardado correctamente`);
 
       if (submitMode === 'digital') {
         verComprobanteDigital(resultado.recibo.id);
@@ -1427,13 +1770,15 @@
         telefono: document.getElementById('cfg-telefono').value.trim(),
         moneda: document.getElementById('cfg-moneda').value.trim() || 'S/',
         direccion: document.getElementById('cfg-direccion').value.trim(),
+        color_tema: document.getElementById('cfg-color-tema')?.value || 'ROJO',
+        tema_visual: document.getElementById('cfg-tema-visual')?.value || 'CLARO',
         precio_inscripcion: Number(document.getElementById('cfg-precio-inscripcion')?.value ?? 30),
         proximo_nro_recibo: Number(document.getElementById('cfg-proximo-recibo').value) || 1,
         dias_alerta_vencimiento: Number(document.getElementById('cfg-dias-alerta').value) || 5,
         pin_admin: document.getElementById('cfg-pin-admin')?.value.trim() || '1234',
         pedir_pin_inicio: Boolean(document.getElementById('cfg-pedir-pin-inicio')?.checked)
       });
-      mostrarToast('Configuración y Clave de Administrador actualizadas');
+      mostrarToast('Configuración, colores y precios actualizados');
     });
 
     // Control de Acceso Admin / Modo Recepción
@@ -1530,6 +1875,7 @@
     cambiarTab,
     abrirModal,
     cerrarModal,
+    abrirModalAccionDirecta,
     abrirModalNuevoPago,
     abrirModalRenovar,
     abrirModalCobrarSaldo,
