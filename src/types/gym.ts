@@ -1,0 +1,80 @@
+export type MetodoPago = 'EFECTIVO' | 'YAPE_PLIN' | 'TRANSFERENCIA' | 'TARJETA';
+
+export type EstadoPagoMembresia = 'PAGADO' | 'PARCIAL' | 'PENDIENTE' | 'ANULADO';
+
+export type EstadoVigencia = 'ACTIVO' | 'POR_VENCER' | 'VENCIDO' | 'SIN_MEMBRESIA';
+
+export interface ConfiguracionGym {
+  id: string;
+  nombre_academia: string;
+  subtitulo: string;
+  telefono: string;
+  direccion: string;
+  moneda: string;
+  serie_recibo: string;
+  proximo_nro_recibo: number;
+  dias_alerta_vencimiento: number;
+  logo_url?: string;
+  pin_admin?: string;
+  supabase_url?: string;
+  supabase_anon_key?: string;
+}
+
+export interface PlanDisciplina {
+  id: string;
+  nombre: string;
+  disciplina: string;
+  duracion_dias: number;
+  precio_sugerido: number;
+  activo: boolean;
+}
+
+export interface Alumno {
+  id: string;
+  nombres: string;
+  apellidos: string;
+  telefono_whatsapp: string;
+  contacto_emergencia: string;
+  telefono_emergencia: string;
+  grado_cinturon: string;
+  disciplina_principal: string;
+  notas: string;
+  activo: boolean;
+  fecha_registro: string;
+}
+
+export interface Membresia {
+  id: string;
+  alumno_id: string;
+  plan_id?: string | null;
+  concepto: string;
+  fecha_inicio: string; // YYYY-MM-DD
+  fecha_fin: string;    // YYYY-MM-DD
+  total_a_pagar: number;
+  monto_pagado_acumulado: number;
+  saldo_pendiente: number;
+  estado_pago: EstadoPagoMembresia;
+  notas?: string;
+  created_at: string;
+}
+
+export interface ReciboPago {
+  id: string;
+  membresia_id: string;
+  alumno_id: string;
+  numero_recibo: string;
+  monto_abonado: number;
+  metodo_pago: MetodoPago;
+  fecha_pago: string; // ISO string
+  observacion: string;
+  anulado: boolean;
+  created_at: string;
+}
+
+export interface AlumnoConEstado extends Alumno {
+  ultima_membresia?: Membresia;
+  estado_vigencia: EstadoVigencia;
+  dias_restantes: number | null;
+  saldo_total_pendiente: number;
+  total_membresias: number;
+}

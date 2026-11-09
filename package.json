@@ -1,0 +1,9 @@
+{
+  "name": "sistema-gimnasio-artes-marciales",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Sistema de Gestión para Gimnasio de Artes Marciales (Alumnos, Membresías, Recibos Secuenciales, Pagos Parciales y Cuadre de Caja)",
+  "scripts": {
+    "start": "npx serve ."
+  }
+}

@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sistema de Gestión - Gimnasio de Artes Marciales</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'ui-monospace', 'monospace']
+          }
+        }
+      }
+    };
+  </script>
+  <!-- Google Fonts Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    body {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+    /* Scrollbar limpio */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #0f172a;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #334155;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #475569;
+    }
+
+    /* Impresión exclusiva del comprobante */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #print-receipt-area,
+      #print-receipt-area * {
+        visibility: visible !important;
+      }
+      #print-receipt-area {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        display: flex !important;
+        justify-content: center !important;
+        background: white !important;
+        padding: 10px !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col selection:bg-red-600 selection:text-white">
+
+  <!-- BARRA SUPERIOR DE NAVEGACIÓN Y BUSCADOR DE RECEPCIÓN -->
+  <header class="sticky top-0 z-30 bg-slate-900/95 backdrop-blur border-b border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <!-- Identidad Academia -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-600 to-red-800 flex items-center justify-center shadow-lg shadow-red-900/30 border border-red-500/30 text-xl select-none">
+          🥋
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 id="header-gym-name" class="font-black text-base sm:text-lg tracking-tight text-white uppercase">
+              ACADEMIA ARTES MARCIALES
+            </h1>
+            <button
+              id="btn-cambiar-rol"
+              type="button"
+              title="Cambiar entre Modo Administrador y Modo Recepción / Bloquear"
+              class="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-red-500/20 hover:bg-red-500/30 text-red-400 border border-red-500/30 flex items-center gap-1 transition cursor-pointer"
+            >
+              <i data-lucide="shield" class="w-3 h-3"></i>
+              <span id="badge-rol-actual">ADMIN</span>
+            </button>
+          </div>
+          <p id="header-gym-subtitle" class="text-xs text-slate-400 hidden sm:block">
+            Muay Thai • Boxeo • Jiu-Jitsu • MMA
+          </p>
+        </div>
+      </div>
+
+      <!-- Buscador Instantáneo de Recepción (Verificar Vigencia o Recibo en 1 seg) -->
+      <div class="relative flex-1 max-w-md mx-2">
+        <div class="relative">
+          <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+          <input
+            id="global-search-input"
+            type="search"
+            autocomplete="off"
+            placeholder="Verificar alumno en recepción o buscar N° de recibo..."
+            class="w-full bg-slate-950/90 border border-slate-700/80 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-400 outline-none transition"
+          />
+        </div>
+        <!-- Dropdown de Resultados Instantáneos de Recepción -->
+        <div
+          id="global-search-results"
+          class="hidden absolute left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto"
+        ></div>
+      </div>
+
+      <!-- Acciones Principales Rápidas -->
+      <div class="flex items-center gap-2.5">
+        <span
+          id="cloud-sync-indicator"
+          class="hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border bg-slate-800 text-slate-400 border-slate-700"
+        >
+          <span class="w-2 h-2 rounded-full bg-slate-400"></span>
+          <span>Modo Local</span>
+        </span>
+        <button
+          id="btn-open-nuevo-pago"
+          type="button"
+          class="inline-flex items-center gap-2 bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white font-bold text-sm px-4 py-2.5 rounded-xl shadow-lg shadow-red-900/40 border border-red-500/30 transition active:scale-95 cursor-pointer"
+        >
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Nuevo Recibo / Inscripción</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Pestañas de Navegación -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 flex items-center gap-1 overflow-x-auto border-t border-slate-800/70 bg-slate-900/60">
+      <button data-tab="dashboard" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-bold border-b-2 border-red-500 text-red-400 whitespace-nowrap transition cursor-pointer">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+        <span>Inicio / Recepción</span>
+      </button>
+      <button data-tab="recibos" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
+        <i data-lucide="receipt" class="w-4 h-4"></i>
+        <span>Recibos y Caja</span>
+        <span id="nav-badge-recibos" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 tabular-nums">0</span>
+      </button>
+      <button data-tab="alumnos" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
+        <i data-lucide="users" class="w-4 h-4"></i>
+        <span>Alumnos y Vigencias</span>
+        <span id="nav-badge-alumnos" class="text-xs px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 tabular-nums">0</span>
+      </button>
+      <button data-tab="planes" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
+        <i data-lucide="swords" class="w-4 h-4"></i>
+        <span>Planes y Disciplinas</span>
+      </button>
+      <button data-tab="configuracion" class="nav-tab-btn flex items-center gap-2 px-4 py-3 text-sm font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 whitespace-nowrap transition cursor-pointer">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+        <span>Configuración y Nube</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 space-y-6">
+
+    <!-- ================================================================== -->
+    <!-- VISTA 1: DASHBOARD OPERATIVO Y CONTROL DE RECEPCIÓN                -->
+    <!-- ================================================================== -->
+    <section id="view-dashboard" class="space-y-6">
+      <!-- Tarjetas KPI Superiores -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- KPI 1: Ingresos de Hoy -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Caja de Hoy</span>
+            <div class="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
+              <i data-lucide="wallet" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p id="kpi-ingresos-hoy" class="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">S/ 0.00</p>
+          <p id="kpi-ingresos-hoy-detalle" class="text-xs text-slate-400 mt-1.5 tabular-nums">0 recibos emitidos hoy</p>
+        </div>
+
+        <!-- KPI 2: Ingresos del Mes -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Ingresos del Mes</span>
+            <div class="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
+              <i data-lucide="trending-up" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p id="kpi-ingresos-mes" class="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">S/ 0.00</p>
+          <p id="kpi-ingresos-mes-detalle" class="text-xs text-slate-400 mt-1.5 tabular-nums">Efectivo: S/ 0 • Yape/Plin: S/ 0</p>
+        </div>
+
+        <!-- KPI 3: Saldos Pendientes por Cobrar -->
+        <div class="bg-slate-900 border border-amber-500/30 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Saldos por Cobrar</span>
+            <div class="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center text-amber-400">
+              <i data-lucide="clock" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p id="kpi-saldos-pendientes" class="text-2xl sm:text-3xl font-black text-amber-400 mt-2 tabular-nums">S/ 0.00</p>
+          <p id="kpi-saldos-detalle" class="text-xs text-slate-400 mt-1.5 tabular-nums">0 alumnos con pago parcial</p>
+        </div>
+
+        <!-- KPI 4: Alumnos Activos y Por Vencer -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 shadow-lg">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Estado de Alumnos</span>
+            <div class="w-9 h-9 rounded-xl bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400">
+              <i data-lucide="shield-check" class="w-5 h-5"></i>
+            </div>
+          </div>
+          <p id="kpi-alumnos-activos" class="text-2xl sm:text-3xl font-black text-white mt-2 tabular-nums">0 Activos</p>
+          <p id="kpi-alumnos-alertas" class="text-xs text-slate-400 mt-1.5 tabular-nums">0 por vencer • 0 vencidos</p>
+        </div>
+      </div>
+
+      <!-- Dos Columnas Operativas: 1) Alertas de Vencimiento y Renovación | 2) Alumnos con Saldo Pendiente -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Bandeja 1: Membresías por Vencer y Vencidas -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+          <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/70">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse"></span>
+              <h2 class="font-bold text-base text-white">Alertas de Vencimiento (Por Vencer y Vencidos)</h2>
+            </div>
+            <span id="badge-count-vencimientos" class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-300 tabular-nums">0</span>
+          </div>
+          <div id="dashboard-lista-vencimientos" class="divide-y divide-slate-800/80 max-h-96 overflow-y-auto"></div>
+        </div>
+
+        <!-- Bandeja 2: Alumnos con Saldo Pendiente (Adelantos) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col">
+          <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between bg-slate-900/70">
+            <div class="flex items-center gap-2.5">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <h2 class="font-bold text-base text-white">Cuentas por Cobrar (Adelantos / Pagos Parciales)</h2>
+            </div>
+            <span id="badge-count-saldos" class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 tabular-nums">0</span>
+          </div>
+          <div id="dashboard-lista-saldos" class="divide-y divide-slate-800/80 max-h-96 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <!-- Tabla Rápida: Últimos Recibos Emitidos -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <div class="px-5 py-4 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 class="font-bold text-base text-white">Últimos Recibos y Membresías Registradas</h2>
+            <p class="text-xs text-slate-400">Vista rápida de nombres y apellidos, N° de recibo, total a pagar, fechas de inicio y finalización</p>
+          </div>
+          <button
+            type="button"
+            onclick="window.AppUI.cambiarTab('recibos')"
+            class="text-xs font-bold text-red-400 hover:text-red-300 flex items-center gap-1 cursor-pointer"
+          >
+            <span>Ver todos los recibos y caja</span>
+            <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/50">
+                <th class="py-3 px-4">N° Recibo</th>
+                <th class="py-3 px-4">Nombres y Apellidos</th>
+                <th class="py-3 px-4">Plan / Disciplina</th>
+                <th class="py-3 px-4">Fecha Inicio</th>
+                <th class="py-3 px-4">Fecha Finalización</th>
+                <th class="py-3 px-4 text-right">Total a Pagar</th>
+                <th class="py-3 px-4 text-right">Abonado</th>
+                <th class="py-3 px-4 text-right">Saldo</th>
+                <th class="py-3 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="dashboard-ultimos-recibos" class="divide-y divide-slate-800/70 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VISTA 2: MÓDULO DE RECIBOS Y CUADRE DE CAJA                        -->
+    <!-- ================================================================== -->
+    <section id="view-recibos" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-black text-white">Historial de Recibos y Cuadre de Caja</h2>
+            <p class="text-xs text-slate-400">Filtra por fecha, método de pago o busca por N° de recibo y nombre del alumno</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              id="btn-exportar-recibos-excel"
+              type="button"
+              class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer"
+            >
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              <span>Exportar Recibos a Excel (.xls)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Filtros de Recibos -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Buscar Recibo o Alumno</label>
+            <input
+              id="filtro-recibos-texto"
+              type="search"
+              placeholder="Ej: 000104 o Carlos Mendoza..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Periodo de Caja</label>
+            <select
+              id="filtro-recibos-periodo"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+            >
+              <option value="TODOS">Todos los recibos</option>
+              <option value="HOY">Emitidos Hoy</option>
+              <option value="MES">Este Mes</option>
+              <option value="CON_SALDO">Membresías con Saldo Pendiente</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-400 mb-1">Método de Pago</label>
+            <select
+              id="filtro-recibos-metodo"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+            >
+              <option value="TODOS">Todos los métodos</option>
+              <option value="EFECTIVO">Efectivo</option>
+              <option value="YAPE_PLIN">Yape / Plin</option>
+              <option value="TRANSFERENCIA">Transferencia</option>
+              <option value="TARJETA">Tarjeta POS</option>
+            </select>
+          </div>
+          <div class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2 flex flex-col justify-center">
+            <span class="text-[11px] font-semibold text-slate-400 uppercase">Total Filtrado en Caja</span>
+            <span id="recibos-total-filtrado" class="text-lg font-black text-emerald-400 tabular-nums">S/ 0.00</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla Completa de Recibos -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">
+                <th class="py-3.5 px-4">N° Recibo</th>
+                <th class="py-3.5 px-4">Fecha Pago</th>
+                <th class="py-3.5 px-4">Nombres y Apellidos</th>
+                <th class="py-3.5 px-4">Concepto</th>
+                <th class="py-3.5 px-4">Fecha Inicio</th>
+                <th class="py-3.5 px-4">Fecha Finalización</th>
+                <th class="py-3.5 px-4 text-right">Total a Pagar</th>
+                <th class="py-3.5 px-4 text-right">Abonado</th>
+                <th class="py-3.5 px-4 text-right">Saldo</th>
+                <th class="py-3.5 px-4 text-center">Método</th>
+                <th class="py-3.5 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-recibos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VISTA 3: PADRÓN DE ALUMNOS Y VIGENCIAS                             -->
+    <!-- ================================================================== -->
+    <section id="view-alumnos" class="hidden space-y-6">
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h2 class="text-xl font-black text-white">Padrón de Alumnos y Estado de Membresías</h2>
+            <p class="text-xs text-slate-400">Consulta la vigencia, grado/cinturón, apoderado e historial de recibos de cada deportista</p>
+          </div>
+          <div class="flex flex-wrap items-center gap-2.5">
+            <button
+              id="btn-exportar-alumnos-excel"
+              type="button"
+              class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-3.5 py-2.5 rounded-xl transition cursor-pointer"
+            >
+              <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+              <span>Exportar Padrón a Excel (.xls)</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div class="sm:col-span-2">
+            <input
+              id="filtro-alumnos-texto"
+              type="search"
+              placeholder="Buscar por nombres, apellidos, WhatsApp o cinturón..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+          <div>
+            <select
+              id="filtro-alumnos-estado"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+            >
+              <option value="TODOS">Todos los estados</option>
+              <option value="ACTIVO">🟢 Activos</option>
+              <option value="POR_VENCER">🟡 Por vencer (≤ 5 días)</option>
+              <option value="VENCIDO">🔴 Vencidos</option>
+              <option value="CON_DEUDA">⚠️ Con Saldo Pendiente</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Alumnos -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-lg">
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="border-b border-slate-800 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-950/60">
+                <th class="py-3.5 px-4">Nombres y Apellidos</th>
+                <th class="py-3.5 px-4">Grado / Cinturón</th>
+                <th class="py-3.5 px-4">WhatsApp / Emergencia</th>
+                <th class="py-3.5 px-4">Último Plan</th>
+                <th class="py-3.5 px-4">Fecha Inicio</th>
+                <th class="py-3.5 px-4">Fecha Finalización</th>
+                <th class="py-3.5 px-4 text-center">Vigencia</th>
+                <th class="py-3.5 px-4 text-right">Saldo Pendiente</th>
+                <th class="py-3.5 px-4 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-alumnos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VISTA 4: CATÁLOGO DE PLANES Y DISCIPLINAS                          -->
+    <!-- ================================================================== -->
+    <section id="view-planes" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Formulario Crear / Editar Plan -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 h-fit">
+          <h3 id="form-plan-titulo" class="text-base font-black text-white mb-1">Agregar Plan / Disciplina</h3>
+          <p class="text-xs text-slate-400 mb-4">Predefine tus planes para autocompletar precios y fechas al registrar recibos.</p>
+          <form id="form-plan" class="space-y-3.5">
+            <input type="hidden" id="plan-id" />
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Plan *</label>
+              <input
+                id="plan-nombre"
+                type="text"
+                required
+                placeholder="Ej: Mensual Muay Thai"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Disciplina *</label>
+              <input
+                id="plan-disciplina"
+                type="text"
+                required
+                placeholder="Ej: Muay Thai, Boxeo, BJJ, MMA..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+              />
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Duración (Días) *</label>
+                <input
+                  id="plan-duracion"
+                  type="number"
+                  min="1"
+                  value="30"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                />
+                <span class="text-[11px] text-slate-400">30 = 1 mes, 90 = 3 meses</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Total a Pagar Sugerido *</label>
+                <input
+                  id="plan-precio"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="120.00"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                />
+              </div>
+            </div>
+            <div class="flex items-center gap-2 pt-2">
+              <button
+                type="submit"
+                class="flex-1 bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-2.5 rounded-xl transition cursor-pointer"
+              >
+                Guardar Plan
+              </button>
+              <button
+                id="btn-cancelar-plan"
+                type="button"
+                class="hidden px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-semibold text-slate-300 cursor-pointer"
+              >
+                Cancelar
+              </button>
+            </div>
+          </form>
+        </div>
+
+        <!-- Lista de Planes -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5">
+          <h3 class="text-base font-black text-white mb-4">Catálogo de Planes Activos</h3>
+          <div id="lista-planes-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-3.5"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================================================================== -->
+    <!-- VISTA 5: CONFIGURACIÓN, CORRELATIVO DE RECIBOS Y NUBE SUPABASE     -->
+    <!-- ================================================================== -->
+    <section id="view-configuracion" class="hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Datos de la Academia y Talonario -->
+        <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+          <div class="flex items-center gap-2.5">
+            <i data-lucide="building-2" class="w-5 h-5 text-red-400"></i>
+            <h3 class="text-lg font-black text-white">Datos de la Academia y Numeración de Recibos</h3>
+          </div>
+          <form id="form-configuracion" class="space-y-4">
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Nombre del Gimnasio / Academia</label>
+              <input
+                id="cfg-nombre"
+                type="text"
+                required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Subtítulo / Disciplinas (Aparece en el recibo digital)</label>
+              <input
+                id="cfg-subtitulo"
+                type="text"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+              />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Teléfono / WhatsApp del Gimnasio</label>
+                <input
+                  id="cfg-telefono"
+                  type="text"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Símbolo de Moneda</label>
+                <input
+                  id="cfg-moneda"
+                  type="text"
+                  value="S/"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+                />
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-300 mb-1">Dirección del Local</label>
+              <input
+                id="cfg-direccion"
+                type="text"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+              />
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Próximo N° de Recibo Secuencial</label>
+                <input
+                  id="cfg-proximo-recibo"
+                  type="number"
+                  min="1"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm font-mono text-emerald-400 font-bold tabular-nums outline-none focus:border-red-500"
+                />
+                <span class="text-[11px] text-slate-400">Se incrementa automáticamente con cada recibo</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Días de Alerta antes del Vencimiento</label>
+                <input
+                  id="cfg-dias-alerta"
+                  type="number"
+                  min="1"
+                  max="30"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                />
+              </div>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800 items-center">
+              <div>
+                <label class="block text-xs font-semibold text-amber-400 mb-1">🔑 Clave / PIN de Administrador (Papá)</label>
+                <input
+                  id="cfg-pin-admin"
+                  type="text"
+                  placeholder="Ej: 1234"
+                  required
+                  class="w-full bg-slate-950 border border-amber-500/40 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-amber-300 outline-none focus:border-amber-400"
+                />
+                <span class="text-[11px] text-slate-400">Para desbloquear el modo Admin</span>
+              </div>
+              <div class="pt-3">
+                <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                  <input id="cfg-pedir-pin-inicio" type="checkbox" class="w-4 h-4 accent-red-600 rounded" />
+                  <span class="text-xs font-semibold text-slate-200">Pedir Clave al abrir el sistema</span>
+                </label>
+                <p class="text-[11px] text-slate-400 mt-1">Protege la caja y configuración si otra persona usa la PC</p>
+              </div>
+            </div>
+            <button
+              type="submit"
+              class="w-full bg-red-600 hover:bg-red-500 text-white font-bold text-sm py-2.5 rounded-xl transition cursor-pointer"
+            >
+              Guardar Configuración del Gimnasio
+            </button>
+          </form>
+        </div>
+
+        <!-- Conexión Nube (Supabase) y Respaldos -->
+        <div class="space-y-6">
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="cloud" class="w-5 h-5 text-sky-400"></i>
+                <h3 class="text-lg font-black text-white">Base de Datos en la Nube (Supabase)</h3>
+              </div>
+              <span class="text-xs px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 font-semibold">
+                Esquema SQL Listo
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              El esquema relacional completo se encuentra en <code class="text-sky-300 bg-slate-950 px-1.5 py-0.5 rounded">supabase/schema.sql</code>.
+              Pega aquí las credenciales de tu proyecto Supabase para sincronizar en la nube:
+            </p>
+            <div class="space-y-3">
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Supabase Project URL</label>
+                <input
+                  id="cfg-supabase-url"
+                  type="url"
+                  placeholder="https://xyzcompany.supabase.co"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono outline-none focus:border-sky-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Supabase Anon Public Key</label>
+                <input
+                  id="cfg-supabase-key"
+                  type="password"
+                  placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white font-mono outline-none focus:border-sky-500"
+                />
+              </div>
+              <div class="flex flex-wrap gap-2 pt-1">
+                <button
+                  id="btn-test-supabase"
+                  type="button"
+                  class="flex-1 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+                >
+                  Guardar y Probar Conexión Cloud
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Respaldo Local y Limpieza de Datos de Prueba -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center gap-2.5">
+              <i data-lucide="database-backup" class="w-5 h-5 text-amber-400"></i>
+              <h3 class="text-base font-black text-white">Respaldo de Seguridad y Datos de Prueba</h3>
+            </div>
+            <div class="flex flex-wrap gap-2.5">
+              <button
+                id="btn-backup-json"
+                type="button"
+                class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+              >
+                <i data-lucide="download" class="w-4 h-4"></i>
+                <span>Descargar Copia de Seguridad (.JSON)</span>
+              </button>
+              <label class="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-semibold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer">
+                <i data-lucide="upload" class="w-4 h-4"></i>
+                <span>Restaurar Copia (.JSON)</span>
+                <input id="input-restore-json" type="file" accept=".json" class="hidden" />
+              </label>
+            </div>
+            <div class="pt-3 border-t border-slate-800 flex flex-wrap items-center justify-between gap-2">
+              <p class="text-xs text-slate-400">¿Listo para empezar desde cero sin los 4 alumnos de ejemplo?</p>
+              <div class="flex gap-2">
+                <button
+                  id="btn-limpiar-produccion"
+                  type="button"
+                  class="text-xs font-bold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 px-3 py-2 rounded-xl transition cursor-pointer"
+                >
+                  Iniciar en Limpio (Recibo #000001)
+                </button>
+                <button
+                  id="btn-restaurar-demo"
+                  type="button"
+                  class="text-xs font-semibold text-slate-400 hover:text-white bg-slate-800 px-3 py-2 rounded-xl transition cursor-pointer"
+                >
+                  Restaurar Ejemplos
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 1: NUEVO RECIBO / INSCRIPCIÓN / RENOVACIÓN                     -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-nuevo-pago"
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4 overflow-y-auto"
+  >
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full shadow-2xl overflow-hidden my-auto">
+      <!-- Cabecera Modal -->
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 via-slate-900 to-red-950/60 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-red-400">
+            <i data-lucide="file-plus-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="modal-pago-titulo" class="font-black text-base sm:text-lg text-white">Registrar Nuevo Recibo / Inscripción</h3>
+            <p class="text-xs text-slate-400">Completa los datos del alumno, N° de recibo, total a pagar y fechas de vigencia</p>
+          </div>
+        </div>
+        <button type="button" data-close-modal="modal-nuevo-pago" class="text-slate-400 hover:text-white p-1.5 rounded-lg cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="form-nuevo-pago" class="p-5 sm:p-6 space-y-5 max-h-[82vh] overflow-y-auto">
+        <!-- Selector Modo: Nuevo Alumno vs Alumno Existente / Renovación -->
+        <div class="grid grid-cols-2 gap-2 p-1 bg-slate-950 rounded-xl border border-slate-800">
+          <button
+            type="button"
+            id="btn-modo-alumno-nuevo"
+            class="py-2 px-3 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer"
+          >
+            👤 Alumno Nuevo
+          </button>
+          <button
+            type="button"
+            id="btn-modo-alumno-existente"
+            class="py-2 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+          >
+            🔄 Alumno Registrado / Renovar
+          </button>
+        </div>
+
+        <!-- Buscador de Alumno Existente (Oculto cuando es Alumno Nuevo) -->
+        <div id="bloque-selector-existente" class="hidden bg-slate-950/90 border border-slate-800 rounded-xl p-3.5 space-y-2">
+          <label class="block text-xs font-bold text-slate-300">Seleccionar Alumno Registrado</label>
+          <select
+            id="pago-select-alumno"
+            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+          >
+            <option value="">-- Selecciona un alumno --</option>
+          </select>
+          <!-- Banner de Renovación Flexible -->
+          <div id="banner-renovacion-flexible" class="hidden pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
+            <span id="texto-vencimiento-anterior" class="text-slate-300">Último vencimiento: —</span>
+            <div class="flex items-center gap-1.5">
+              <button
+                type="button"
+                id="btn-renovar-continuar"
+                class="px-2.5 py-1 rounded-lg bg-red-600/20 border border-red-500/40 text-red-300 font-semibold hover:bg-red-600/30 cursor-pointer"
+              >
+                Continuar desde vencimiento
+              </button>
+              <button
+                type="button"
+                id="btn-renovar-hoy"
+                class="px-2.5 py-1 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 font-semibold hover:bg-slate-700 cursor-pointer"
+              >
+                Iniciar desde Hoy
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 1. NOMBRES Y APELLIDOS DEL ALUMNO + DATOS COMPLEMENTARIOS -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">1. Datos del Alumno</span>
+            <span class="text-[11px] text-slate-400">* Campos obligatorios</span>
+          </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">Nombres *</label>
+              <input
+                id="pago-nombres"
+                type="text"
+                required
+                placeholder="Ej: Carlos Andrés"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">Apellidos *</label>
+              <input
+                id="pago-apellidos"
+                type="text"
+                required
+                placeholder="Ej: Mendoza Vargas"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Teléfono / WhatsApp</label>
+              <input
+                id="pago-whatsapp"
+                type="tel"
+                placeholder="Ej: 987654321"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Grado / Cinturón</label>
+              <select
+                id="pago-grado"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+              >
+                <option value="Principiante / Blanco">Principiante / Blanco</option>
+                <option value="Intermedio / Cinturón Azul">Intermedio / Cinturón Azul</option>
+                <option value="Avanzado / Cinturón Morado">Avanzado / Cinturón Morado</option>
+                <option value="Cinturón Marrón">Cinturón Marrón</option>
+                <option value="Cinturón Negro">Cinturón Negro</option>
+                <option value="Competidor">Competidor</option>
+                <option value="Infantil / Kids">Infantil / Kids</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-slate-400 mb-1">Apoderado / Emergencia</label>
+              <input
+                id="pago-emergencia"
+                type="text"
+                placeholder="Nombre y/o Celular"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3 py-1.5 text-xs text-white outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. PLAN, FECHA DE INICIO Y FECHA DE FINALIZACIÓN -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">2. Plan y Periodo de Vigencia</span>
+            <div class="flex gap-1.5">
+              <button type="button" data-quick-duration="30" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+1 Mes</button>
+              <button type="button" data-quick-duration="90" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+3 Meses</button>
+              <button type="button" data-quick-duration="15" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+15 Días</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">Plantilla de Plan / Disciplina</label>
+              <select
+                id="pago-select-plan"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+              ></select>
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">Concepto en el Recibo *</label>
+              <input
+                id="pago-concepto"
+                type="text"
+                required
+                placeholder="Ej: Mensual Muay Thai"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">📅 Fecha de Inicio *</label>
+              <input
+                id="pago-fecha-inicio"
+                type="date"
+                required
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white font-semibold tabular-nums outline-none"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-semibold text-red-300 mb-1">🏁 Fecha de Finalización (Vencimiento) *</label>
+              <input
+                id="pago-fecha-fin"
+                type="date"
+                required
+                class="w-full bg-slate-900 border border-red-500/50 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white font-semibold tabular-nums outline-none"
+              />
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. NÚMERO DE RECIBO, TOTAL A PAGAR Y ABONO -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">3. Número de Recibo y Montos</span>
+            <span id="aviso-recibo-duplicado" class="hidden text-xs font-bold text-amber-400">⚠️ Este N° de recibo ya fue registrado</span>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <!-- Número de Recibo -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">🧾 Número de Recibo *</label>
+              <input
+                id="pago-numero-recibo"
+                type="text"
+                required
+                placeholder="000105"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-emerald-400 tabular-nums outline-none"
+              />
+              <span class="text-[11px] text-slate-400">Auto o escribe el de tu talonario</span>
+            </div>
+
+            <!-- Total a Pagar -->
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">💰 Total a Pagar (Membresía) *</label>
+              <input
+                id="pago-total-pagar"
+                type="number"
+                step="0.01"
+                min="0"
+                required
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm font-bold text-white tabular-nums outline-none"
+              />
+              <span class="text-[11px] text-slate-400">Costo total acordado</span>
+            </div>
+
+            <!-- Monto Abonado Hoy -->
+            <div>
+              <label class="block text-xs font-semibold text-emerald-400 mb-1">✅ Monto que Abona Hoy *</label>
+              <input
+                id="pago-monto-abonado"
+                type="number"
+                step="0.01"
+                min="0.1"
+                required
+                class="w-full bg-slate-900 border border-emerald-500/60 focus:border-emerald-400 rounded-xl px-3.5 py-2 text-sm font-black text-emerald-400 tabular-nums outline-none"
+              />
+              <span class="text-[11px] text-slate-400">Si deja adelanto, pon lo que paga hoy</span>
+            </div>
+          </div>
+
+          <!-- Resumen en vivo de Saldo Pendiente + Método de Pago -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 items-center">
+            <div>
+              <label class="block text-xs font-semibold text-slate-200 mb-1">Método de Pago</label>
+              <select
+                id="pago-metodo"
+                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
+              >
+                <option value="EFECTIVO">💵 Efectivo</option>
+                <option value="YAPE_PLIN">📱 Yape / Plin</option>
+                <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
+                <option value="TARJETA">💳 Tarjeta POS</option>
+              </select>
+            </div>
+
+            <div id="caja-resumen-saldo" class="rounded-xl p-3 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+              <div>
+                <span class="block text-[11px] font-bold uppercase text-slate-300">Saldo Pendiente</span>
+                <span id="pago-estado-texto" class="text-xs font-bold text-emerald-400">PAGADO COMPLETO</span>
+              </div>
+              <span id="pago-saldo-preview" class="text-xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-medium text-slate-400 mb-1">Observación (Opcional)</label>
+            <input
+              id="pago-observacion"
+              type="text"
+              placeholder="Ej: Dejó adelanto, cancela el viernes / Descuento hermano..."
+              class="w-full bg-slate-900 border border-slate-700/80 rounded-xl px-3.5 py-1.5 text-xs text-white outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+
+        <!-- Botones de Acción del Formulario -->
+        <div class="flex flex-wrap items-center justify-end gap-2.5 pt-2 border-t border-slate-800">
+          <button
+            type="button"
+            data-close-modal="modal-nuevo-pago"
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            data-submit-mode="interno"
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-600 text-xs font-bold text-white transition cursor-pointer"
+          >
+            Guardar (Solo Control Interno)
+          </button>
+          <button
+            type="submit"
+            data-submit-mode="digital"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-xs font-black text-white shadow-lg shadow-red-900/40 transition cursor-pointer"
+          >
+            <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+            <span>Guardar y Ver Comprobante Digital</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 2: COBRAR SALDO PENDIENTE (EMITE NUEVO RECIBO EN CAJA HOY)     -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-cobrar-saldo"
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4"
+  >
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 bg-gradient-to-r from-slate-900 to-amber-950/50 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <i data-lucide="coins" class="w-5 h-5 text-amber-400"></i>
+          <h3 class="font-black text-base text-white">Cobrar Saldo Pendiente</h3>
+        </div>
+        <button type="button" data-close-modal="modal-cobrar-saldo" class="text-slate-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="form-cobrar-saldo" class="p-6 space-y-4">
+        <input type="hidden" id="saldo-membresia-id" />
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-1">
+          <p id="saldo-alumno-nombre" class="font-black text-base text-white">—</p>
+          <p id="saldo-membresia-detalle" class="text-xs text-slate-400">—</p>
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 mt-2 text-xs">
+            <span class="text-slate-400">Deuda / Saldo Actual:</span>
+            <span id="saldo-monto-actual" class="text-base font-black text-amber-400 tabular-nums">S/ 0.00</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-semibold text-slate-200 mb-1">Nuevo N° de Recibo *</label>
+            <input
+              id="saldo-numero-recibo"
+              type="text"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm font-mono font-bold text-emerald-400 tabular-nums outline-none focus:border-amber-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-emerald-400 mb-1">Monto que Abona Hoy *</label>
+            <input
+              id="saldo-monto-abonar"
+              type="number"
+              step="0.01"
+              min="0.1"
+              required
+              class="w-full bg-slate-950 border border-emerald-500/60 rounded-xl px-3.5 py-2 text-sm font-black text-emerald-400 tabular-nums outline-none"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-200 mb-1">Método de Pago</label>
+          <select
+            id="saldo-metodo-pago"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
+          >
+            <option value="EFECTIVO">💵 Efectivo</option>
+            <option value="YAPE_PLIN">📱 Yape / Plin</option>
+            <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
+            <option value="TARJETA">💳 Tarjeta POS</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-medium text-slate-400 mb-1">Observación</label>
+          <input
+            id="saldo-observacion"
+            type="text"
+            placeholder="Cancelación de saldo pendiente"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+          />
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-2">
+          <button
+            type="button"
+            data-close-modal="modal-cobrar-saldo"
+            class="px-4 py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs transition cursor-pointer"
+          >
+            <i data-lucide="check" class="w-4 h-4"></i>
+            <span>Registrar Recibo de Saldo</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 3: VISOR DE COMPROBANTE DIGITAL (WHATSAPP / PNG / IMPRIMIR)    -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-comprobante"
+    class="hidden fixed inset-0 z-50 bg-slate-950/85 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+  >
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden my-auto">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2">
+          <i data-lucide="award" class="w-5 h-5 text-red-400"></i>
+          <h3 class="font-black text-sm sm:text-base text-white">Comprobante Digital Oficial</h3>
+        </div>
+        <button type="button" data-close-modal="modal-comprobante" class="text-slate-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-4 sm:p-5 space-y-4">
+        <!-- Área del Canvas imprimible -->
+        <div id="print-receipt-area" class="bg-slate-950 rounded-xl p-2 border border-slate-800 flex justify-center">
+          <canvas id="canvas-comprobante" class="w-full max-w-[380px] h-auto rounded-lg shadow-lg"></canvas>
+        </div>
+
+        <!-- Botones de Acción de Comprobante -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <a
+            id="btn-whatsapp-recibo"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            class="inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer"
+          >
+            <i data-lucide="send" class="w-4 h-4"></i>
+            <span>Enviar por WhatsApp</span>
+          </a>
+          <button
+            id="btn-copiar-imagen-recibo"
+            type="button"
+            class="inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-3 px-4 rounded-xl transition cursor-pointer"
+          >
+            <i data-lucide="copy" class="w-4 h-4"></i>
+            <span>Copiar Imagen (Pegar en WhatsApp)</span>
+          </button>
+          <button
+            id="btn-descargar-png-recibo"
+            type="button"
+            class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+          >
+            <i data-lucide="download" class="w-4 h-4"></i>
+            <span>Descargar Imagen (.PNG)</span>
+          </button>
+          <button
+            type="button"
+            onclick="window.print()"
+            class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+          >
+            <i data-lucide="printer" class="w-4 h-4"></i>
+            <span>Imprimir Comprobante</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 4: FICHA E HISTORIAL DEL ALUMNO                                -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-historial-alumno"
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+  >
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-3xl w-full shadow-2xl overflow-hidden my-auto">
+      <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 id="hist-alumno-nombre" class="font-black text-lg text-white">Ficha del Alumno</h3>
+          <p id="hist-alumno-subtitulo" class="text-xs text-slate-400">Historial de membresías y recibos emitidos</p>
+        </div>
+        <button type="button" data-close-modal="modal-historial-alumno" class="text-slate-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+      <div id="hist-alumno-contenido" class="p-6 space-y-5 max-h-[80vh] overflow-y-auto"></div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 5: ACCESO ADMINISTRADOR / CAMBIO DE ROL (ADMIN vs RECEPCIÓN)   -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-login-admin"
+    class="hidden fixed inset-0 z-50 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4"
+  >
+    <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 bg-gradient-to-r from-slate-900 to-red-950/60 border-b border-slate-800 text-center">
+        <div class="w-12 h-12 rounded-2xl bg-red-600/20 border border-red-500/40 flex items-center justify-center text-2xl mx-auto mb-2">
+          🥋
+        </div>
+        <h3 class="font-black text-base text-white">Control de Acceso del Gimnasio</h3>
+        <p class="text-xs text-slate-400 mt-0.5">Selecciona el modo de uso o ingresa la clave de Administrador</p>
+      </div>
+      <form id="form-login-admin" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">🔑 Clave / PIN de Administrador</label>
+          <input
+            id="login-input-pin"
+            type="password"
+            placeholder="Ingresa tu clave (por defecto: 1234)"
+            class="w-full bg-slate-950 border border-slate-700 focus:border-red-500 rounded-xl px-4 py-2.5 text-center font-mono text-base font-bold text-white tracking-widest outline-none"
+          />
+        </div>
+        <button
+          type="submit"
+          class="w-full bg-red-600 hover:bg-red-500 text-white font-black text-xs py-3 rounded-xl shadow-lg shadow-red-900/40 transition cursor-pointer"
+        >
+          🔓 Entrar como Administrador (Acceso Total)
+        </button>
+        <div class="relative flex py-1 items-center">
+          <div class="flex-grow border-t border-slate-800"></div>
+          <span class="flex-shrink mx-3 text-[11px] text-slate-400 uppercase font-semibold">o para ayudantes</span>
+          <div class="flex-grow border-t border-slate-800"></div>
+        </div>
+        <button
+          id="btn-entrar-modo-recepcion"
+          type="button"
+          class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
+        >
+          🔒 Usar en Modo Recepción (Solo registrar pagos)
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- TOAST DE NOTIFICACIONES -->
+  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
+  <script src="./src/js/cloudConfig.js"></script>
+  <script src="./src/js/store.js"></script>
+  <script src="./src/js/receiptGenerator.js"></script>
+  <script src="./src/js/excelExporter.js"></script>
+  <script src="./src/js/supabaseSync.js"></script>
+  <script src="./src/js/app.js"></script>
+</body>
+</html>
