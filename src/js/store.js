@@ -380,7 +380,6 @@ class GymStore {
     } catch (e) {}
     this.notify();
   }
-  }
 
   subscribe(listener) {
     this.listeners.push(listener);
