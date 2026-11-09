@@ -32,7 +32,11 @@
           <td><b>${escapeHtml(r.alumno?.nombres)} ${escapeHtml(r.alumno?.apellidos)}</b></td>
           <td>${escapeHtml(r.membresia?.concepto)}</td>
           <td style="text-align:center;">${escapeHtml(formatDatePE(r.membresia?.fecha_inicio))}</td>
-          <td style="text-align:center;">${escapeHtml(formatDatePE(r.membresia?.fecha_fin))}</td>
+          <td style="text-align:center;">${
+            r.membresia?.tipo_operacion === 'SOLO_INSCRIPCION'
+              ? 'PAGO ÚNICO (ALTA)'
+              : escapeHtml(formatDatePE(r.membresia?.fecha_fin))
+          }</td>
           <td style="text-align:right;">${Number(r.membresia?.total_a_pagar || 0).toFixed(2)}</td>
           <td style="text-align:right; font-weight:bold; color:#15803d;">${Number(r.monto_abonado || 0).toFixed(2)}</td>
           <td style="text-align:right; color:${Number(r.membresia?.saldo_pendiente) > 0 ? '#b45309' : '#64748b'};">${Number(r.membresia?.saldo_pendiente || 0).toFixed(2)}</td>
@@ -105,8 +109,11 @@
           <td><b>${escapeHtml(a.apellidos)}</b></td>
           <td style="mso-number-format:'\\@';">${escapeHtml(a.telefono_whatsapp || '')}</td>
           <td>${escapeHtml(a.grado_cinturon || '')}</td>
+          <td style="text-align:center; font-weight:bold; color:${a.inscripcion_pagada !== false ? '#15803d' : '#b45309'};">${
+            a.inscripcion_pagada !== false ? 'PAGADA' : 'PENDIENTE'
+          }</td>
           <td>${escapeHtml(a.contacto_emergencia || '')} ${a.telefono_emergencia ? `(${escapeHtml(a.telefono_emergencia)})` : ''}</td>
-          <td>${escapeHtml(mem?.concepto || 'Sin membresía')}</td>
+          <td>${escapeHtml(mem?.concepto || (a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : 'Sin membresía'))}</td>
           <td style="text-align:center;">${escapeHtml(mem ? formatDatePE(mem.fecha_inicio) : '—')}</td>
           <td style="text-align:center;">${escapeHtml(mem ? formatDatePE(mem.fecha_fin) : '—')}</td>
           <td style="text-align:center; font-weight:bold;">${escapeHtml(a.estado_vigencia)}</td>
@@ -125,7 +132,7 @@
         <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-family:Calibri, Arial, sans-serif; font-size:11pt;">
           <thead>
             <tr style="background-color:#111827; color:#ffffff; font-size:13pt; font-weight:bold;">
-              <th colspan="11" style="padding:10px; text-align:left;">
+              <th colspan="12" style="padding:10px; text-align:left;">
                 ${escapeHtml(config.nombre_academia || 'GIMNASIO ARTES MARCIALES')} - PADRÓN DE ALUMNOS Y VIGENCIAS (${hoy})
               </th>
             </tr>
@@ -134,6 +141,7 @@
               <th>Apellidos</th>
               <th>WhatsApp</th>
               <th>Grado / Cinturón</th>
+              <th>Inscripción</th>
               <th>Contacto Emergencia / Apoderado</th>
               <th>Plan Actual</th>
               <th>Fecha de Inicio</th>

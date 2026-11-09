@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS public.configuracion_gym (
     telefono VARCHAR(30) DEFAULT '',
     direccion VARCHAR(200) DEFAULT '',
     moneda VARCHAR(10) NOT NULL DEFAULT 'S/',
+    precio_inscripcion NUMERIC(10, 2) NOT NULL DEFAULT 30.00,
     serie_recibo VARCHAR(10) NOT NULL DEFAULT '001',
     proximo_nro_recibo INTEGER NOT NULL DEFAULT 1,
     dias_alerta_vencimiento INTEGER NOT NULL DEFAULT 5,
@@ -42,6 +43,8 @@ CREATE TABLE IF NOT EXISTS public.alumnos (
     telefono_emergencia VARCHAR(30) DEFAULT '',
     grado_cinturon VARCHAR(60) DEFAULT 'Principiante / Blanco',
     disciplina_principal VARCHAR(80) DEFAULT 'General',
+    inscripcion_pagada BOOLEAN NOT NULL DEFAULT FALSE,
+    fecha_inscripcion DATE,
     notas TEXT DEFAULT '',
     activo BOOLEAN NOT NULL DEFAULT TRUE,
     fecha_registro TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -52,7 +55,11 @@ CREATE TABLE IF NOT EXISTS public.membresias (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     alumno_id UUID NOT NULL REFERENCES public.alumnos(id) ON DELETE CASCADE,
     plan_id UUID REFERENCES public.planes_disciplinas(id) ON DELETE SET NULL,
-    concepto VARCHAR(160) NOT NULL,         -- Ej: "Mensual Muay Thai"
+    tipo_operacion VARCHAR(30) NOT NULL DEFAULT 'MENSUALIDAD', -- 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
+    incluye_inscripcion BOOLEAN NOT NULL DEFAULT FALSE,
+    monto_inscripcion NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    monto_mensualidad NUMERIC(10, 2) NOT NULL DEFAULT 0.00,
+    concepto VARCHAR(160) NOT NULL,         -- Ej: "Inscripción + Mensual Muay Thai"
     fecha_inicio DATE NOT NULL,
     fecha_fin DATE NOT NULL,
     total_a_pagar NUMERIC(10, 2) NOT NULL CHECK (total_a_pagar >= 0),

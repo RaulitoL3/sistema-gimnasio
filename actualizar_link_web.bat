@@ -3,19 +3,20 @@ chcp 65001 >nul
 title Publicar Actualizacion al Link Web del Gimnasio
 cd /d "%~dp0"
 echo =========================================================
-echo   SUBIENDO SISTEMA A GITHUB (RaulitoL3/sistema-gimnasio)
+echo   SUBIENDO ACTUALIZACION A GITHUB PAGES...
 echo =========================================================
 echo.
+
+powershell -NoProfile -Command "$ts = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds(); (Get-Content index.html -Raw) -replace '\.js\?v=\d+', (\".js?v=\" + $ts) | Set-Content index.html -Encoding UTF8"
 
 git add .
-git commit -m "Actualizacion del sistema de gimnasio" 2>nul
-git branch -M main
-git push -u origin main
+git commit -m "Actualizacion del sistema de gimnasio"
+git push origin main
 
 echo.
 echo =========================================================
-echo   PROCESO COMPLETADO!
-echo   Ahora activa GitHub Pages en:
-echo   https://github.com/RaulitoL3/sistema-gimnasio/settings/pages
+echo   LISTO! En ~30 segundos el link web estara actualizado
+echo   sin problemas de cache:
+echo   https://raulitol3.github.io/sistema-gimnasio/
 echo =========================================================
 pause

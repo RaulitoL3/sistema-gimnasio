@@ -421,6 +421,7 @@
             >
               <option value="TODOS">Todos los estados</option>
               <option value="ACTIVO">🟢 Activos</option>
+              <option value="SOLO_INSCRITO">🎓 Solo Inscritos (Pendiente 1ra Mensualidad)</option>
               <option value="POR_VENCER">🟡 Por vencer (≤ 5 días)</option>
               <option value="VENCIDO">🔴 Vencidos</option>
               <option value="CON_DEUDA">⚠️ Con Saldo Pendiente</option>
@@ -592,9 +593,22 @@
                 class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm text-white outline-none focus:border-red-500"
               />
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800">
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 border-t border-slate-800">
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Próximo N° de Recibo Secuencial</label>
+                <label class="block text-xs font-semibold text-emerald-400 mb-1">🎓 Precio de Inscripción</label>
+                <input
+                  id="cfg-precio-inscripcion"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value="30.00"
+                  required
+                  class="w-full bg-slate-950 border border-emerald-500/40 rounded-xl px-3.5 py-2 text-sm font-bold text-emerald-300 tabular-nums outline-none focus:border-emerald-400"
+                />
+                <span class="text-[11px] text-slate-400">Matrícula por defecto</span>
+              </div>
+              <div>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Próximo N° de Recibo</label>
                 <input
                   id="cfg-proximo-recibo"
                   type="number"
@@ -602,10 +616,10 @@
                   required
                   class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-sm font-mono text-emerald-400 font-bold tabular-nums outline-none focus:border-red-500"
                 />
-                <span class="text-[11px] text-slate-400">Se incrementa automáticamente con cada recibo</span>
+                <span class="text-[11px] text-slate-400">Secuencia automática</span>
               </div>
               <div>
-                <label class="block text-xs font-semibold text-slate-300 mb-1">Días de Alerta antes del Vencimiento</label>
+                <label class="block text-xs font-semibold text-slate-300 mb-1">Alerta Vencimiento (días)</label>
                 <input
                   id="cfg-dias-alerta"
                   type="number"
@@ -879,32 +893,81 @@
           </div>
         </div>
 
-        <!-- 2. PLAN, FECHA DE INICIO Y FECHA DE FINALIZACIÓN -->
-        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">2. Plan y Periodo de Vigencia</span>
-            <div class="flex gap-1.5">
+        <!-- 2. INSCRIPCIÓN, PLAN, FECHA DE INICIO Y FECHA DE FINALIZACIÓN -->
+        <div class="bg-slate-950/60 border border-slate-800/90 rounded-xl p-4 space-y-3.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-extrabold uppercase tracking-wider text-red-400">2. Inscripción y Mensualidad</span>
+              <span id="badge-estado-inscripcion-modal" class="hidden text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                🎓 Ya tiene Inscripción pagada
+              </span>
+            </div>
+            <div id="botones-duracion-rapida" class="flex gap-1.5">
               <button type="button" data-quick-duration="30" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+1 Mes</button>
               <button type="button" data-quick-duration="90" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+3 Meses</button>
               <button type="button" data-quick-duration="15" class="quick-dur-btn text-[11px] px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">+15 Días</button>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <!-- Selector de Modalidad de Cobro (Inscripción + Mensualidad | Solo Inscripción | Solo Mensualidad) -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-2 p-1 bg-slate-900 rounded-xl border border-slate-800">
+            <button
+              type="button"
+              data-tipo-op="INSCRIPCION_Y_MENSUALIDAD"
+              class="btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer"
+            >
+              🎓 Inscripción + Mensualidad
+            </button>
+            <button
+              type="button"
+              data-tipo-op="SOLO_INSCRIPCION"
+              class="btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+            >
+              📝 Solo Inscripción (Matrícula)
+            </button>
+            <button
+              type="button"
+              data-tipo-op="MENSUALIDAD"
+              class="btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer"
+            >
+              🥊 Solo Mensualidad
+            </button>
+          </div>
+
+          <!-- Recuadro de Costo de Inscripción (Visible cuando se cobra Inscripción) -->
+          <div id="bloque-costo-inscripcion" class="bg-emerald-950/25 border border-emerald-500/30 rounded-xl p-3 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">Plantilla de Plan / Disciplina</label>
+              <span class="text-xs font-bold text-emerald-300 block">🎓 Derecho de Inscripción / Matrícula</span>
+              <span id="subtexto-costo-inscripcion" class="text-[11px] text-slate-400">Pago para dar de alta al alumno en el sistema (editable si hay promoción)</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-xs font-bold text-slate-300">Costo Inscripción:</span>
+              <input
+                id="pago-monto-inscripcion"
+                type="number"
+                step="0.01"
+                min="0"
+                value="30.00"
+                class="w-28 bg-slate-900 border border-emerald-500/50 focus:border-emerald-400 rounded-xl px-3 py-1.5 text-sm font-black text-emerald-400 tabular-nums text-right outline-none"
+              />
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div id="bloque-select-plan">
+              <label class="block text-xs font-semibold text-slate-200 mb-1">Plantilla de Plan / Mensualidad</label>
               <select
                 id="pago-select-plan"
                 class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
               ></select>
             </div>
-            <div>
+            <div id="bloque-concepto-recibo">
               <label class="block text-xs font-semibold text-slate-200 mb-1">Concepto en el Recibo *</label>
               <input
                 id="pago-concepto"
                 type="text"
                 required
-                placeholder="Ej: Mensual Muay Thai"
+                placeholder="Ej: Inscripción + Mensual Muay Thai"
                 class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white outline-none"
               />
             </div>
@@ -912,7 +975,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label class="block text-xs font-semibold text-slate-200 mb-1">📅 Fecha de Inicio *</label>
+              <label id="label-pago-fecha-inicio" class="block text-xs font-semibold text-slate-200 mb-1">📅 Fecha de Inicio *</label>
               <input
                 id="pago-fecha-inicio"
                 type="date"
@@ -920,7 +983,7 @@
                 class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2 text-sm text-white font-semibold tabular-nums outline-none"
               />
             </div>
-            <div>
+            <div id="bloque-fecha-fin">
               <label class="block text-xs font-semibold text-red-300 mb-1">🏁 Fecha de Finalización (Vencimiento) *</label>
               <input
                 id="pago-fecha-fin"
@@ -1278,11 +1341,11 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
-  <script src="./src/js/cloudConfig.js?v=2"></script>
-  <script src="./src/js/store.js?v=2"></script>
-  <script src="./src/js/receiptGenerator.js?v=2"></script>
-  <script src="./src/js/excelExporter.js?v=2"></script>
-  <script src="./src/js/supabaseSync.js?v=2"></script>
-  <script src="./src/js/app.js?v=2"></script>
+  <script src="./src/js/cloudConfig.js?v=3"></script>
+  <script src="./src/js/store.js?v=3"></script>
+  <script src="./src/js/receiptGenerator.js?v=3"></script>
+  <script src="./src/js/excelExporter.js?v=3"></script>
+  <script src="./src/js/supabaseSync.js?v=3"></script>
+  <script src="./src/js/app.js?v=3"></script>
 </body>
 </html>

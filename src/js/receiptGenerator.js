@@ -170,7 +170,11 @@
 
     ctx.fillStyle = '#0f172a';
     ctx.font = '800 20px "Inter", system-ui, sans-serif';
-    ctx.fillText(membresia.concepto || 'Membresía Mensual', cardX + 58, y + 60);
+    const textoConcepto =
+      membresia.incluye_inscripcion && Number(membresia.monto_inscripcion) > 0 && membresia.tipo_operacion !== 'SOLO_INSCRIPCION'
+        ? `${membresia.concepto} (Insc: ${moneda}${Number(membresia.monto_inscripcion).toFixed(0)} + Plan: ${moneda}${Number(membresia.monto_mensualidad).toFixed(0)})`
+        : membresia.concepto || 'Membresía Mensual';
+    ctx.fillText(textoConcepto, cardX + 58, y + 60);
 
     // Cajas de Fecha de Inicio y Fecha de Finalización
     const boxW = (cardW - 140) / 2;
@@ -185,25 +189,37 @@
 
     ctx.fillStyle = '#64748b';
     ctx.font = '700 11px "Inter", system-ui, sans-serif';
-    ctx.fillText('FECHA DE INICIO', cardX + 76, boxY + 22);
+    ctx.fillText(
+      membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? 'FECHA DE INSCRIPCIÓN' : 'FECHA DE INICIO',
+      cardX + 76,
+      boxY + 22
+    );
     ctx.fillStyle = '#0f172a';
     ctx.font = '800 19px "Inter", system-ui, sans-serif';
     ctx.fillText(formatDatePE(membresia.fecha_inicio), cardX + 76, boxY + 48);
 
     // Fecha de Finalización
     const box2X = cardX + 58 + boxW + 24;
-    ctx.fillStyle = '#fff1f2';
+    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#ecfdf5' : '#fff1f2';
     roundRect(ctx, box2X, boxY, boxW, 64, 10);
     ctx.fill();
-    ctx.strokeStyle = '#fecdd3';
+    ctx.strokeStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#a7f3d0' : '#fecdd3';
     ctx.stroke();
 
-    ctx.fillStyle = '#be123c';
+    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#047857' : '#be123c';
     ctx.font = '700 11px "Inter", system-ui, sans-serif';
-    ctx.fillText('FECHA DE FINALIZACIÓN (VENCIMIENTO)', box2X + 18, boxY + 22);
-    ctx.fillStyle = '#881337';
-    ctx.font = '800 19px "Inter", system-ui, sans-serif';
-    ctx.fillText(formatDatePE(membresia.fecha_fin), box2X + 18, boxY + 48);
+    ctx.fillText(
+      membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? 'TIPO DE REGISTRO' : 'FECHA DE FINALIZACIÓN (VENCIMIENTO)',
+      box2X + 18,
+      boxY + 22
+    );
+    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#065f46' : '#881337';
+    ctx.font = '800 18px "Inter", system-ui, sans-serif';
+    ctx.fillText(
+      membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? 'PAGO ÚNICO • INSCRITO' : formatDatePE(membresia.fecha_fin),
+      box2X + 18,
+      boxY + 48
+    );
 
     // Sección 3: Desglose Financiero (Total a Pagar, Monto Abonado hoy, Saldo Pendiente)
     y += 188;
@@ -349,14 +365,24 @@
     const nombreCompleto = `${alumno.nombres} ${alumno.apellidos}`.trim();
     const saldo = Number(membresia.saldo_pendiente || 0);
 
+    const desgloseInscripcion =
+      membresia.incluye_inscripcion && Number(membresia.monto_inscripcion) > 0 && membresia.tipo_operacion !== 'SOLO_INSCRIPCION'
+        ? `🎓 *Desglose:* Inscripción ${moneda} ${Number(membresia.monto_inscripcion).toFixed(2)} + Mensualidad ${moneda} ${Number(membresia.monto_mensualidad).toFixed(2)}`
+        : null;
+
     const lineas = [
       `🥋 *${(config.nombre_academia || 'GIMNASIO ARTES MARCIALES').toUpperCase()}*`,
       `📄 *COMPROBANTE DE PAGO - RECIBO N° ${detalleRecibo.numero_recibo}*`,
       `--------------------------------`,
       `👤 *Alumno:* ${nombreCompleto}`,
       `🥊 *Concepto:* ${membresia.concepto}`,
-      `📅 *Fecha de Inicio:* ${formatDatePE(membresia.fecha_inicio)}`,
-      `🏁 *Fecha de Finalización:* ${formatDatePE(membresia.fecha_fin)}`,
+      desgloseInscripcion,
+      membresia.tipo_operacion === 'SOLO_INSCRIPCION'
+        ? `📅 *Fecha de Inscripción:* ${formatDatePE(membresia.fecha_inicio)} (Pago Único)`
+        : `📅 *Fecha de Inicio:* ${formatDatePE(membresia.fecha_inicio)}`,
+      membresia.tipo_operacion === 'SOLO_INSCRIPCION'
+        ? null
+        : `🏁 *Fecha de Finalización:* ${formatDatePE(membresia.fecha_fin)}`,
       `--------------------------------`,
       `💰 *Total a Pagar:* ${moneda} ${Number(membresia.total_a_pagar).toFixed(2)}`,
       `✅ *Monto Abonado (Recibo #${detalleRecibo.numero_recibo}):* ${moneda} ${Number(detalleRecibo.monto_abonado).toFixed(2)} (${METODO_LABELS[detalleRecibo.metodo_pago] || detalleRecibo.metodo_pago})`,
@@ -365,7 +391,7 @@
         : `🎉 *Estado:* PAGADO COMPLETO (Saldo ${moneda} 0.00)`,
       `--------------------------------`,
       `¡Gracias por entrenar con nosotros! 💪`
-    ];
+    ].filter(Boolean);
 
     const texto = encodeURIComponent(lineas.join('\n'));
     return tel ? `https://wa.me/${tel}?text=${texto}` : `https://wa.me/?text=${texto}`;

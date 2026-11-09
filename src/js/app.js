@@ -30,6 +30,7 @@
 
   let tabActual = 'dashboard';
   let modoModalPago = 'NUEVO'; // 'NUEVO' | 'EXISTENTE'
+  let tipoOperacionPago = 'INSCRIPCION_Y_MENSUALIDAD'; // 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
   let reciboActualEnVisor = null;
   let ultimoTotalSincronizado = 0;
 
@@ -334,7 +335,11 @@
         </td>
         <td class="py-3 px-4 text-xs text-slate-300">${m.concepto || 'Membresía'}</td>
         <td class="py-3 px-4 text-xs font-semibold text-slate-200 tabular-nums whitespace-nowrap">${formatDatePE(m.fecha_inicio)}</td>
-        <td class="py-3 px-4 text-xs font-semibold text-red-300 tabular-nums whitespace-nowrap">${formatDatePE(m.fecha_fin)}</td>
+        <td class="py-3 px-4 text-xs font-semibold text-red-300 tabular-nums whitespace-nowrap">${
+          m.tipo_operacion === 'SOLO_INSCRIPCION'
+            ? `<span class="text-xs font-bold text-emerald-400">PAGO ÚNICO (ALTA)</span>`
+            : formatDatePE(m.fecha_fin)
+        }</td>
         <td class="py-3 px-4 text-right font-semibold text-slate-200 tabular-nums whitespace-nowrap">${moneda} ${Number(m.total_a_pagar || 0).toFixed(2)}</td>
         <td class="py-3 px-4 text-right font-black text-emerald-400 tabular-nums whitespace-nowrap">${moneda} ${Number(r.monto_abonado || 0).toFixed(2)}</td>
         <td class="py-3 px-4 text-right tabular-nums whitespace-nowrap">${badgeSaldo}</td>
@@ -458,6 +463,7 @@
       }
 
       if (estado === 'ACTIVO' && a.estado_vigencia !== 'ACTIVO') return false;
+      if (estado === 'SOLO_INSCRITO' && a.estado_vigencia !== 'SOLO_INSCRITO') return false;
       if (estado === 'POR_VENCER' && a.estado_vigencia !== 'POR_VENCER') return false;
       if (estado === 'VENCIDO' && a.estado_vigencia !== 'VENCIDO') return false;
       if (estado === 'CON_DEUDA' && !(a.saldo_total_pendiente > 0)) return false;
@@ -487,11 +493,18 @@
         let badgeVigencia = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Sin membresía</span>`;
         if (a.estado_vigencia === 'ACTIVO') {
           badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tabular-nums">🟢 Activo (${a.dias_restantes}d)</span>`;
+        } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
+          badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">🎓 Inscrito (Falta 1ra Mensualidad)</span>`;
         } else if (a.estado_vigencia === 'POR_VENCER') {
           badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">🟡 Vence en ${a.dias_restantes}d</span>`;
         } else if (a.estado_vigencia === 'VENCIDO') {
           badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 tabular-nums">🔴 Vencido (${Math.abs(a.dias_restantes)}d)</span>`;
         }
+
+        const badgeInscrito =
+          a.inscripcion_pagada !== false
+            ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🎓 Inscrito</span>`
+            : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">⚠️ Sin inscripción</span>`;
 
         const saldoHtml =
           a.saldo_total_pendiente > 0
@@ -501,13 +514,16 @@
         return `
           <tr class="hover:bg-slate-800/40 transition">
             <td class="py-3.5 px-4">
-              <button
-                type="button"
-                onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
-                class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
-              >
-                ${a.nombre_completo}
-              </button>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                  class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
+                >
+                  ${a.nombre_completo}
+                </button>
+                ${badgeInscrito}
+              </div>
               <span class="text-[11px] text-slate-400">${a.total_membresias} membresía(s) registrada(s)</span>
             </td>
             <td class="py-3.5 px-4 text-xs text-slate-300">${a.grado_cinturon || 'Principiante'}</td>
@@ -515,7 +531,7 @@
               <div>${a.telefono_whatsapp || '—'}</div>
               ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${a.contacto_emergencia}</div>` : ''}
             </td>
-            <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? mem.concepto : '—'}</td>
+            <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? mem.concepto : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : '—'}</td>
             <td class="py-3.5 px-4 text-xs font-semibold text-slate-200 tabular-nums">${mem ? formatDatePE(mem.fecha_inicio) : '—'}</td>
             <td class="py-3.5 px-4 text-xs font-semibold text-red-300 tabular-nums">${mem ? formatDatePE(mem.fecha_fin) : '—'}</td>
             <td class="py-3.5 px-4 text-center whitespace-nowrap">${badgeVigencia}</td>
@@ -534,7 +550,7 @@
                   onclick="window.AppUI.abrirModalRenovar('${a.id}')"
                   class="px-2.5 py-1 rounded-lg bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-xs font-bold text-red-300 cursor-pointer"
                 >
-                  Renovar
+                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1ra Mensualidad' : 'Renovar'}
                 </button>
               </div>
             </td>
@@ -597,6 +613,9 @@
     document.getElementById('cfg-telefono').value = cfg.telefono || '';
     document.getElementById('cfg-moneda').value = cfg.moneda || 'S/';
     document.getElementById('cfg-direccion').value = cfg.direccion || '';
+    if (document.getElementById('cfg-precio-inscripcion')) {
+      document.getElementById('cfg-precio-inscripcion').value = Number(cfg.precio_inscripcion ?? 30).toFixed(2);
+    }
     document.getElementById('cfg-proximo-recibo').value = cfg.proximo_nro_recibo || 1;
     document.getElementById('cfg-dias-alerta').value = cfg.dias_alerta_vencimiento || 5;
     if (document.getElementById('cfg-pin-admin')) {
@@ -633,7 +652,13 @@
       alumnos
         .map(
           (a) =>
-            `<option value="${a.id}">${a.nombre_completo} (${a.ultima_membresia ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}` : 'Sin membresía'})</option>`
+            `<option value="${a.id}">${a.nombre_completo} (${
+              a.ultima_membresia
+                ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
+                : a.estado_vigencia === 'SOLO_INSCRITO'
+                ? '🎓 Inscrito - Falta 1ra Mensualidad'
+                : 'Sin membresía'
+            })</option>`
         )
         .join('');
   }
@@ -643,6 +668,7 @@
     const btnNuevo = document.getElementById('btn-modo-alumno-nuevo');
     const btnExistente = document.getElementById('btn-modo-alumno-existente');
     const bloqueExistente = document.getElementById('bloque-selector-existente');
+    const badgeInscripcion = document.getElementById('badge-estado-inscripcion-modal');
 
     if (modo === 'NUEVO') {
       btnNuevo.className = 'py-2 px-3 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer';
@@ -650,6 +676,8 @@
       bloqueExistente.classList.add('hidden');
       document.getElementById('pago-select-alumno').value = '';
       document.getElementById('banner-renovacion-flexible').classList.add('hidden');
+      if (badgeInscripcion) badgeInscripcion.classList.add('hidden');
+      setTipoOperacionModal('INSCRIPCION_Y_MENSUALIDAD');
     } else {
       btnExistente.className = 'py-2 px-3 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer';
       btnNuevo.className = 'py-2 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
@@ -657,18 +685,61 @@
     }
   }
 
-  function aplicarPlanSeleccionado() {
-    const planId = document.getElementById('pago-select-plan').value;
-    const plan = store.state.planes.find((p) => p.id === planId);
-    const fechaInicio = document.getElementById('pago-fecha-inicio').value || getLocalDateISO();
+  function setTipoOperacionModal(tipo) {
+    tipoOperacionPago = tipo;
+    document.querySelectorAll('.btn-tipo-operacion').forEach((btn) => {
+      const esActivo = btn.getAttribute('data-tipo-op') === tipo;
+      btn.className = esActivo
+        ? 'btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold bg-red-600 text-white transition cursor-pointer'
+        : 'btn-tipo-operacion py-2 px-2.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
+    });
 
-    if (plan) {
-      document.getElementById('pago-concepto').value = plan.nombre;
-      document.getElementById('pago-fecha-fin').value = calcularFechaFin(fechaInicio, plan.duracion_dias);
-      const precio = Number(plan.precio_sugerido || 0).toFixed(2);
-      document.getElementById('pago-total-pagar').value = precio;
-      document.getElementById('pago-monto-abonado').value = precio;
-      ultimoTotalSincronizado = Number(precio);
+    const incluyeInscripcion = tipo === 'INSCRIPCION_Y_MENSUALIDAD' || tipo === 'SOLO_INSCRIPCION';
+    const soloInscripcion = tipo === 'SOLO_INSCRIPCION';
+
+    document.getElementById('bloque-costo-inscripcion')?.classList.toggle('hidden', !incluyeInscripcion);
+    document.getElementById('bloque-select-plan')?.classList.toggle('hidden', soloInscripcion);
+    document.getElementById('bloque-fecha-fin')?.classList.toggle('hidden', soloInscripcion);
+    document.getElementById('botones-duracion-rapida')?.classList.toggle('hidden', soloInscripcion);
+
+    const lblFechaInicio = document.getElementById('label-pago-fecha-inicio');
+    if (lblFechaInicio) {
+      lblFechaInicio.textContent = soloInscripcion ? '📅 Fecha de Inscripción *' : '📅 Fecha de Inicio *';
+    }
+
+    aplicarPlanSeleccionado();
+  }
+
+  function aplicarPlanSeleccionado() {
+    const planId = document.getElementById('pago-select-plan')?.value;
+    const plan = store.state.planes.find((p) => p.id === planId);
+    const fechaInicio = document.getElementById('pago-fecha-inicio')?.value || getLocalDateISO();
+    const montoInscripcion = Number(document.getElementById('pago-monto-inscripcion')?.value || 0);
+
+    if (tipoOperacionPago === 'SOLO_INSCRIPCION') {
+      document.getElementById('pago-concepto').value = 'Inscripción / Matrícula en el Sistema';
+      document.getElementById('pago-fecha-fin').value = fechaInicio;
+      const total = montoInscripcion.toFixed(2);
+      document.getElementById('pago-total-pagar').value = total;
+      document.getElementById('pago-monto-abonado').value = total;
+      ultimoTotalSincronizado = Number(total);
+    } else if (plan) {
+      const precioPlan = Number(plan.precio_sugerido || 0);
+      if (tipoOperacionPago === 'INSCRIPCION_Y_MENSUALIDAD') {
+        document.getElementById('pago-concepto').value = `Inscripción + ${plan.nombre}`;
+        document.getElementById('pago-fecha-fin').value = calcularFechaFin(fechaInicio, plan.duracion_dias);
+        const total = (montoInscripcion + precioPlan).toFixed(2);
+        document.getElementById('pago-total-pagar').value = total;
+        document.getElementById('pago-monto-abonado').value = total;
+        ultimoTotalSincronizado = Number(total);
+      } else {
+        document.getElementById('pago-concepto').value = plan.nombre;
+        document.getElementById('pago-fecha-fin').value = calcularFechaFin(fechaInicio, plan.duracion_dias);
+        const total = precioPlan.toFixed(2);
+        document.getElementById('pago-total-pagar').value = total;
+        document.getElementById('pago-monto-abonado').value = total;
+        ultimoTotalSincronizado = Number(total);
+      }
     }
     actualizarPreviewSaldoModal();
   }
@@ -705,7 +776,10 @@
 
   function abrirModalNuevoPago() {
     poblarSelectoresModalPago();
-    setModoAlumnoModal('NUEVO');
+    const precioInscDefault = Number(store.state.configuracion.precio_inscripcion ?? 30).toFixed(2);
+    if (document.getElementById('pago-monto-inscripcion')) {
+      document.getElementById('pago-monto-inscripcion').value = precioInscDefault;
+    }
 
     document.getElementById('modal-pago-titulo').textContent = 'Registrar Nuevo Recibo / Inscripción';
     document.getElementById('pago-nombres').value = '';
@@ -720,13 +794,17 @@
     document.getElementById('pago-fecha-inicio').value = hoy;
     document.getElementById('pago-numero-recibo').value = store.getProximoNumeroReciboFormateado();
 
-    aplicarPlanSeleccionado();
+    setModoAlumnoModal('NUEVO');
     abrirModal('modal-nuevo-pago');
     setTimeout(() => document.getElementById('pago-nombres')?.focus(), 80);
   }
 
   function abrirModalRenovar(alumnoId) {
     poblarSelectoresModalPago();
+    const precioInscDefault = Number(store.state.configuracion.precio_inscripcion ?? 30).toFixed(2);
+    if (document.getElementById('pago-monto-inscripcion')) {
+      document.getElementById('pago-monto-inscripcion').value = precioInscDefault;
+    }
     setModoAlumnoModal('EXISTENTE');
 
     document.getElementById('modal-pago-titulo').textContent = 'Renovar Membresía / Nuevo Recibo';
@@ -741,8 +819,11 @@
   function cargarDatosAlumnoEnModal(alumnoId) {
     const alu = store.getAlumnosConEstado().find((a) => a.id === alumnoId);
     const banner = document.getElementById('banner-renovacion-flexible');
+    const badgeInscripcion = document.getElementById('badge-estado-inscripcion-modal');
+
     if (!alu) {
       banner.classList.add('hidden');
+      if (badgeInscripcion) badgeInscripcion.classList.add('hidden');
       return;
     }
 
@@ -751,6 +832,20 @@
     document.getElementById('pago-whatsapp').value = alu.telefono_whatsapp || '';
     document.getElementById('pago-grado').value = alu.grado_cinturon || 'Principiante / Blanco';
     document.getElementById('pago-emergencia').value = alu.contacto_emergencia || '';
+
+    const yaTieneInscripcion = alu.inscripcion_pagada !== false;
+    if (badgeInscripcion) {
+      badgeInscripcion.classList.remove('hidden');
+      if (yaTieneInscripcion) {
+        badgeInscripcion.className =
+          'text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+        badgeInscripcion.textContent = '🎓 Ya tiene Inscripción pagada';
+      } else {
+        badgeInscripcion.className =
+          'text-[11px] font-bold px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
+        badgeInscripcion.textContent = '⚠️ Aún no registra Inscripción';
+      }
+    }
 
     const mem = alu.ultima_membresia;
     if (mem) {
@@ -764,12 +859,12 @@
 
       // Por defecto, continuar desde la fecha de finalización anterior
       document.getElementById('pago-fecha-inicio').value = mem.fecha_fin;
-      aplicarPlanSeleccionado();
     } else {
       banner.classList.add('hidden');
       document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
-      aplicarPlanSeleccionado();
     }
+
+    setTipoOperacionModal(yaTieneInscripcion ? 'MENSUALIDAD' : 'INSCRIPCION_Y_MENSUALIDAD');
   }
 
   // =========================================================================
@@ -826,8 +921,9 @@
     const moneda = store.state.configuracion.moneda || 'S/';
 
     document.getElementById('hist-alumno-nombre').textContent = alu.nombre_completo;
+    const textoInscripcion = alu.inscripcion_pagada !== false ? '🎓 Inscripción Pagada' : '⚠️ Sin Inscripción';
     document.getElementById('hist-alumno-subtitulo').textContent =
-      `${alu.grado_cinturon || 'Principiante'} • WhatsApp: ${alu.telefono_whatsapp || 'No registrado'} • Emergencia: ${alu.contacto_emergencia || 'No registrado'}`;
+      `${textoInscripcion} • ${alu.grado_cinturon || 'Principiante'} • WhatsApp: ${alu.telefono_whatsapp || 'No registrado'} • Emergencia: ${alu.contacto_emergencia || 'No registrado'}`;
 
     const recibosAlumno = store
       .getRecibosDetallados()
@@ -850,7 +946,11 @@
                   }">${m.estado_pago}</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  Inicio: <b>${formatDatePE(m.fecha_inicio)}</b> • Finalización: <b class="text-red-300">${formatDatePE(m.fecha_fin)}</b>
+                  ${
+                    m.tipo_operacion === 'SOLO_INSCRIPCION'
+                      ? `Fecha de Alta: <b>${formatDatePE(m.fecha_inicio)}</b> • <b class="text-emerald-400">PAGO ÚNICO DE INSCRIPCIÓN</b>`
+                      : `Inicio: <b>${formatDatePE(m.fecha_inicio)}</b> • Finalización: <b class="text-red-300">${formatDatePE(m.fecha_fin)}</b>`
+                  }
                 </p>
               </div>
               <div class="text-right tabular-nums">
@@ -1035,6 +1135,8 @@
           const semaforo =
             a.estado_vigencia === 'ACTIVO'
               ? '🟢 ACTIVO'
+              : a.estado_vigencia === 'SOLO_INSCRITO'
+              ? '🎓 SOLO INSCRITO'
               : a.estado_vigencia === 'POR_VENCER'
               ? `🟡 VENCE EN ${a.dias_restantes}D`
               : a.estado_vigencia === 'VENCIDO'
@@ -1049,7 +1151,7 @@
                   <span class="text-[11px] font-bold">${semaforo}</span>
                 </div>
                 <p class="text-xs text-slate-400 tabular-nums">
-                  ${mem ? `${mem.concepto} • Vence: ${formatDatePE(mem.fecha_fin)}` : 'Sin membresía'}
+                  ${mem ? `${mem.concepto} • Vence: ${formatDatePE(mem.fecha_fin)}` : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Inscrito (Falta 1ra Mensualidad)' : 'Sin membresía'}
                   ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Debe ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
                 </p>
               </div>
@@ -1066,7 +1168,7 @@
                   onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${a.id}')"
                   class="px-2.5 py-1 rounded-lg bg-red-600 hover:bg-red-500 text-xs font-bold text-white cursor-pointer"
                 >
-                  Renovar
+                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1ra Mensualidad' : 'Renovar'}
                 </button>
               </div>
             </div>`;
@@ -1145,6 +1247,13 @@
     document.getElementById('btn-modo-alumno-nuevo')?.addEventListener('click', () => setModoAlumnoModal('NUEVO'));
     document.getElementById('btn-modo-alumno-existente')?.addEventListener('click', () => setModoAlumnoModal('EXISTENTE'));
 
+    // Conmutador de modalidad de operación (Inscripción + Mensualidad | Solo Inscripción | Solo Mensualidad)
+    document.querySelectorAll('.btn-tipo-operacion').forEach((btn) => {
+      btn.addEventListener('click', () => setTipoOperacionModal(btn.getAttribute('data-tipo-op')));
+    });
+
+    document.getElementById('pago-monto-inscripcion')?.addEventListener('input', aplicarPlanSeleccionado);
+
     document.getElementById('pago-select-alumno')?.addEventListener('change', (e) => {
       cargarDatosAlumnoEnModal(e.target.value);
     });
@@ -1167,6 +1276,10 @@
     // Cambio de Plan o Fecha de Inicio recalcula Fecha de Finalización
     document.getElementById('pago-select-plan')?.addEventListener('change', aplicarPlanSeleccionado);
     document.getElementById('pago-fecha-inicio')?.addEventListener('change', (e) => {
+      if (tipoOperacionPago === 'SOLO_INSCRIPCION') {
+        document.getElementById('pago-fecha-fin').value = e.target.value;
+        return;
+      }
       const planId = document.getElementById('pago-select-plan').value;
       const plan = store.state.planes.find((p) => p.id === planId);
       const dias = plan ? plan.duracion_dias : 30;
@@ -1209,6 +1322,9 @@
         telefono_whatsapp: document.getElementById('pago-whatsapp').value,
         grado_cinturon: document.getElementById('pago-grado').value,
         contacto_emergencia: document.getElementById('pago-emergencia').value,
+        tipo_operacion: tipoOperacionPago,
+        incluye_inscripcion: tipoOperacionPago !== 'MENSUALIDAD',
+        monto_inscripcion: document.getElementById('pago-monto-inscripcion')?.value || 0,
         plan_id: document.getElementById('pago-select-plan').value,
         concepto: document.getElementById('pago-concepto').value,
         fecha_inicio: document.getElementById('pago-fecha-inicio').value,
@@ -1311,6 +1427,7 @@
         telefono: document.getElementById('cfg-telefono').value.trim(),
         moneda: document.getElementById('cfg-moneda').value.trim() || 'S/',
         direccion: document.getElementById('cfg-direccion').value.trim(),
+        precio_inscripcion: Number(document.getElementById('cfg-precio-inscripcion')?.value ?? 30),
         proximo_nro_recibo: Number(document.getElementById('cfg-proximo-recibo').value) || 1,
         dias_alerta_vencimiento: Number(document.getElementById('cfg-dias-alerta').value) || 5,
         pin_admin: document.getElementById('cfg-pin-admin')?.value.trim() || '1234',

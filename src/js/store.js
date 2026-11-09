@@ -293,6 +293,7 @@ function crearDatosIniciales() {
     telefono: '987 654 321',
     direccion: 'Av. Principal 123 - Lima, Perú',
     moneda: 'S/',
+    precio_inscripcion: 30.00,
     serie_recibo: '001',
     proximo_nro_recibo: 105,
     dias_alerta_vencimiento: 5,
@@ -341,6 +342,9 @@ class GymStore {
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && parsed.configuracion && Array.isArray(parsed.alumnos)) {
+          if (parsed.configuracion.precio_inscripcion === undefined) {
+            parsed.configuracion.precio_inscripcion = 30.00;
+          }
           const savedRole = localStorage.getItem('dojo_gym_device_role');
           if (savedRole) parsed.configuracion.rol_actual = savedRole;
           return parsed;
@@ -373,6 +377,9 @@ class GymStore {
   }
 
   aplicarEstadoRemotoSinRebote(remoteState) {
+    if (remoteState?.configuracion && remoteState.configuracion.precio_inscripcion === undefined) {
+      remoteState.configuracion.precio_inscripcion = 30.00;
+    }
     this.state = remoteState;
     this.recalcularTodasLasMembresias();
     try {
@@ -450,7 +457,11 @@ class GymStore {
       grado_cinturon = 'Principiante / Blanco',
       disciplina_principal = 'General',
       notas_alumno = '',
-      // Datos de Membresía
+      // Datos de Membresía e Inscripción
+      tipo_operacion = 'MENSUALIDAD', // 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
+      incluye_inscripcion = false,
+      monto_inscripcion = 0,
+      monto_mensualidad = 0,
       plan_id = null,
       concepto,
       fecha_inicio,
@@ -463,6 +474,11 @@ class GymStore {
       fecha_pago = new Date().toISOString(),
       observacion = ''
     } = payload;
+
+    const cobraInscripcion =
+      Boolean(incluye_inscripcion) ||
+      tipo_operacion === 'SOLO_INSCRIPCION' ||
+      tipo_operacion === 'INSCRIPCION_Y_MENSUALIDAD';
 
     let targetAlumnoId = alumnoId;
     let alumnoObj = null;
@@ -477,6 +493,10 @@ class GymStore {
         if (telefono_emergencia !== undefined) alumnoObj.telefono_emergencia = telefono_emergencia.trim();
         if (grado_cinturon) alumnoObj.grado_cinturon = grado_cinturon;
         if (disciplina_principal) alumnoObj.disciplina_principal = disciplina_principal;
+        if (cobraInscripcion) {
+          alumnoObj.inscripcion_pagada = true;
+          alumnoObj.fecha_inscripcion = fecha_inicio || getLocalDateISO();
+        }
       }
     }
 
@@ -491,6 +511,8 @@ class GymStore {
         telefono_emergencia: (telefono_emergencia || '').trim(),
         grado_cinturon: grado_cinturon || 'Principiante / Blanco',
         disciplina_principal: disciplina_principal || concepto || 'Artes Marciales',
+        inscripcion_pagada: cobraInscripcion,
+        fecha_inscripcion: cobraInscripcion ? (fecha_inicio || getLocalDateISO()) : null,
         notas: (notas_alumno || '').trim(),
         activo: true,
         fecha_registro: getLocalDateISO()
@@ -507,10 +529,17 @@ class GymStore {
     const nuevaMembresia = {
       id: membresiaId,
       alumno_id: targetAlumnoId,
-      plan_id: plan_id || null,
+      plan_id: tipo_operacion === 'SOLO_INSCRIPCION' ? null : (plan_id || null),
+      tipo_operacion,
+      incluye_inscripcion: cobraInscripcion,
+      monto_inscripcion: cobraInscripcion ? Number(Number(monto_inscripcion || 0).toFixed(2)) : 0,
+      monto_mensualidad:
+        tipo_operacion === 'SOLO_INSCRIPCION'
+          ? 0
+          : Number(Number(monto_mensualidad || (totalPagarNum - (cobraInscripcion ? Number(monto_inscripcion || 0) : 0))).toFixed(2)),
       concepto: (concepto || 'Membresía Artes Marciales').trim(),
-      fecha_inicio,
-      fecha_fin,
+      fecha_inicio: fecha_inicio || getLocalDateISO(),
+      fecha_fin: tipo_operacion === 'SOLO_INSCRIPCION' ? (fecha_inicio || getLocalDateISO()) : fecha_fin,
       total_a_pagar: totalPagarNum,
       monto_pagado_acumulado: abonadoNum,
       saldo_pendiente: saldoNum,
@@ -736,6 +765,7 @@ class GymStore {
     this.state.configuracion = {
       ...this.state.configuracion,
       ...nuevosDatos,
+      precio_inscripcion: Number(nuevosDatos.precio_inscripcion ?? this.state.configuracion.precio_inscripcion ?? 30),
       proximo_nro_recibo: Number(nuevosDatos.proximo_nro_recibo ?? this.state.configuracion.proximo_nro_recibo),
       dias_alerta_vencimiento: Number(nuevosDatos.dias_alerta_vencimiento ?? this.state.configuracion.dias_alerta_vencimiento)
     };
@@ -743,7 +773,7 @@ class GymStore {
     return this.state.configuracion;
   }
 
-  // Obtener lista enriquecida de alumnos con su estado de vigencia y deuda actual
+  // Obtener lista enriquecida de alumnos con su estado de vigencia, inscripción y deuda actual
   getAlumnosConEstado() {
     const diasAlerta = Number(this.state.configuracion.dias_alerta_vencimiento) || 5;
 
@@ -752,8 +782,20 @@ class GymStore {
         .filter((m) => m.alumno_id === alumno.id && m.estado_pago !== 'ANULADO')
         .sort((a, b) => (a.fecha_fin < b.fecha_fin ? 1 : -1));
 
-      const ultimaMembresia = memsAlumno[0] || null;
+      const memsMensuales = memsAlumno.filter((m) => m.tipo_operacion !== 'SOLO_INSCRIPCION');
+      const ultimaMembresia = memsMensuales[0] || null;
       const saldoTotalPendiente = memsAlumno.reduce((acc, m) => acc + Number(m.saldo_pendiente || 0), 0);
+
+      // Si el alumno ya tiene membresías registradas o pagó inscripción explícitamente, figura inscrito
+      const tieneInscripcionPagada =
+        alumno.inscripcion_pagada === true ||
+        memsAlumno.some(
+          (m) =>
+            m.incluye_inscripcion === true ||
+            m.tipo_operacion === 'SOLO_INSCRIPCION' ||
+            m.tipo_operacion === 'INSCRIPCION_Y_MENSUALIDAD'
+        ) ||
+        (alumno.inscripcion_pagada === undefined && memsMensuales.length > 0);
 
       let estadoVigencia = 'SIN_MEMBRESIA';
       let diasRestantes = null;
@@ -767,10 +809,13 @@ class GymStore {
         } else {
           estadoVigencia = 'ACTIVO';
         }
+      } else if (tieneInscripcionPagada) {
+        estadoVigencia = 'SOLO_INSCRITO';
       }
 
       return {
         ...alumno,
+        inscripcion_pagada: tieneInscripcionPagada,
         nombre_completo: `${alumno.nombres} ${alumno.apellidos}`.trim(),
         ultima_membresia: ultimaMembresia,
         membresias_historial: memsAlumno,

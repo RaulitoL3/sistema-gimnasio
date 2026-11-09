@@ -2,7 +2,9 @@ export type MetodoPago = 'EFECTIVO' | 'YAPE_PLIN' | 'TRANSFERENCIA' | 'TARJETA';
 
 export type EstadoPagoMembresia = 'PAGADO' | 'PARCIAL' | 'PENDIENTE' | 'ANULADO';
 
-export type EstadoVigencia = 'ACTIVO' | 'POR_VENCER' | 'VENCIDO' | 'SIN_MEMBRESIA';
+export type EstadoVigencia = 'ACTIVO' | 'SOLO_INSCRITO' | 'POR_VENCER' | 'VENCIDO' | 'SIN_MEMBRESIA';
+
+export type TipoOperacionMembresia = 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD';
 
 export interface ConfiguracionGym {
   id: string;
@@ -11,6 +13,7 @@ export interface ConfiguracionGym {
   telefono: string;
   direccion: string;
   moneda: string;
+  precio_inscripcion: number;
   serie_recibo: string;
   proximo_nro_recibo: number;
   dias_alerta_vencimiento: number;
@@ -38,6 +41,8 @@ export interface Alumno {
   telefono_emergencia: string;
   grado_cinturon: string;
   disciplina_principal: string;
+  inscripcion_pagada: boolean;
+  fecha_inscripcion?: string | null;
   notas: string;
   activo: boolean;
   fecha_registro: string;
@@ -47,6 +52,10 @@ export interface Membresia {
   id: string;
   alumno_id: string;
   plan_id?: string | null;
+  tipo_operacion: TipoOperacionMembresia;
+  incluye_inscripcion: boolean;
+  monto_inscripcion: number;
+  monto_mensualidad: number;
   concepto: string;
   fecha_inicio: string; // YYYY-MM-DD
   fecha_fin: string;    // YYYY-MM-DD
