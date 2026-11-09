@@ -147,7 +147,7 @@
       return;
     }
     tabActual = tabName;
-    const tabs = ['dashboard', 'recibos', 'alumnos', 'planes', 'configuracion'];
+    const tabs = ['dashboard', 'alumnos', 'horarios', 'recibos', 'planes', 'configuracion'];
     tabs.forEach((t) => {
       const sec = document.getElementById(`view-${t}`);
       if (sec) sec.classList.toggle('hidden', t !== tabName);
@@ -173,6 +173,27 @@
     if (el) el.classList.add('hidden');
   }
 
+  function actualizarFiltroHorariosAlumnos() {
+    const selectFiltro = document.getElementById('filtro-alumnos-horario');
+    if (!selectFiltro) return;
+    const valorActual = selectFiltro.value || 'TODOS';
+    const horarios = store.state.horarios || [];
+
+    selectFiltro.innerHTML =
+      `<option value="TODOS">Todos los horarios (${store.state.alumnos.length})</option>` +
+      horarios
+        .map((h) => {
+          const count = store.state.alumnos.filter((a) => a.horario_id === h.id).length;
+          return `<option value="${h.id}">🕒 ${h.hora} (${h.dias}) — ${h.nombre} [${count}]</option>`;
+        })
+        .join('') +
+      `<option value="SIN_HORARIO">⚪ Sin horario asignado</option>`;
+
+    if ([...selectFiltro.options].some((o) => o.value === valorActual)) {
+      selectFiltro.value = valorActual;
+    }
+  }
+
   // =========================================================================
   // RENDERIZADO GENERAL REACTIVO
   // =========================================================================
@@ -181,12 +202,17 @@
     const moneda = cfg.moneda || 'S/';
 
     aplicarIdentidadVisual();
+    actualizarFiltroHorariosAlumnos();
 
     // Cabecera / Sidebar
     document.getElementById('header-gym-name').textContent = cfg.nombre_academia || 'GIMNASIO ARTES MARCIALES';
     document.getElementById('header-gym-subtitle').textContent = cfg.subtitulo || 'Artes Marciales & Deportes de Contacto';
     document.getElementById('nav-badge-recibos').textContent = store.state.recibos.filter((r) => !r.anulado).length;
     document.getElementById('nav-badge-alumnos').textContent = store.state.alumnos.length;
+    const badgeHorarios = document.getElementById('nav-badge-horarios');
+    if (badgeHorarios) {
+      badgeHorarios.textContent = (store.state.horarios || []).length;
+    }
 
     const badgeRol = document.getElementById('badge-rol-actual');
     const btnRol = document.getElementById('btn-cambiar-rol');
@@ -205,6 +231,7 @@
     renderDashboard(moneda);
     renderTablaRecibos(moneda);
     renderTablaAlumnos(moneda);
+    renderHorarios(moneda);
     renderPlanes(moneda);
     renderConfiguracion();
     refreshIcons();
@@ -530,13 +557,23 @@
   function getAlumnosFiltrados() {
     const texto = (document.getElementById('filtro-alumnos-texto')?.value || '').trim().toLowerCase();
     const estado = document.getElementById('filtro-alumnos-estado')?.value || 'TODOS';
+    const horarioFiltro = document.getElementById('filtro-alumnos-horario')?.value || 'TODOS';
 
     return store.getAlumnosConEstado().filter((a) => {
       if (texto) {
         const matchNombre = a.nombre_completo.toLowerCase().includes(texto);
         const matchTel = String(a.telefono_whatsapp || '').toLowerCase().includes(texto);
         const matchGrado = String(a.grado_cinturon || '').toLowerCase().includes(texto);
-        if (!matchNombre && !matchTel && !matchGrado) return false;
+        const matchHorario = String(a.horario_texto || '').toLowerCase().includes(texto);
+        if (!matchNombre && !matchTel && !matchGrado && !matchHorario) return false;
+      }
+
+      if (horarioFiltro !== 'TODOS') {
+        if (horarioFiltro === 'SIN_HORARIO') {
+          if (a.horario_id) return false;
+        } else if (a.horario_id !== horarioFiltro) {
+          return false;
+        }
       }
 
       if (estado === 'ACTIVO' && a.estado_vigencia !== 'ACTIVO') return false;
@@ -578,7 +615,7 @@
       if (gridTarjetas) {
         gridTarjetas.innerHTML = `
           <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center text-slate-400 text-sm font-medium">
-            No se encontraron alumnos con ese criterio de búsqueda.
+            No se encontraron alumnos con ese criterio de búsqueda o horario.
           </div>`;
       }
       if (tbody) {
@@ -592,7 +629,7 @@
       return;
     }
 
-    // 1. Renderizar Tarjetas Visuales Grandes con Avatar de Cinturón y Estado Gigante
+    // 1. Renderizar Tarjetas Visuales Grandes con Avatar de Cinturón, Horario y Estado Gigante
     if (gridTarjetas) {
       gridTarjetas.innerHTML = alumnos
         .map((a) => {
@@ -646,6 +683,7 @@
                       ${a.nombre_completo}
                     </button>
                     <p class="text-xs font-bold text-slate-400 mt-0.5">${belt.label}</p>
+                    <p class="text-xs font-bold text-sky-400 mt-0.5 truncate">🕒 ${a.horario_texto || 'Sin horario asignado'}</p>
                     ${
                       a.telefono_whatsapp
                         ? `<p class="text-xs text-slate-400 tabular-nums mt-0.5">📱 WhatsApp: <b>${a.telefono_whatsapp}</b></p>`
@@ -682,25 +720,33 @@
                 <button
                   type="button"
                   onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
-                  class="flex-1 py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
+                  class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
                 >
-                  📄 Ver Ficha (${a.total_membresias})
+                  📄 Ficha (${a.total_membresias})
+                </button>
+                <button
+                  type="button"
+                  onclick="window.AppUI.abrirModalEditarAlumno('${a.id}')"
+                  title="Cambiar Horario, Cinturón o Datos del Alumno"
+                  class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
+                >
+                  ✏️ Horario / Datos
                 </button>
                 ${
                   memConDeuda
                     ? `<button
                         type="button"
                         onclick="window.AppUI.abrirModalCobrarSaldo('${memConDeuda.id}')"
-                        class="keep-white-text py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-black text-white cursor-pointer"
+                        class="keep-white-text py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-black text-white cursor-pointer"
                       >
-                        💰 Cobrar Deuda
+                        💰 Deuda
                       </button>`
                     : ''
                 }
                 <button
                   type="button"
                   onclick="window.AppUI.abrirModalRenovar('${a.id}')"
-                  class="keep-white-text flex-1 py-2.5 px-3 rounded-xl brand-bg text-xs font-black text-white cursor-pointer"
+                  class="keep-white-text flex-1 py-2 px-3 rounded-xl brand-bg text-xs font-black text-white cursor-pointer"
                 >
                   ${a.estado_vigencia === 'SOLO_INSCRITO' ? '🥊 Cobrar 1er Mes' : '🥊 Cobrar Mes'}
                 </button>
@@ -752,7 +798,10 @@
                 </div>
                 <span class="text-[11px] text-slate-400">${a.total_membresias} registro(s)</span>
               </td>
-              <td class="py-3.5 px-4 text-xs font-semibold text-slate-300">${a.grado_cinturon || 'Principiante'}</td>
+              <td class="py-3.5 px-4 text-xs">
+                <div class="font-semibold text-slate-200">${a.grado_cinturon || 'Principiante'}</div>
+                <div class="text-[11px] font-bold text-sky-400 mt-0.5">🕒 ${a.horario_texto || 'Sin horario'}</div>
+              </td>
               <td class="py-3.5 px-4 text-xs text-slate-300 tabular-nums">
                 <div>${a.telefono_whatsapp || '—'}</div>
                 ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${a.contacto_emergencia}</div>` : ''}
@@ -764,6 +813,14 @@
               <td class="py-3.5 px-4 text-right whitespace-nowrap">${saldoHtml}</td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap">
                 <div class="inline-flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onclick="window.AppUI.abrirModalEditarAlumno('${a.id}')"
+                    title="Cambiar horario, cinturón o datos"
+                    class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
+                  >
+                    ✏️
+                  </button>
                   <button
                     type="button"
                     onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
@@ -785,6 +842,191 @@
         })
         .join('');
     }
+  }
+
+  // =========================================================================
+  // 3B. RENDER HORARIOS Y GRUPOS DE ENTRENAMIENTO
+  // =========================================================================
+  function renderHorarios(moneda) {
+    const contenedor = document.getElementById('lista-horarios-grupos');
+    if (!contenedor) return;
+
+    const horarios = store.state.horarios || [];
+    const todosAlumnos = store.getAlumnosConEstado();
+
+    const crearFilaAlumnoHorarioHTML = (alu) => {
+      const belt = obtenerEstiloCinturon(alu.grado_cinturon);
+      let badgeEstado = `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Sin plan</span>`;
+      if (alu.estado_vigencia === 'ACTIVO') {
+        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 Al Día (${alu.dias_restantes}d)</span>`;
+      } else if (alu.estado_vigencia === 'SOLO_INSCRITO') {
+        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">🎓 Solo Inscrito</span>`;
+      } else if (alu.estado_vigencia === 'POR_VENCER') {
+        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">🟡 Vence en ${alu.dias_restantes}d</span>`;
+      } else if (alu.estado_vigencia === 'VENCIDO') {
+        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">🔴 Vencido (${Math.abs(alu.dias_restantes)}d)</span>`;
+      }
+
+      return `
+        <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2.5 min-w-0">
+            <span class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs font-black flex-shrink-0 ${belt.bg}">
+              ${obtenerIniciales(alu.nombres, alu.apellidos)}
+            </span>
+            <div class="min-w-0">
+              <div class="flex items-center gap-2 flex-wrap">
+                <button
+                  type="button"
+                  onclick="window.AppUI.abrirHistorialAlumno('${alu.id}')"
+                  class="font-bold text-xs sm:text-sm text-white hover:text-red-400 truncate cursor-pointer"
+                >
+                  ${alu.nombre_completo}
+                </button>
+                ${badgeEstado}
+                ${
+                  alu.saldo_total_pendiente > 0
+                    ? `<span class="text-[11px] font-black text-amber-400 tabular-nums">⚠️ Debe ${moneda}${alu.saldo_total_pendiente.toFixed(0)}</span>`
+                    : ''
+                }
+              </div>
+              <p class="text-[11px] text-slate-400">${belt.label} ${alu.telefono_whatsapp ? `• 📱 ${alu.telefono_whatsapp}` : ''}</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-1.5">
+            <button
+              type="button"
+              onclick="window.AppUI.abrirModalEditarAlumno('${alu.id}')"
+              title="Cambiar de horario o editar datos"
+              class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
+            >
+              ✏️ Cambiar Turno
+            </button>
+            <button
+              type="button"
+              onclick="window.AppUI.abrirModalRenovar('${alu.id}')"
+              class="keep-white-text px-3 py-1.5 rounded-lg brand-bg text-xs font-bold text-white cursor-pointer"
+            >
+              ${alu.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
+            </button>
+          </div>
+        </div>
+      `;
+    };
+
+    const tarjetasHorariosHTML = horarios
+      .map((h) => {
+        const alumnosDelGrupo = todosAlumnos.filter((a) => a.horario_id === h.id);
+        const cantAlDia = alumnosDelGrupo.filter((a) => a.estado_vigencia === 'ACTIVO').length;
+        const cantAlerta = alumnosDelGrupo.filter(
+          (a) => a.estado_vigencia === 'POR_VENCER' || a.estado_vigencia === 'SOLO_INSCRITO'
+        ).length;
+        const cantVencidos = alumnosDelGrupo.filter((a) => a.estado_vigencia === 'VENCIDO').length;
+
+        return `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
+            <!-- Cabecera del Horario -->
+            <div class="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-slate-800">
+              <div>
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
+                    🥋 ${h.disciplina || 'General'}
+                  </span>
+                  <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">
+                    📅 ${h.dias}
+                  </span>
+                  <span class="text-xs font-black px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                    🕒 ${h.hora}
+                  </span>
+                </div>
+                <h4 class="font-black text-base sm:text-lg text-white mt-2">${h.nombre}</h4>
+              </div>
+
+              <!-- Contadores del Grupo -->
+              <div class="flex flex-wrap items-center gap-2">
+                <span class="text-xs font-black px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 text-white">
+                  👥 ${alumnosDelGrupo.length} Alumno(s)
+                </span>
+                <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-400">
+                  🟢 ${cantAlDia} Al Día
+                </span>
+                ${
+                  cantAlerta > 0
+                    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-400">🟡 ${cantAlerta} Alerta/Insc</span>`
+                    : ''
+                }
+                ${
+                  cantVencidos > 0
+                    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-red-500/15 text-red-400">🔴 ${cantVencidos} Vencido(s)</span>`
+                    : ''
+                }
+              </div>
+            </div>
+
+            <!-- Lista de Alumnos en este Horario -->
+            <div class="space-y-2">
+              ${
+                alumnosDelGrupo.length === 0
+                  ? `<div class="p-4 bg-slate-950 border border-slate-800 rounded-xl text-center text-xs text-slate-400">
+                      Aún no hay alumnos asignados a este turno.
+                    </div>`
+                  : alumnosDelGrupo.map(crearFilaAlumnoHorarioHTML).join('')
+              }
+            </div>
+
+            <!-- Pie de acciones del Horario -->
+            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
+              <button
+                type="button"
+                onclick="window.AppUI.inscribirEnHorario('${h.id}')"
+                class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
+              >
+                + Inscribir Alumno en este Turno
+              </button>
+              <div class="flex items-center gap-2">
+                <button
+                  type="button"
+                  onclick="window.AppUI.editarHorario('${h.id}')"
+                  class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
+                >
+                  Editar Horario
+                </button>
+                <button
+                  type="button"
+                  onclick="window.AppUI.eliminarHorario('${h.id}')"
+                  class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
+                >
+                  Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      })
+      .join('');
+
+    // Alumnos que aún no tienen horario asignado
+    const alumnosSinHorario = todosAlumnos.filter(
+      (a) => !a.horario_id || !horarios.some((h) => h.id === a.horario_id)
+    );
+
+    const bloqueSinHorarioHTML =
+      alumnosSinHorario.length > 0
+        ? `
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <h4 class="font-black text-base text-white">⚪ Alumnos Pendientes de Asignar a un Horario (${alumnosSinHorario.length})</h4>
+                <p class="text-xs text-slate-400">Haz clic en "✏️ Cambiar Turno" para elegir en qué horario entrenan</p>
+              </div>
+            </div>
+            <div class="space-y-2">
+              ${alumnosSinHorario.map(crearFilaAlumnoHorarioHTML).join('')}
+            </div>
+          </div>
+        `
+        : '';
+
+    contenedor.innerHTML = tarjetasHorariosHTML + bloqueSinHorarioHTML;
   }
 
   // =========================================================================
@@ -877,6 +1119,18 @@
             `<option value="${p.id}">${p.nombre} — ${moneda} ${Number(p.precio_sugerido).toFixed(2)} (${p.duracion_dias} días)</option>`
         )
         .join('') + `<option value="PERSONALIZADO">✍️ Otro monto / Plan personalizado</option>`;
+
+    const selectHorario = document.getElementById('pago-horario');
+    if (selectHorario) {
+      const horarios = store.state.horarios || [];
+      selectHorario.innerHTML =
+        horarios
+          .map(
+            (h) =>
+              `<option value="${h.id}">🕒 ${h.hora} (${h.dias}) — ${h.nombre}</option>`
+          )
+          .join('') + `<option value="">-- Sin horario fijo / Horario libre --</option>`;
+    }
 
     const selectAlumno = document.getElementById('pago-select-alumno');
     const alumnos = store.getAlumnosConEstado();
@@ -974,6 +1228,17 @@
         document.getElementById('pago-monto-abonado').value = total;
         ultimoTotalSincronizado = Number(total);
       }
+    } else if (planId === 'PERSONALIZADO') {
+      if (!document.getElementById('pago-fecha-fin').value) {
+        document.getElementById('pago-fecha-fin').value = calcularFechaFin(fechaInicio, 30);
+      }
+      const conceptoEl = document.getElementById('pago-concepto');
+      if (!conceptoEl.value || conceptoEl.value.includes('Inscripción / Matrícula')) {
+        conceptoEl.value =
+          tipoOperacionPago === 'INSCRIPCION_Y_MENSUALIDAD'
+            ? 'Inscripción + Plan Personalizado'
+            : 'Plan Personalizado';
+      }
     }
     actualizarPreviewSaldoModal();
   }
@@ -1013,7 +1278,7 @@
    * - 'COBRAR_MENSUALIDAD'
    * - 'COBRAR_SALDO'
    */
-  function abrirModalAccionDirecta(tipoAccion) {
+  function abrirModalAccionDirecta(tipoAccion, horarioPreseleccionadoId = null) {
     if (tipoAccion === 'COBRAR_SALDO') {
       const memsConDeuda = store.state.membresias.filter(
         (m) => Number(m.saldo_pendiente) > 0 && m.estado_pago !== 'ANULADO'
@@ -1057,6 +1322,10 @@
     document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
     document.getElementById('pago-numero-recibo').value = store.getProximoNumeroReciboFormateado();
 
+    if (horarioPreseleccionadoId && document.getElementById('pago-horario')) {
+      document.getElementById('pago-horario').value = horarioPreseleccionadoId;
+    }
+
     if (tipoAccion === 'COBRAR_MENSUALIDAD') {
       document.getElementById('modal-pago-titulo').textContent = '🥊 2. Cobrar Mensualidad a Alumno Inscrito';
       document.getElementById('modal-pago-subtitulo').textContent = 'Elige al alumno registrado para cobrar su mes de clases';
@@ -1065,11 +1334,15 @@
       setTimeout(() => document.getElementById('pago-select-alumno')?.focus(), 80);
     } else {
       document.getElementById('modal-pago-titulo').textContent = '🎓 1. Inscribir Alumno Nuevo';
-      document.getElementById('modal-pago-subtitulo').textContent = 'Registra los datos del nuevo alumno y su pago de inscripción';
+      document.getElementById('modal-pago-subtitulo').textContent = 'Registra los datos del nuevo alumno, su horario y su pago de inscripción';
       setModoAlumnoModal('NUEVO');
       abrirModal('modal-nuevo-pago');
       setTimeout(() => document.getElementById('pago-nombres')?.focus(), 80);
     }
+  }
+
+  function inscribirEnHorario(horarioId) {
+    abrirModalAccionDirecta('INSCRIBIR_NUEVO', horarioId);
   }
 
   function abrirModalNuevoPago() {
@@ -1085,7 +1358,7 @@
     setModoAlumnoModal('EXISTENTE');
 
     document.getElementById('modal-pago-titulo').textContent = '🥊 Cobrar Mensualidad / Renovar';
-    document.getElementById('modal-pago-subtitulo').textContent = 'Verifica el plan, fechas de inicio/fin y el monto que abona hoy';
+    document.getElementById('modal-pago-subtitulo').textContent = 'Verifica el horario, plan, fechas de inicio/fin y el monto que abona hoy';
     document.getElementById('pago-select-alumno').value = alumnoId;
     cargarDatosAlumnoEnModal(alumnoId);
 
@@ -1110,6 +1383,9 @@
     document.getElementById('pago-whatsapp').value = alu.telefono_whatsapp || '';
     document.getElementById('pago-grado').value = alu.grado_cinturon || 'Principiante / Blanco';
     document.getElementById('pago-emergencia').value = alu.contacto_emergencia || '';
+    if (document.getElementById('pago-horario')) {
+      document.getElementById('pago-horario').value = alu.horario_id || '';
+    }
 
     const yaTieneInscripcion = alu.inscripcion_pagada !== false;
     if (badgeInscripcion) {
@@ -1204,7 +1480,7 @@
     document.getElementById('hist-alumno-nombre').textContent = alu.nombre_completo;
     const textoInscripcion = alu.inscripcion_pagada !== false ? '🎓 Inscripción Pagada' : '⚠️ Sin Inscripción';
     document.getElementById('hist-alumno-subtitulo').textContent =
-      `${textoInscripcion} • ${alu.grado_cinturon || 'Principiante'} • WhatsApp: ${alu.telefono_whatsapp || 'No registrado'} • Emergencia: ${alu.contacto_emergencia || 'No registrado'}`;
+      `${textoInscripcion} • 🕒 ${alu.horario_texto || 'Sin horario'} • ${alu.grado_cinturon || 'Principiante'} • WhatsApp: ${alu.telefono_whatsapp || 'No registrado'}`;
 
     const recibosAlumno = store
       .getRecibosDetallados()
@@ -1287,13 +1563,20 @@
 
     document.getElementById('hist-alumno-contenido').innerHTML = `
       <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <button
             type="button"
             onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${alu.id}')"
             class="keep-white-text px-4 py-2.5 rounded-xl brand-bg text-white font-extrabold text-xs sm:text-sm cursor-pointer"
           >
             + Cobrar Nueva Mensualidad
+          </button>
+          <button
+            type="button"
+            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalEditarAlumno('${alu.id}')"
+            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs sm:text-sm cursor-pointer"
+          >
+            ✏️ Cambiar Horario / Cinturón / Datos
           </button>
         </div>
         <button
@@ -1318,8 +1601,77 @@
   }
 
   // =========================================================================
-  // ACCIONES DE PLANES, RECIBOS Y SUBIDA DE LOGO
+  // FLUJO MODAL 5: EDITAR DATOS, HORARIO Y CINTURÓN DEL ALUMNO DIRECTAMENTE
   // =========================================================================
+  function abrirModalEditarAlumno(alumnoId) {
+    const alu = store.getAlumnosConEstado().find((a) => a.id === alumnoId);
+    if (!alu) return;
+
+    const selectHorario = document.getElementById('edit-alu-horario');
+    if (selectHorario) {
+      const horarios = store.state.horarios || [];
+      selectHorario.innerHTML =
+        horarios
+          .map(
+            (h) =>
+              `<option value="${h.id}">🕒 ${h.hora} (${h.dias}) — ${h.nombre}</option>`
+          )
+          .join('') + `<option value="">-- Sin horario asignado --</option>`;
+      selectHorario.value = alu.horario_id || '';
+    }
+
+    document.getElementById('edit-alu-id').value = alu.id;
+    document.getElementById('edit-alu-nombres').value = alu.nombres || '';
+    document.getElementById('edit-alu-apellidos').value = alu.apellidos || '';
+    document.getElementById('edit-alu-grado').value = alu.grado_cinturon || 'Principiante / Blanco';
+    document.getElementById('edit-alu-whatsapp').value = alu.telefono_whatsapp || '';
+    document.getElementById('edit-alu-emergencia').value = alu.contacto_emergencia || '';
+    if (document.getElementById('edit-alu-inscripcion')) {
+      document.getElementById('edit-alu-inscripcion').checked = alu.inscripcion_pagada !== false;
+    }
+
+    abrirModal('modal-editar-alumno');
+    refreshIcons();
+  }
+
+  // =========================================================================
+  // ACCIONES DE HORARIOS, PLANES, RECIBOS Y SUBIDA DE LOGO
+  // =========================================================================
+  function editarHorario(horarioId) {
+    const h = (store.state.horarios || []).find((x) => x.id === horarioId);
+    if (!h) return;
+    document.getElementById('form-horario-titulo').textContent = 'Editar Horario / Turno';
+    document.getElementById('horario-id').value = h.id;
+    document.getElementById('horario-nombre').value = h.nombre || '';
+    document.getElementById('horario-dias').value = h.dias || '';
+    document.getElementById('horario-hora').value = h.hora || '';
+    document.getElementById('horario-disciplina').value = h.disciplina || '';
+    document.getElementById('btn-cancelar-horario')?.classList.remove('hidden');
+    document.getElementById('horario-nombre')?.focus();
+  }
+
+  function resetFormHorario() {
+    if (document.getElementById('form-horario-titulo')) {
+      document.getElementById('form-horario-titulo').textContent = 'Agregar Nuevo Horario / Turno';
+    }
+    if (document.getElementById('horario-id')) {
+      document.getElementById('horario-id').value = '';
+    }
+    document.getElementById('form-horario')?.reset();
+    document.getElementById('btn-cancelar-horario')?.classList.add('hidden');
+  }
+
+  function eliminarHorario(horarioId) {
+    if (!esAdmin()) {
+      mostrarToast('Solo el Administrador puede eliminar horarios', 'warning');
+      abrirModal('modal-login-admin');
+      return;
+    }
+    if (!confirm('¿Deseas eliminar este horario/turno? Los alumnos conservarán su historial.')) return;
+    store.eliminarHorario(horarioId);
+    mostrarToast('Horario eliminado', 'info');
+  }
+
   function editarPlan(planId) {
     const p = store.state.planes.find((x) => x.id === planId);
     if (!p) return;
@@ -1558,7 +1910,13 @@
 
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        ['modal-nuevo-pago', 'modal-cobrar-saldo', 'modal-comprobante', 'modal-historial-alumno'].forEach(cerrarModal);
+        [
+          'modal-nuevo-pago',
+          'modal-cobrar-saldo',
+          'modal-comprobante',
+          'modal-historial-alumno',
+          'modal-editar-alumno'
+        ].forEach(cerrarModal);
         document.getElementById('global-search-results')?.classList.add('hidden');
       }
     });
@@ -1664,6 +2022,7 @@
         apellidos: document.getElementById('pago-apellidos').value,
         telefono_whatsapp: document.getElementById('pago-whatsapp').value,
         grado_cinturon: document.getElementById('pago-grado').value,
+        horario_id: document.getElementById('pago-horario')?.value || null,
         contacto_emergencia: document.getElementById('pago-emergencia').value,
         tipo_operacion: tipoOperacionPago,
         incluye_inscripcion: tipoOperacionPago !== 'MENSUALIDAD',
@@ -1685,6 +2044,23 @@
       if (submitMode === 'digital') {
         verComprobanteDigital(resultado.recibo.id);
       }
+    });
+
+    // Submit Formulario Editar Alumno (Horario, Cinturón, Datos)
+    document.getElementById('form-editar-alumno')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      store.guardarAlumno({
+        id: document.getElementById('edit-alu-id').value,
+        nombres: document.getElementById('edit-alu-nombres').value,
+        apellidos: document.getElementById('edit-alu-apellidos').value,
+        horario_id: document.getElementById('edit-alu-horario').value || null,
+        grado_cinturon: document.getElementById('edit-alu-grado').value,
+        telefono_whatsapp: document.getElementById('edit-alu-whatsapp').value,
+        contacto_emergencia: document.getElementById('edit-alu-emergencia').value,
+        inscripcion_pagada: Boolean(document.getElementById('edit-alu-inscripcion')?.checked)
+      });
+      cerrarModal('modal-editar-alumno');
+      mostrarToast('Datos y horario del alumno actualizados');
     });
 
     // Submit Formulario Cobrar Saldo Pendiente
@@ -1728,8 +2104,11 @@
       );
     });
 
-    ['filtro-alumnos-texto', 'filtro-alumnos-estado'].forEach((id) => {
+    ['filtro-alumnos-texto', 'filtro-alumnos-estado', 'filtro-alumnos-horario'].forEach((id) => {
       document.getElementById(id)?.addEventListener('input', () =>
+        renderTablaAlumnos(store.state.configuracion.moneda || 'S/')
+      );
+      document.getElementById(id)?.addEventListener('change', () =>
         renderTablaAlumnos(store.state.configuracion.moneda || 'S/')
       );
     });
@@ -1744,6 +2123,36 @@
       exportarAlumnosExcel(getAlumnosFiltrados(), store.state.configuracion);
       mostrarToast('Padrón de Alumnos exportado a Excel (.xls)');
     });
+
+    // Gestión de Horarios / Turnos
+    document.querySelectorAll('.btn-quick-dias').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById('horario-dias');
+        if (input) input.value = btn.getAttribute('data-quick-dias') || '';
+      });
+    });
+
+    document.querySelectorAll('.btn-quick-hora').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const input = document.getElementById('horario-hora');
+        if (input) input.value = btn.getAttribute('data-quick-hora') || '';
+      });
+    });
+
+    document.getElementById('form-horario')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      store.guardarHorario({
+        id: document.getElementById('horario-id').value || null,
+        nombre: document.getElementById('horario-nombre').value,
+        dias: document.getElementById('horario-dias').value,
+        hora: document.getElementById('horario-hora').value,
+        disciplina: document.getElementById('horario-disciplina').value
+      });
+      resetFormHorario();
+      mostrarToast('Horario / Turno guardado correctamente');
+    });
+
+    document.getElementById('btn-cancelar-horario')?.addEventListener('click', resetFormHorario);
 
     // Gestión de Planes
     document.getElementById('form-plan')?.addEventListener('submit', (e) => {
@@ -1876,11 +2285,15 @@
     abrirModal,
     cerrarModal,
     abrirModalAccionDirecta,
+    inscribirEnHorario,
     abrirModalNuevoPago,
     abrirModalRenovar,
     abrirModalCobrarSaldo,
     verComprobanteDigital,
     abrirHistorialAlumno,
+    abrirModalEditarAlumno,
+    editarHorario,
+    eliminarHorario,
     editarPlan,
     eliminarPlan,
     anularOReactivarRecibo,

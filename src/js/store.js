@@ -101,6 +101,59 @@ function formatearNumeroRecibo(num, digits = 6) {
   return limpio;
 }
 
+function crearHorariosPorDefecto() {
+  return [
+    {
+      id: 'hor-manana-lmv',
+      nombre: 'Turno Mañana (8:00 AM - 9:30 AM)',
+      dias: 'Lun - Mié - Vie',
+      hora: '8:00 AM - 9:30 AM',
+      disciplina: 'Muay Thai / Boxeo',
+      activo: true
+    },
+    {
+      id: 'hor-kids-tarde',
+      nombre: 'Turno Kids / Infantil (4:30 PM - 5:30 PM)',
+      dias: 'Lun - Mié - Vie',
+      hora: '4:30 PM - 5:30 PM',
+      disciplina: 'Infantil / Kids',
+      activo: true
+    },
+    {
+      id: 'hor-tarde-6pm',
+      nombre: 'Turno Tarde (6:00 PM - 7:30 PM)',
+      dias: 'Lunes a Viernes',
+      hora: '6:00 PM - 7:30 PM',
+      disciplina: 'Boxeo / Muay Thai',
+      activo: true
+    },
+    {
+      id: 'hor-noche-730pm',
+      nombre: 'Turno Noche (7:30 PM - 9:00 PM)',
+      dias: 'Lun - Mié - Vie',
+      hora: '7:30 PM - 9:00 PM',
+      disciplina: 'Jiu-Jitsu (BJJ) / MMA',
+      activo: true
+    },
+    {
+      id: 'hor-noche-mjs',
+      nombre: 'Turno Noche (8:00 PM - 9:30 PM)',
+      dias: 'Mar - Jue - Sáb',
+      hora: '8:00 PM - 9:30 PM',
+      disciplina: 'Muay Thai / MMA',
+      activo: true
+    },
+    {
+      id: 'hor-libre',
+      nombre: 'Horario Libre / Full Acceso',
+      dias: 'Lunes a Sábado',
+      hora: 'Turno Libre',
+      disciplina: 'Todas las disciplinas',
+      activo: true
+    }
+  ];
+}
+
 // Datos semilla de demostración para que el sistema se vea vivo desde el primer segundo
 function crearDatosIniciales() {
   const hoy = getLocalDateISO();
@@ -111,6 +164,8 @@ function crearDatosIniciales() {
   const hace5Dias = addDaysISO(hoy, -5);
   const venceEn25Dias = calcularFechaFin(hace5Dias, 30);
   const venceEn1Mes = calcularFechaFin(hoy, 30);
+
+  const horarios = crearHorariosPorDefecto();
 
   const planes = [
     { id: 'plan-muaythai', nombre: 'Mensual Muay Thai', disciplina: 'Muay Thai', duracion_dias: 30, precio_sugerido: 130.00, activo: true },
@@ -131,7 +186,10 @@ function crearDatosIniciales() {
       telefono_emergencia: '987111222',
       grado_cinturon: 'Intermedio / Cinturón Azul',
       disciplina_principal: 'Jiu-Jitsu',
-      notas: 'Entrena turno noche 8pm.',
+      horario_id: 'hor-noche-730pm',
+      horario_texto: '7:30 PM - 9:00 PM (Lun - Mié - Vie)',
+      inscripcion_pagada: true,
+      notas: 'Entrena turno noche.',
       activo: true,
       fecha_registro: hace25Dias
     },
@@ -144,6 +202,9 @@ function crearDatosIniciales() {
       telefono_emergencia: '999444555',
       grado_cinturon: 'Principiante / Blanco',
       disciplina_principal: 'Muay Thai',
+      horario_id: 'hor-tarde-6pm',
+      horario_texto: '6:00 PM - 7:30 PM (Lunes a Viernes)',
+      inscripcion_pagada: true,
       notas: 'Dejó adelanto, cancela saldo a fin de semana.',
       activo: true,
       fecha_registro: hace5Dias
@@ -155,8 +216,11 @@ function crearDatosIniciales() {
       telefono_whatsapp: '965432189',
       contacto_emergencia: 'Elena Quispe',
       telefono_emergencia: '965000111',
-      grado_cinturon: 'Avanzado / Competidora',
+      grado_cinturon: 'Competidor',
       disciplina_principal: 'Boxeo',
+      horario_id: 'hor-manana-lmv',
+      horario_texto: '8:00 AM - 9:30 AM (Lun - Mié - Vie)',
+      inscripcion_pagada: true,
       notas: 'Membresía próxima a vencer.',
       activo: true,
       fecha_registro: hace25Dias
@@ -170,6 +234,9 @@ function crearDatosIniciales() {
       telefono_emergencia: '954000999',
       grado_cinturon: 'Principiante / Blanco',
       disciplina_principal: 'MMA Libre',
+      horario_id: 'hor-noche-mjs',
+      horario_texto: '8:00 PM - 9:30 PM (Mar - Jue - Sáb)',
+      inscripcion_pagada: true,
       notas: 'Vencido hace unos días, pendiente renovar.',
       activo: true,
       fecha_registro: hace40Dias
@@ -181,6 +248,8 @@ function crearDatosIniciales() {
       id: 'mem-1',
       alumno_id: 'alu-1',
       plan_id: 'plan-bjj',
+      horario_id: 'hor-noche-730pm',
+      horario_texto: '7:30 PM - 9:00 PM (Lun - Mié - Vie)',
       concepto: 'Mensual Jiu-Jitsu (BJJ)',
       fecha_inicio: hoy,
       fecha_fin: venceEn1Mes,
@@ -195,6 +264,8 @@ function crearDatosIniciales() {
       id: 'mem-2',
       alumno_id: 'alu-2',
       plan_id: 'plan-muaythai',
+      horario_id: 'hor-tarde-6pm',
+      horario_texto: '6:00 PM - 7:30 PM (Lunes a Viernes)',
       concepto: 'Mensual Muay Thai',
       fecha_inicio: hace5Dias,
       fecha_fin: venceEn25Dias,
@@ -209,6 +280,8 @@ function crearDatosIniciales() {
       id: 'mem-3',
       alumno_id: 'alu-3',
       plan_id: 'plan-boxeo',
+      horario_id: 'hor-manana-lmv',
+      horario_texto: '8:00 AM - 9:30 AM (Lun - Mié - Vie)',
       concepto: 'Mensual Boxeo',
       fecha_inicio: hace25Dias,
       fecha_fin: venceEn3Dias,
@@ -223,6 +296,8 @@ function crearDatosIniciales() {
       id: 'mem-4',
       alumno_id: 'alu-4',
       plan_id: 'plan-mma',
+      horario_id: 'hor-noche-mjs',
+      horario_texto: '8:00 PM - 9:30 PM (Mar - Jue - Sáb)',
       concepto: 'Mensual MMA / Full Acceso',
       fecha_inicio: hace40Dias,
       fecha_fin: vencioHace5Dias,
@@ -308,6 +383,7 @@ function crearDatosIniciales() {
 
   return {
     configuracion,
+    horarios,
     planes,
     alumnos,
     membresias,
@@ -339,21 +415,46 @@ class GymStore {
     }
   }
 
+  asegurarHorariosYValoresPorDefecto(objState) {
+    if (!objState) return;
+    if (objState.configuracion) {
+      if (objState.configuracion.precio_inscripcion === undefined) {
+        objState.configuracion.precio_inscripcion = 30.00;
+      }
+      if (!objState.configuracion.color_tema) {
+        objState.configuracion.color_tema = 'ROJO';
+      }
+      if (!objState.configuracion.tema_visual) {
+        objState.configuracion.tema_visual = 'CLARO';
+      }
+    }
+    if (!Array.isArray(objState.horarios) || objState.horarios.length === 0) {
+      objState.horarios = crearHorariosPorDefecto();
+    }
+    // Asignar horarios por defecto a los 4 alumnos de demostración si aún no tenían
+    const mapaDemoHorarios = {
+      'alu-1': { id: 'hor-noche-730pm', texto: '7:30 PM - 9:00 PM (Lun - Mié - Vie)' },
+      'alu-2': { id: 'hor-tarde-6pm', texto: '6:00 PM - 7:30 PM (Lunes a Viernes)' },
+      'alu-3': { id: 'hor-manana-lmv', texto: '8:00 AM - 9:30 AM (Lun - Mié - Vie)' },
+      'alu-4': { id: 'hor-noche-mjs', texto: '8:00 PM - 9:30 PM (Mar - Jue - Sáb)' }
+    };
+    if (Array.isArray(objState.alumnos)) {
+      objState.alumnos.forEach((a) => {
+        if (!a.horario_id && mapaDemoHorarios[a.id]) {
+          a.horario_id = mapaDemoHorarios[a.id].id;
+          a.horario_texto = mapaDemoHorarios[a.id].texto;
+        }
+      });
+    }
+  }
+
   loadState() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (parsed && parsed.configuracion && Array.isArray(parsed.alumnos)) {
-          if (parsed.configuracion.precio_inscripcion === undefined) {
-            parsed.configuracion.precio_inscripcion = 30.00;
-          }
-          if (!parsed.configuracion.color_tema) {
-            parsed.configuracion.color_tema = 'ROJO';
-          }
-          if (!parsed.configuracion.tema_visual) {
-            parsed.configuracion.tema_visual = 'CLARO';
-          }
+          this.asegurarHorariosYValoresPorDefecto(parsed);
           const savedRole = localStorage.getItem('dojo_gym_device_role');
           if (savedRole) parsed.configuracion.rol_actual = savedRole;
           return parsed;
@@ -386,9 +487,7 @@ class GymStore {
   }
 
   aplicarEstadoRemotoSinRebote(remoteState) {
-    if (remoteState?.configuracion && remoteState.configuracion.precio_inscripcion === undefined) {
-      remoteState.configuracion.precio_inscripcion = 30.00;
-    }
+    this.asegurarHorariosYValoresPorDefecto(remoteState);
     this.state = remoteState;
     this.recalcularTodasLasMembresias();
     try {
@@ -465,6 +564,8 @@ class GymStore {
       telefono_emergencia = '',
       grado_cinturon = 'Principiante / Blanco',
       disciplina_principal = 'General',
+      horario_id = null,
+      horario_texto = '',
       notas_alumno = '',
       // Datos de Membresía e Inscripción
       tipo_operacion = 'MENSUALIDAD', // 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
@@ -489,6 +590,11 @@ class GymStore {
       tipo_operacion === 'SOLO_INSCRIPCION' ||
       tipo_operacion === 'INSCRIPCION_Y_MENSUALIDAD';
 
+    const horarioObj = (this.state.horarios || []).find((h) => h.id === horario_id) || null;
+    const textoHorarioFinal =
+      (horario_texto || '').trim() ||
+      (horarioObj ? `${horarioObj.hora} (${horarioObj.dias})` : '');
+
     let targetAlumnoId = alumnoId;
     let alumnoObj = null;
 
@@ -502,6 +608,8 @@ class GymStore {
         if (telefono_emergencia !== undefined) alumnoObj.telefono_emergencia = telefono_emergencia.trim();
         if (grado_cinturon) alumnoObj.grado_cinturon = grado_cinturon;
         if (disciplina_principal) alumnoObj.disciplina_principal = disciplina_principal;
+        if (horario_id) alumnoObj.horario_id = horario_id;
+        if (textoHorarioFinal) alumnoObj.horario_texto = textoHorarioFinal;
         if (cobraInscripcion) {
           alumnoObj.inscripcion_pagada = true;
           alumnoObj.fecha_inscripcion = fecha_inicio || getLocalDateISO();
@@ -520,6 +628,8 @@ class GymStore {
         telefono_emergencia: (telefono_emergencia || '').trim(),
         grado_cinturon: grado_cinturon || 'Principiante / Blanco',
         disciplina_principal: disciplina_principal || concepto || 'Artes Marciales',
+        horario_id: horario_id || null,
+        horario_texto: textoHorarioFinal,
         inscripcion_pagada: cobraInscripcion,
         fecha_inscripcion: cobraInscripcion ? (fecha_inicio || getLocalDateISO()) : null,
         notas: (notas_alumno || '').trim(),
@@ -539,6 +649,8 @@ class GymStore {
       id: membresiaId,
       alumno_id: targetAlumnoId,
       plan_id: tipo_operacion === 'SOLO_INSCRIPCION' ? null : (plan_id || null),
+      horario_id: horario_id || alumnoObj.horario_id || null,
+      horario_texto: textoHorarioFinal || alumnoObj.horario_texto || '',
       tipo_operacion,
       incluye_inscripcion: cobraInscripcion,
       monto_inscripcion: cobraInscripcion ? Number(Number(monto_inscripcion || 0).toFixed(2)) : 0,
@@ -701,10 +813,29 @@ class GymStore {
 
   // Gestión de Alumnos
   guardarAlumno(datos) {
+    let horarioTextoResuelto = datos.horario_texto;
+    if (datos.horario_id !== undefined) {
+      const hObj = (this.state.horarios || []).find((h) => h.id === datos.horario_id);
+      if (hObj) {
+        horarioTextoResuelto = `${hObj.hora} (${hObj.dias})`;
+      } else if (!datos.horario_id) {
+        horarioTextoResuelto = '';
+      }
+    }
+
     if (datos.id) {
       const idx = this.state.alumnos.findIndex((a) => a.id === datos.id);
       if (idx !== -1) {
-        this.state.alumnos[idx] = { ...this.state.alumnos[idx], ...datos };
+        this.state.alumnos[idx] = {
+          ...this.state.alumnos[idx],
+          ...datos,
+          nombres: (datos.nombres ?? this.state.alumnos[idx].nombres).trim(),
+          apellidos: (datos.apellidos ?? this.state.alumnos[idx].apellidos).trim(),
+          telefono_whatsapp: (datos.telefono_whatsapp ?? this.state.alumnos[idx].telefono_whatsapp ?? '').trim(),
+          contacto_emergencia: (datos.contacto_emergencia ?? this.state.alumnos[idx].contacto_emergencia ?? '').trim(),
+          telefono_emergencia: (datos.telefono_emergencia ?? this.state.alumnos[idx].telefono_emergencia ?? '').trim(),
+          horario_texto: horarioTextoResuelto !== undefined ? horarioTextoResuelto : (this.state.alumnos[idx].horario_texto || '')
+        };
         this.saveState();
         return this.state.alumnos[idx];
       }
@@ -718,6 +849,9 @@ class GymStore {
       telefono_emergencia: (datos.telefono_emergencia || '').trim(),
       grado_cinturon: datos.grado_cinturon || 'Principiante / Blanco',
       disciplina_principal: datos.disciplina_principal || 'Artes Marciales',
+      horario_id: datos.horario_id || null,
+      horario_texto: horarioTextoResuelto || '',
+      inscripcion_pagada: datos.inscripcion_pagada !== undefined ? Boolean(datos.inscripcion_pagada) : false,
       notas: (datos.notas || '').trim(),
       activo: true,
       fecha_registro: getLocalDateISO()
@@ -731,6 +865,58 @@ class GymStore {
     this.state.alumnos = this.state.alumnos.filter((a) => a.id !== alumnoId);
     this.state.membresias = this.state.membresias.filter((m) => m.alumno_id !== alumnoId);
     this.state.recibos = this.state.recibos.filter((r) => r.alumno_id !== alumnoId);
+    this.saveState();
+  }
+
+  // Gestión de Horarios / Turnos de Entrenamiento
+  guardarHorario(horario) {
+    if (!Array.isArray(this.state.horarios)) {
+      this.state.horarios = crearHorariosPorDefecto();
+    }
+    const nombreLimpio = (horario.nombre || '').trim();
+    const diasLimpio = (horario.dias || '').trim();
+    const horaLimpia = (horario.hora || '').trim();
+    const disciplinaLimpia = (horario.disciplina || 'General').trim();
+    const etiquetaCompleta = `${horaLimpia} (${diasLimpio})`;
+
+    if (horario.id) {
+      const idx = this.state.horarios.findIndex((h) => h.id === horario.id);
+      if (idx !== -1) {
+        this.state.horarios[idx] = {
+          ...this.state.horarios[idx],
+          nombre: nombreLimpio,
+          dias: diasLimpio,
+          hora: horaLimpia,
+          disciplina: disciplinaLimpia,
+          activo: horario.activo !== undefined ? horario.activo : true
+        };
+        // Actualizar también el texto de horario en los alumnos que tienen este horario_id
+        this.state.alumnos.forEach((alu) => {
+          if (alu.horario_id === horario.id) {
+            alu.horario_texto = etiquetaCompleta;
+          }
+        });
+        this.saveState();
+        return this.state.horarios[idx];
+      }
+    }
+
+    const nuevoHorario = {
+      id: generarUUID(),
+      nombre: nombreLimpio,
+      dias: diasLimpio,
+      hora: horaLimpia,
+      disciplina: disciplinaLimpia,
+      activo: true
+    };
+    this.state.horarios.push(nuevoHorario);
+    this.saveState();
+    return nuevoHorario;
+  }
+
+  eliminarHorario(horarioId) {
+    if (!Array.isArray(this.state.horarios)) return;
+    this.state.horarios = this.state.horarios.filter((h) => h.id !== horarioId);
     this.saveState();
   }
 
@@ -782,9 +968,10 @@ class GymStore {
     return this.state.configuracion;
   }
 
-  // Obtener lista enriquecida de alumnos con su estado de vigencia, inscripción y deuda actual
+  // Obtener lista enriquecida de alumnos con su estado de vigencia, inscripción, horario y deuda actual
   getAlumnosConEstado() {
     const diasAlerta = Number(this.state.configuracion.dias_alerta_vencimiento) || 5;
+    const listaHorarios = this.state.horarios || [];
 
     return this.state.alumnos.map((alumno) => {
       const memsAlumno = this.state.membresias
@@ -794,6 +981,14 @@ class GymStore {
       const memsMensuales = memsAlumno.filter((m) => m.tipo_operacion !== 'SOLO_INSCRIPCION');
       const ultimaMembresia = memsMensuales[0] || null;
       const saldoTotalPendiente = memsAlumno.reduce((acc, m) => acc + Number(m.saldo_pendiente || 0), 0);
+
+      // Resolver horario del alumno
+      const horarioObj = listaHorarios.find((h) => h.id === alumno.horario_id) || null;
+      const horarioTextoResuelto =
+        alumno.horario_texto ||
+        (horarioObj ? `${horarioObj.hora} (${horarioObj.dias})` : '') ||
+        (ultimaMembresia && ultimaMembresia.horario_texto ? ultimaMembresia.horario_texto : 'Sin horario asignado');
+      const horarioNombreCorto = horarioObj ? horarioObj.nombre : horarioTextoResuelto;
 
       // Si el alumno ya tiene membresías registradas o pagó inscripción explícitamente, figura inscrito
       const tieneInscripcionPagada =
@@ -824,6 +1019,9 @@ class GymStore {
 
       return {
         ...alumno,
+        horario_id: alumno.horario_id || (horarioObj ? horarioObj.id : ''),
+        horario_texto: horarioTextoResuelto,
+        horario_nombre: horarioNombreCorto,
         inscripcion_pagada: tieneInscripcionPagada,
         nombre_completo: `${alumno.nombres} ${alumno.apellidos}`.trim(),
         ultima_membresia: ultimaMembresia,

@@ -31,6 +31,7 @@
           <td>${escapeHtml(formatDateTimePE(r.fecha_pago))}</td>
           <td><b>${escapeHtml(r.alumno?.nombres)} ${escapeHtml(r.alumno?.apellidos)}</b></td>
           <td>${escapeHtml(r.membresia?.concepto)}</td>
+          <td>${escapeHtml(r.membresia?.horario_texto || r.alumno?.horario_texto || '—')}</td>
           <td style="text-align:center;">${escapeHtml(formatDatePE(r.membresia?.fecha_inicio))}</td>
           <td style="text-align:center;">${
             r.membresia?.tipo_operacion === 'SOLO_INSCRIPCION'
@@ -56,7 +57,7 @@
         <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-family:Calibri, Arial, sans-serif; font-size:11pt;">
           <thead>
             <tr style="background-color:#111827; color:#ffffff; font-size:13pt; font-weight:bold;">
-              <th colspan="12" style="padding:10px; text-align:left;">
+              <th colspan="13" style="padding:10px; text-align:left;">
                 ${escapeHtml(config.nombre_academia || 'GIMNASIO ARTES MARCIALES')} - REPORTE DE RECIBOS Y CAJA (${hoy})
               </th>
             </tr>
@@ -65,6 +66,7 @@
               <th>Fecha y Hora Pago</th>
               <th>Nombres y Apellidos</th>
               <th>Plan / Concepto</th>
+              <th>Horario / Turno</th>
               <th>Fecha de Inicio</th>
               <th>Fecha de Finalización</th>
               <th>Total a Pagar (${escapeHtml(moneda)})</th>
@@ -80,7 +82,7 @@
           </tbody>
           <tfoot>
             <tr style="background-color:#f1f5f9; font-weight:bold; font-size:12pt;">
-              <td colspan="7" style="text-align:right;">TOTAL RECAUDADO (RECIBOS VÁLIDOS):</td>
+              <td colspan="8" style="text-align:right;">TOTAL RECAUDADO (RECIBOS VÁLIDOS):</td>
               <td style="text-align:right; color:#15803d;">${escapeHtml(moneda)} ${totalIngresos.toFixed(2)}</td>
               <td colspan="4"></td>
             </tr>
@@ -94,7 +96,7 @@
   }
 
   /**
-   * Exporta el Padrón de Alumnos con sus Fechas de Inicio/Fin y Saldos Pendientes a Excel
+   * Exporta el Padrón de Alumnos con sus Fechas de Inicio/Fin, Horario y Saldos Pendientes a Excel
    */
   function exportarAlumnosExcel(alumnosConEstado, config) {
     const moneda = config.moneda || 'S/';
@@ -109,6 +111,7 @@
           <td><b>${escapeHtml(a.apellidos)}</b></td>
           <td style="mso-number-format:'\\@';">${escapeHtml(a.telefono_whatsapp || '')}</td>
           <td>${escapeHtml(a.grado_cinturon || '')}</td>
+          <td>${escapeHtml(a.horario_texto || 'Sin horario')}</td>
           <td style="text-align:center; font-weight:bold; color:${a.inscripcion_pagada !== false ? '#15803d' : '#b45309'};">${
             a.inscripcion_pagada !== false ? 'PAGADA' : 'PENDIENTE'
           }</td>
@@ -132,7 +135,7 @@
         <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-family:Calibri, Arial, sans-serif; font-size:11pt;">
           <thead>
             <tr style="background-color:#111827; color:#ffffff; font-size:13pt; font-weight:bold;">
-              <th colspan="12" style="padding:10px; text-align:left;">
+              <th colspan="13" style="padding:10px; text-align:left;">
                 ${escapeHtml(config.nombre_academia || 'GIMNASIO ARTES MARCIALES')} - PADRÓN DE ALUMNOS Y VIGENCIAS (${hoy})
               </th>
             </tr>
@@ -141,6 +144,7 @@
               <th>Apellidos</th>
               <th>WhatsApp</th>
               <th>Grado / Cinturón</th>
+              <th>Horario / Turno</th>
               <th>Inscripción</th>
               <th>Contacto Emergencia / Apoderado</th>
               <th>Plan Actual</th>

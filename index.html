@@ -116,9 +116,9 @@
       font-weight: 400;
     }
 
-    body.light-theme main .text-white,
-    body.light-theme .modal-surface .text-white,
-    body.light-theme #global-search-results .text-white {
+    body.light-theme main .text-white:not(.keep-white-text),
+    body.light-theme .modal-surface .text-white:not(.keep-white-text),
+    body.light-theme #global-search-results .text-white:not(.keep-white-text) {
       color: #0f172a !important;
     }
 
@@ -204,7 +204,11 @@
 
     /* Mantener texto blanco en botones sólidos de acción */
     body.light-theme .keep-white-text,
-    body.light-theme .keep-white-text * {
+    body.light-theme .keep-white-text *,
+    body.light-theme main .keep-white-text,
+    body.light-theme main .keep-white-text *,
+    body.light-theme .modal-surface .keep-white-text,
+    body.light-theme .modal-surface .keep-white-text * {
       color: #ffffff !important;
     }
 
@@ -294,12 +298,24 @@
 
             <button
               type="button"
+              data-tab="horarios"
+              class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer"
+            >
+              <span class="flex items-center gap-3">
+                <i data-lucide="clock-3" class="w-5 h-5"></i>
+                <span>3. Horarios y Grupos</span>
+              </span>
+              <span id="nav-badge-horarios" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 font-extrabold">0</span>
+            </button>
+
+            <button
+              type="button"
               data-tab="recibos"
               class="nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer"
             >
               <span class="flex items-center gap-3">
                 <i data-lucide="receipt" class="w-5 h-5"></i>
-                <span>3. Recibos y Caja</span>
+                <span>4. Recibos y Caja</span>
               </span>
               <span id="nav-badge-recibos" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-200 font-extrabold">0</span>
             </button>
@@ -311,7 +327,7 @@
             >
               <span class="flex items-center gap-3">
                 <i data-lucide="swords" class="w-5 h-5"></i>
-                <span>4. Planes y Precios</span>
+                <span>5. Planes y Precios</span>
               </span>
             </button>
 
@@ -322,7 +338,7 @@
             >
               <span class="flex items-center gap-3">
                 <i data-lucide="settings" class="w-5 h-5"></i>
-                <span>5. Ajustes y Logo</span>
+                <span>6. Ajustes y Logo</span>
               </span>
             </button>
           </nav>
@@ -629,7 +645,7 @@
             </div>
 
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div class="sm:col-span-2">
+              <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1">Buscar Alumno</label>
                 <input
                   id="filtro-alumnos-texto"
@@ -637,6 +653,15 @@
                   placeholder="Escribe nombre, apellido, WhatsApp o cinturón..."
                   class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-red-500"
                 />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">🕒 Filtrar por Horario / Turno</label>
+                <select
+                  id="filtro-alumnos-horario"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                >
+                  <option value="TODOS">Todos los horarios / turnos</option>
+                </select>
               </div>
               <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1">Filtrar por Situación</label>
@@ -665,7 +690,7 @@
                 <thead>
                   <tr class="border-b border-slate-800 text-xs font-extrabold uppercase tracking-wider text-slate-400 bg-slate-950/60">
                     <th class="py-3.5 px-4">Alumno / Inscripción</th>
-                    <th class="py-3.5 px-4">Grado / Cinturón</th>
+                    <th class="py-3.5 px-4">Grado / Horario</th>
                     <th class="py-3.5 px-4">WhatsApp / Emergencia</th>
                     <th class="py-3.5 px-4">Último Plan</th>
                     <th class="py-3.5 px-4">Día que Inicia</th>
@@ -677,6 +702,125 @@
                 </thead>
                 <tbody id="tabla-alumnos-body" class="divide-y divide-slate-800/70 text-sm"></tbody>
               </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ================================================================== -->
+        <!-- VISTA 3: HORARIOS Y GRUPOS DE ENTRENAMIENTO                        -->
+        <!-- ================================================================== -->
+        <section id="view-horarios" class="hidden space-y-6">
+          <!-- Encabezado y Resumen Rápido de Horarios -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 class="text-xl sm:text-2xl font-black text-white">🕒 Horarios y Turnos de la Academia</h2>
+                <p class="text-xs sm:text-sm text-slate-400 mt-0.5">
+                  Revisa qué alumnos entrenan en cada horario, cuántos están <b>AL DÍA</b> o <b>VENCIDOS</b> en ese grupo y administra tus turnos de clase.
+                </p>
+              </div>
+              <button
+                type="button"
+                onclick="window.AppUI.abrirModalAccionDirecta('INSCRIBIR_NUEVO')"
+                class="keep-white-text brand-bg font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow cursor-pointer"
+              >
+                <i data-lucide="user-plus" class="w-4 h-4"></i>
+                <span>Inscribir Alumno en un Horario</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Columna Izquierda: Crear o Editar un Horario / Turno -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit space-y-4">
+              <div>
+                <h3 id="form-horario-titulo" class="text-lg font-black text-white">Agregar Nuevo Horario / Turno</h3>
+                <p class="text-xs text-slate-400 mt-0.5">Crea los turnos de tu academia por días y horas de entrenamiento.</p>
+              </div>
+
+              <form id="form-horario" class="space-y-4">
+                <input type="hidden" id="horario-id" />
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Nombre del Turno / Grupo *</label>
+                  <input
+                    id="horario-nombre"
+                    type="text"
+                    required
+                    placeholder="Ej: Turno Noche (Adultos / Avanzados)"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Días de Entrenamiento *</label>
+                  <input
+                    id="horario-dias"
+                    type="text"
+                    required
+                    placeholder="Ej: Lun - Mié - Vie"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                  <!-- Botones rápidos de días -->
+                  <div class="flex flex-wrap gap-1.5 mt-2">
+                    <button type="button" data-quick-dias="Lun - Mié - Vie" class="btn-quick-dias text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Lun-Mié-Vie</button>
+                    <button type="button" data-quick-dias="Mar - Jue - Sáb" class="btn-quick-dias text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Mar-Jue-Sáb</button>
+                    <button type="button" data-quick-dias="Lunes a Viernes" class="btn-quick-dias text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Lun a Vie</button>
+                    <button type="button" data-quick-dias="Lunes a Sábado" class="btn-quick-dias text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Lun a Sáb</button>
+                    <button type="button" data-quick-dias="Sábados" class="btn-quick-dias text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">Sábados</button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Hora de Inicio y Fin *</label>
+                  <input
+                    id="horario-hora"
+                    type="text"
+                    required
+                    placeholder="Ej: 7:30 PM - 9:00 PM"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                  <!-- Botones rápidos de horas -->
+                  <div class="flex flex-wrap gap-1.5 mt-2">
+                    <button type="button" data-quick-hora="8:00 AM - 9:30 AM" class="btn-quick-hora text-[11px] font-bold px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">8:00-9:30 AM</button>
+                    <button type="button" data-quick-hora="4:30 PM - 5:30 PM" class="btn-quick-hora text-[11px] font-bold px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">4:30-5:30 PM</button>
+                    <button type="button" data-quick-hora="6:00 PM - 7:30 PM" class="btn-quick-hora text-[11px] font-bold px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">6:00-7:30 PM</button>
+                    <button type="button" data-quick-hora="7:30 PM - 9:00 PM" class="btn-quick-hora text-[11px] font-bold px-2 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 cursor-pointer">7:30-9:00 PM</button>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Disciplina / Arte Marcial *</label>
+                  <input
+                    id="horario-disciplina"
+                    type="text"
+                    required
+                    placeholder="Ej: Muay Thai, Boxeo, Jiu-Jitsu, Kids..."
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div class="flex items-center gap-2 pt-2">
+                  <button
+                    type="submit"
+                    class="keep-white-text flex-1 brand-bg font-bold text-sm py-3 rounded-xl transition cursor-pointer shadow"
+                  >
+                    Guardar Horario
+                  </button>
+                  <button
+                    id="btn-cancelar-horario"
+                    type="button"
+                    class="hidden px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Columna Derecha: Lista de Horarios con sus Alumnos Inscritos -->
+            <div class="lg:col-span-2 space-y-4">
+              <div id="lista-horarios-grupos" class="space-y-4"></div>
             </div>
           </div>
         </section>
@@ -1233,21 +1377,19 @@
             </div>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
             <div>
-              <label class="block text-xs font-bold text-slate-400 mb-1">Celular / WhatsApp</label>
-              <input
-                id="pago-whatsapp"
-                type="tel"
-                placeholder="Ej: 987654321"
-                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none"
-              />
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">🕒 Horario / Turno en que entrena *</label>
+              <select
+                id="pago-horario"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none"
+              ></select>
             </div>
             <div>
-              <label class="block text-xs font-bold text-slate-400 mb-1">Cinturón / Categoría</label>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">🥋 Cinturón / Categoría</label>
               <select
                 id="pago-grado"
-                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none"
+                class="w-full bg-slate-900 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none"
               >
                 <option value="Principiante / Blanco">⚪ Principiante / Blanco</option>
                 <option value="Intermedio / Cinturón Azul">🔵 Intermedio / Cinturón Azul</option>
@@ -1257,6 +1399,18 @@
                 <option value="Competidor">🔴 Competidor</option>
                 <option value="Infantil / Kids">🟢 Infantil / Kids</option>
               </select>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-xs font-bold text-slate-400 mb-1">Celular / WhatsApp</label>
+              <input
+                id="pago-whatsapp"
+                type="tel"
+                placeholder="Ej: 987654321"
+                class="w-full bg-slate-900 border border-slate-700/80 focus:border-red-500 rounded-xl px-3.5 py-2 text-xs sm:text-sm text-white outline-none"
+              />
             </div>
             <div>
               <label class="block text-xs font-bold text-slate-400 mb-1">Padre / Contacto Emergencia</label>
@@ -1676,7 +1830,127 @@
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL 5: ACCESO ADMINISTRADOR / CAMBIO DE ROL                        -->
+  <!-- MODAL 5: EDITAR DATOS, CINTURÓN U HORARIO DEL ALUMNO DIRECTAMENTE    -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-editar-alumno"
+    class="hidden fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto"
+  >
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-lg w-full shadow-2xl overflow-hidden my-auto">
+      <div class="px-6 py-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl brand-bg flex items-center justify-center text-white keep-white-text">
+            <i data-lucide="user-cog" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="font-black text-base sm:text-lg text-white">Editar Alumno / Cambiar Horario o Cinturón</h3>
+            <p class="text-xs text-slate-400">Actualiza sus datos sin necesidad de emitir un recibo</p>
+          </div>
+        </div>
+        <button type="button" data-close-modal="modal-editar-alumno" class="text-slate-400 hover:text-white cursor-pointer">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="form-editar-alumno" class="p-6 space-y-4">
+        <input type="hidden" id="edit-alu-id" />
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-1">Nombres *</label>
+            <input
+              id="edit-alu-nombres"
+              type="text"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-1">Apellidos *</label>
+            <input
+              id="edit-alu-apellidos"
+              type="text"
+              required
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-1">🕒 Horario / Turno Asignado</label>
+            <select
+              id="edit-alu-horario"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            ></select>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-200 mb-1">🥋 Cinturón / Categoría</label>
+            <select
+              id="edit-alu-grado"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            >
+              <option value="Principiante / Blanco">⚪ Principiante / Blanco</option>
+              <option value="Intermedio / Cinturón Azul">🔵 Intermedio / Cinturón Azul</option>
+              <option value="Avanzado / Cinturón Morado">🟣 Avanzado / Cinturón Morado</option>
+              <option value="Cinturón Marrón">🟤 Cinturón Marrón</option>
+              <option value="Cinturón Negro">⚫ Cinturón Negro</option>
+              <option value="Competidor">🔴 Competidor</option>
+              <option value="Infantil / Kids">🟢 Infantil / Kids</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Celular / WhatsApp</label>
+            <input
+              id="edit-alu-whatsapp"
+              type="tel"
+              placeholder="Ej: 987654321"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-300 mb-1">Padre / Contacto Emergencia</label>
+            <input
+              id="edit-alu-emergencia"
+              type="text"
+              placeholder="Opcional"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+            />
+          </div>
+        </div>
+
+        <div class="pt-1">
+          <label class="flex items-center gap-2.5 cursor-pointer select-none">
+            <input id="edit-alu-inscripcion" type="checkbox" class="w-4 h-4 accent-emerald-600 rounded" />
+            <span class="text-xs font-bold text-slate-200">🎓 Tiene su Inscripción (Matrícula) pagada</span>
+          </label>
+        </div>
+
+        <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800">
+          <button
+            type="button"
+            data-close-modal="modal-editar-alumno"
+            class="px-4 py-2.5 rounded-xl bg-slate-800 text-xs font-bold text-slate-300 cursor-pointer"
+          >
+            Cancelar
+          </button>
+          <button
+            type="submit"
+            class="keep-white-text inline-flex items-center gap-2 px-5 py-2.5 rounded-xl brand-bg text-white font-black text-xs sm:text-sm transition cursor-pointer shadow"
+          >
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span>Guardar Cambios</span>
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL 6: ACCESO ADMINISTRADOR / CAMBIO DE ROL                        -->
   <!-- ==================================================================== -->
   <div
     id="modal-login-admin"
@@ -1726,11 +2000,11 @@
   <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
-  <script src="./src/js/cloudConfig.js?v=4"></script>
-  <script src="./src/js/store.js?v=4"></script>
-  <script src="./src/js/receiptGenerator.js?v=4"></script>
-  <script src="./src/js/excelExporter.js?v=4"></script>
-  <script src="./src/js/supabaseSync.js?v=4"></script>
-  <script src="./src/js/app.js?v=4"></script>
+  <script src="./src/js/cloudConfig.js?v=5"></script>
+  <script src="./src/js/store.js?v=5"></script>
+  <script src="./src/js/receiptGenerator.js?v=5"></script>
+  <script src="./src/js/excelExporter.js?v=5"></script>
+  <script src="./src/js/supabaseSync.js?v=5"></script>
+  <script src="./src/js/app.js?v=5"></script>
 </body>
 </html>

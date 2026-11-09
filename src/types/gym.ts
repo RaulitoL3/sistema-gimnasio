@@ -32,6 +32,15 @@ export interface PlanDisciplina {
   activo: boolean;
 }
 
+export interface HorarioClase {
+  id: string;
+  nombre: string;
+  dias: string;       // Ej: 'Lun - Mié - Vie', 'Mar - Jue - Sáb', 'Lunes a Viernes'
+  hora: string;       // Ej: '7:00 PM - 8:30 PM'
+  disciplina: string; // Ej: 'Muay Thai / Boxeo'
+  activo: boolean;
+}
+
 export interface Alumno {
   id: string;
   nombres: string;
@@ -41,6 +50,8 @@ export interface Alumno {
   telefono_emergencia: string;
   grado_cinturon: string;
   disciplina_principal: string;
+  horario_id?: string | null;
+  horario_texto?: string;
   inscripcion_pagada: boolean;
   fecha_inscripcion?: string | null;
   notas: string;
@@ -52,6 +63,8 @@ export interface Membresia {
   id: string;
   alumno_id: string;
   plan_id?: string | null;
+  horario_id?: string | null;
+  horario_texto?: string;
   tipo_operacion: TipoOperacionMembresia;
   incluye_inscripcion: boolean;
   monto_inscripcion: number;

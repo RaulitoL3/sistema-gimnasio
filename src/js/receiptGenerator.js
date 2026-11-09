@@ -18,6 +18,9 @@
     ESMERALDA: { gradEnd: '#065f46', accent: '#059669', subtext: '#6ee7b7' }
   };
 
+  let cachedLogoUrl = '';
+  let cachedLogoImg = null;
+
   /**
    * Dibuja el comprobante digital en un elemento <canvas> en alta resolución
    */
@@ -36,6 +39,7 @@
     const saldoPendiente = Number(membresia.saldo_pendiente || 0);
     const totalPagar = Number(membresia.total_a_pagar || 0);
     const montoAbonado = Number(detalleRecibo.monto_abonado || 0);
+    const horarioTexto = membresia.horario_texto || alumno.horario_texto || '';
 
     // 1. Fondo principal
     ctx.fillStyle = '#0f172a'; // Slate 900
@@ -75,10 +79,9 @@
     ctx.textAlign = 'center';
     ctx.fillText('🥋', cardX + 68, cardY + 90);
 
-    // Si hay logo_url cargado, dibujarlo encima del círculo
+    // Si hay logo_url cargado, usar caché sincrónica o cargarlo y redibujar
     if (config.logo_url) {
-      const img = new Image();
-      img.onload = () => {
+      if (cachedLogoUrl === config.logo_url && cachedLogoImg && cachedLogoImg.complete) {
         ctx.save();
         ctx.beginPath();
         ctx.arc(cardX + 68, cardY + 80, 34, 0, Math.PI * 2);
@@ -86,10 +89,17 @@
         ctx.clip();
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(cardX + 34, cardY + 46, 68, 68);
-        ctx.drawImage(img, cardX + 34, cardY + 46, 68, 68);
+        ctx.drawImage(cachedLogoImg, cardX + 34, cardY + 46, 68, 68);
         ctx.restore();
-      };
-      img.src = config.logo_url;
+      } else {
+        const img = new Image();
+        img.onload = () => {
+          cachedLogoUrl = config.logo_url;
+          cachedLogoImg = img;
+          dibujarReciboEnCanvas(canvas, detalleRecibo, config);
+        };
+        img.src = config.logo_url;
+      }
     }
 
     // Nombre de la Academia
@@ -174,12 +184,12 @@
     ctx.font = '500 14px "Inter", system-ui, sans-serif';
     const extraAlumno = [
       alumno.grado_cinturon ? `Grado: ${alumno.grado_cinturon}` : '',
-      alumno.telefono_whatsapp ? `WhatsApp: ${alumno.telefono_whatsapp}` : '',
-      alumno.contacto_emergencia ? `Apoderado/Emerg.: ${alumno.contacto_emergencia}` : ''
+      horarioTexto ? `Horario: ${horarioTexto}` : '',
+      alumno.telefono_whatsapp ? `WhatsApp: ${alumno.telefono_whatsapp}` : ''
     ]
       .filter(Boolean)
       .join('   |   ');
-    ctx.fillText(extraAlumno || 'Deportista inscrito', cardX + 58, y + 100);
+    ctx.fillText((extraAlumno || 'Deportista inscrito').slice(0, 88), cardX + 58, y + 100);
 
     // Sección 2: Plan y Periodo de Vigencia (Fecha de Inicio y Fecha de Finalización)
     y += 152;
@@ -390,6 +400,8 @@
     const nombreCompleto = `${alumno.nombres} ${alumno.apellidos}`.trim();
     const saldo = Number(membresia.saldo_pendiente || 0);
 
+    const horarioTexto = membresia.horario_texto || alumno.horario_texto || '';
+
     const desgloseInscripcion =
       membresia.incluye_inscripcion && Number(membresia.monto_inscripcion) > 0 && membresia.tipo_operacion !== 'SOLO_INSCRIPCION'
         ? `🎓 *Desglose:* Inscripción ${moneda} ${Number(membresia.monto_inscripcion).toFixed(2)} + Mensualidad ${moneda} ${Number(membresia.monto_mensualidad).toFixed(2)}`
@@ -401,6 +413,7 @@
       `--------------------------------`,
       `👤 *Alumno:* ${nombreCompleto}`,
       `🥊 *Concepto:* ${membresia.concepto}`,
+      horarioTexto ? `🕒 *Horario / Turno:* ${horarioTexto}` : null,
       desgloseInscripcion,
       membresia.tipo_operacion === 'SOLO_INSCRIPCION'
         ? `📅 *Fecha de Inscripción:* ${formatDatePE(membresia.fecha_inicio)} (Pago Único)`
