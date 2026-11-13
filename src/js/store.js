@@ -375,7 +375,8 @@ function crearDatosIniciales() {
     serie_recibo: '001',
     proximo_nro_recibo: 105,
     dias_alerta_vencimiento: 5,
-    rol_actual: 'ADMIN', // ADMIN | RECEPCION
+    rol_actual: 'RECEPCION', // ADMIN | RECEPCION
+    pin_recepcion: '2026',
     pin_admin: '1234',
     supabase_url: '',
     supabase_anon_key: ''
@@ -387,7 +388,8 @@ function crearDatosIniciales() {
     planes,
     alumnos,
     membresias,
-    recibos
+    recibos,
+    actividades: []
   };
 }
 
@@ -403,7 +405,7 @@ class GymStore {
       const savedRole = localStorage.getItem('dojo_gym_device_role');
       if (savedRole === 'ADMIN' || savedRole === 'RECEPCION') return savedRole;
     } catch (e) {}
-    return this.state?.configuracion?.rol_actual || 'ADMIN';
+    return this.state?.configuracion?.rol_actual || 'RECEPCION';
   }
 
   setRolDispositivoActual(rol) {
@@ -412,6 +414,25 @@ class GymStore {
     } catch (e) {}
     if (this.state?.configuracion) {
       this.state.configuracion.rol_actual = rol;
+    }
+  }
+
+  registrarActividad(accion, detalle = '', actor = null) {
+    if (!this.state) return;
+    if (!Array.isArray(this.state.actividades)) {
+      this.state.actividades = [];
+    }
+    const rolActual = this.getRolDispositivoActual();
+    const actorFinal = actor || (rolActual === 'ADMIN' ? 'Administrador' : 'Recepción');
+    this.state.actividades.unshift({
+      id: generarUUID(),
+      fecha: new Date().toISOString(),
+      actor: actorFinal,
+      accion,
+      detalle
+    });
+    if (this.state.actividades.length > 150) {
+      this.state.actividades = this.state.actividades.slice(0, 150);
     }
   }
 
@@ -427,6 +448,15 @@ class GymStore {
       if (!objState.configuracion.tema_visual) {
         objState.configuracion.tema_visual = 'CLARO';
       }
+      if (!objState.configuracion.pin_recepcion) {
+        objState.configuracion.pin_recepcion = '2026';
+      }
+      if (!objState.configuracion.pin_admin) {
+        objState.configuracion.pin_admin = '1234';
+      }
+    }
+    if (!Array.isArray(objState.actividades)) {
+      objState.actividades = [];
     }
     if (!Array.isArray(objState.horarios) || objState.horarios.length === 0) {
       objState.horarios = crearHorariosPorDefecto();
@@ -582,7 +612,8 @@ class GymStore {
       monto_abonado,
       metodo_pago = 'EFECTIVO',
       fecha_pago = new Date().toISOString(),
-      observacion = ''
+      observacion = '',
+      cobrado_por = 'Recepción'
     } = payload;
 
     const cobraInscripcion =
@@ -687,6 +718,7 @@ class GymStore {
         (saldoNum > 0
           ? `Adelanto ${nuevaMembresia.concepto} (Resta ${this.state.configuracion.moneda} ${saldoNum.toFixed(2)})`
           : `Pago completo ${nuevaMembresia.concepto}`),
+      cobrado_por: (cobrado_por || 'Recepción').trim() || 'Recepción',
       anulado: false,
       created_at: new Date().toISOString()
     };
@@ -701,6 +733,13 @@ class GymStore {
     }
 
     this.recalcularMembresia(membresiaId);
+    const moneda = this.state.configuracion.moneda || 'S/';
+    const nombreCompletoLog = `${alumnoObj.nombres} ${alumnoObj.apellidos}`.trim();
+    this.registrarActividad(
+      'Cobro registrado',
+      `Recibo N° ${nroReciboFormateado} - ${nombreCompletoLog} (${moneda} ${abonadoNum.toFixed(2)} - ${metodo_pago})`,
+      nuevoRecibo.cobrado_por
+    );
     this.saveState();
 
     return {
@@ -715,7 +754,7 @@ class GymStore {
    * Genera un NUEVO recibo en la fecha actual vinculado a la misma membresía
    * para que el ingreso caiga en la caja del día en que pagó el saldo.
    */
-  cobrarSaldoMembresia({ membresia_id, numero_recibo, monto_abonado, metodo_pago, observacion = '' }) {
+  cobrarSaldoMembresia({ membresia_id, numero_recibo, monto_abonado, metodo_pago, observacion = '', cobrado_por = 'Recepción' }) {
     const mem = this.state.membresias.find((m) => m.id === membresia_id);
     if (!mem) throw new Error('Membresía no encontrada');
 
@@ -740,6 +779,7 @@ class GymStore {
         (nuevoSaldoEstimado === 0
           ? `Cancelación de saldo - ${mem.concepto}`
           : `Abono parcial a cuenta - ${mem.concepto} (Resta ${this.state.configuracion.moneda} ${nuevoSaldoEstimado.toFixed(2)})`),
+      cobrado_por: (cobrado_por || 'Recepción').trim() || 'Recepción',
       anulado: false,
       created_at: new Date().toISOString()
     };
@@ -752,6 +792,13 @@ class GymStore {
     }
 
     this.recalcularMembresia(mem.id);
+    const moneda = this.state.configuracion.moneda || 'S/';
+    const nombreAlumno = alumno ? `${alumno.nombres} ${alumno.apellidos}`.trim() : 'Alumno';
+    this.registrarActividad(
+      'Cobro de saldo',
+      `Recibo N° ${nroReciboFormateado} - ${nombreAlumno} (${moneda} ${abonadoNum.toFixed(2)})`,
+      nuevoRecibo.cobrado_por
+    );
     this.saveState();
 
     return {
@@ -767,6 +814,10 @@ class GymStore {
     if (!rec) return null;
     rec.anulado = !rec.anulado;
     this.recalcularMembresia(rec.membresia_id);
+    this.registrarActividad(
+      rec.anulado ? 'Recibo anulado' : 'Recibo reactivado',
+      `Recibo N° ${rec.numero_recibo} (S/ ${Number(rec.monto_abonado || 0).toFixed(2)})`
+    );
     this.saveState();
     return rec;
   }
@@ -790,6 +841,9 @@ class GymStore {
     if (cambios.observacion !== undefined) {
       rec.observacion = cambios.observacion;
     }
+    if (cambios.cobrado_por !== undefined) {
+      rec.cobrado_por = cambios.cobrado_por;
+    }
 
     if (mem) {
       if (cambios.fecha_inicio) mem.fecha_inicio = cambios.fecha_inicio;
@@ -807,6 +861,7 @@ class GymStore {
       if (cambios.telefono_whatsapp !== undefined) alu.telefono_whatsapp = cambios.telefono_whatsapp.trim();
     }
 
+    this.registrarActividad('Recibo/membresía editados', `Recibo N° ${rec.numero_recibo}`);
     this.saveState();
     return { recibo: rec, membresia: mem, alumno: alu };
   }
@@ -836,6 +891,7 @@ class GymStore {
           telefono_emergencia: (datos.telefono_emergencia ?? this.state.alumnos[idx].telefono_emergencia ?? '').trim(),
           horario_texto: horarioTextoResuelto !== undefined ? horarioTextoResuelto : (this.state.alumnos[idx].horario_texto || '')
         };
+        this.registrarActividad('Alumno actualizado', `${this.state.alumnos[idx].nombres} ${this.state.alumnos[idx].apellidos}`.trim());
         this.saveState();
         return this.state.alumnos[idx];
       }
@@ -857,14 +913,18 @@ class GymStore {
       fecha_registro: getLocalDateISO()
     };
     this.state.alumnos.unshift(nuevo);
+    this.registrarActividad('Alumno registrado', `${nuevo.nombres} ${nuevo.apellidos}`.trim());
     this.saveState();
     return nuevo;
   }
 
   eliminarAlumno(alumnoId) {
+    const alu = this.state.alumnos.find((a) => a.id === alumnoId);
+    const nombre = alu ? `${alu.nombres} ${alu.apellidos}`.trim() : alumnoId;
     this.state.alumnos = this.state.alumnos.filter((a) => a.id !== alumnoId);
     this.state.membresias = this.state.membresias.filter((m) => m.alumno_id !== alumnoId);
     this.state.recibos = this.state.recibos.filter((r) => r.alumno_id !== alumnoId);
+    this.registrarActividad('Alumno eliminado', nombre);
     this.saveState();
   }
 
@@ -896,6 +956,7 @@ class GymStore {
             alu.horario_texto = etiquetaCompleta;
           }
         });
+        this.registrarActividad('Horario actualizado', `${nombreLimpio} (${etiquetaCompleta})`);
         this.saveState();
         return this.state.horarios[idx];
       }
@@ -910,13 +971,16 @@ class GymStore {
       activo: true
     };
     this.state.horarios.push(nuevoHorario);
+    this.registrarActividad('Horario creado', `${nombreLimpio} (${etiquetaCompleta})`);
     this.saveState();
     return nuevoHorario;
   }
 
   eliminarHorario(horarioId) {
     if (!Array.isArray(this.state.horarios)) return;
-    this.state.horarios = this.state.horarios.filter((h) => h.id !== horarioId);
+    const h = this.state.horarios.find((item) => item.id === horarioId);
+    this.state.horarios = this.state.horarios.filter((item) => item.id !== horarioId);
+    this.registrarActividad('Horario eliminado', h ? h.nombre : horarioId);
     this.saveState();
   }
 
@@ -933,6 +997,7 @@ class GymStore {
           precio_sugerido: Number(plan.precio_sugerido) || 0,
           activo: plan.activo !== undefined ? plan.activo : true
         };
+        this.registrarActividad('Plan actualizado', plan.nombre.trim());
         this.saveState();
         return this.state.planes[idx];
       }
@@ -946,12 +1011,15 @@ class GymStore {
       activo: true
     };
     this.state.planes.push(nuevo);
+    this.registrarActividad('Plan creado', nuevo.nombre);
     this.saveState();
     return nuevo;
   }
 
   eliminarPlan(planId) {
-    this.state.planes = this.state.planes.filter((p) => p.id !== planId);
+    const p = this.state.planes.find((item) => item.id === planId);
+    this.state.planes = this.state.planes.filter((item) => item.id !== planId);
+    this.registrarActividad('Plan eliminado', p ? p.nombre : planId);
     this.saveState();
   }
 
@@ -964,6 +1032,7 @@ class GymStore {
       proximo_nro_recibo: Number(nuevosDatos.proximo_nro_recibo ?? this.state.configuracion.proximo_nro_recibo),
       dias_alerta_vencimiento: Number(nuevosDatos.dias_alerta_vencimiento ?? this.state.configuracion.dias_alerta_vencimiento)
     };
+    this.registrarActividad('Configuración actualizada', this.state.configuracion.nombre_academia || 'Ajustes generales');
     this.saveState();
     return this.state.configuracion;
   }

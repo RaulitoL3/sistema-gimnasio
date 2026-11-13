@@ -1,0 +1,277 @@
+:root {
+  --brand-600: #dc2626;
+  --brand-500: #ef4444;
+  --brand-700: #b91c1c;
+  --brand-light-bg: rgba(220, 38, 38, 0.12);
+  --brand-light-border: rgba(220, 38, 38, 0.35);
+  --brand-text: #dc2626;
+}
+
+body[data-brand="ROJO"] {
+  --brand-600: #dc2626;
+  --brand-500: #ef4444;
+  --brand-700: #b91c1c;
+  --brand-light-bg: rgba(220, 38, 38, 0.12);
+  --brand-light-border: rgba(220, 38, 38, 0.35);
+  --brand-text: #dc2626;
+}
+
+body[data-brand="AZUL"] {
+  --brand-600: #2563eb;
+  --brand-500: #3b82f6;
+  --brand-700: #1d4ed8;
+  --brand-light-bg: rgba(37, 99, 235, 0.12);
+  --brand-light-border: rgba(37, 99, 235, 0.35);
+  --brand-text: #2563eb;
+}
+
+body[data-brand="DORADO"] {
+  --brand-600: #d97706;
+  --brand-500: #f59e0b;
+  --brand-700: #b45309;
+  --brand-light-bg: rgba(217, 119, 6, 0.14);
+  --brand-light-border: rgba(217, 119, 6, 0.38);
+  --brand-text: #b45309;
+}
+
+body[data-brand="ESMERALDA"] {
+  --brand-600: #059669;
+  --brand-500: #10b981;
+  --brand-700: #047857;
+  --brand-light-bg: rgba(5, 150, 105, 0.12);
+  --brand-light-border: rgba(5, 150, 105, 0.35);
+  --brand-text: #059669;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.font-mono,
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.brand-bg {
+  background-color: var(--brand-600) !important;
+  color: #ffffff !important;
+}
+
+.brand-bg:hover {
+  background-color: var(--brand-500) !important;
+}
+
+/* ======================================================================
+   BOTONES GRANDES DE MÉTODO DE PAGO (V2 ANTI-FRICCIÓN)
+   ====================================================================== */
+.btn-metodo-pago,
+.btn-metodo-saldo {
+  transition: all 0.15s ease;
+  border-width: 2px;
+}
+
+.btn-metodo-pago.active[data-metodo="EFECTIVO"],
+.btn-metodo-saldo.active[data-metodo="EFECTIVO"] {
+  background-color: #059669 !important;
+  border-color: #34d399 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+}
+
+.btn-metodo-pago.active[data-metodo="YAPE_PLIN"],
+.btn-metodo-saldo.active[data-metodo="YAPE_PLIN"] {
+  background-color: #7c3aed !important;
+  border-color: #a78bfa !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(124, 58, 237, 0.35);
+}
+
+.btn-metodo-pago.active[data-metodo="TRANSFERENCIA"],
+.btn-metodo-saldo.active[data-metodo="TRANSFERENCIA"] {
+  background-color: #0284c7 !important;
+  border-color: #38bdf8 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.35);
+}
+
+.btn-metodo-pago.active[data-metodo="TARJETA"],
+.btn-metodo-saldo.active[data-metodo="TARJETA"] {
+  background-color: #d97706 !important;
+  border-color: #fbbf24 !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(217, 119, 6, 0.35);
+}
+
+.btn-metodo-pago.active *,
+.btn-metodo-saldo.active * {
+  color: #ffffff !important;
+}
+
+/* Autocompletado de Alumno Existente */
+.autocomplete-dropdown {
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: 0 12px 28px -4px rgba(15, 23, 42, 0.25);
+}
+
+/* ======================================================================
+   TEMA CLARO PROFESIONAL (POR DEFECTO PARA LECTURA FÁCIL Y NÍTIDA)
+   ====================================================================== */
+body.light-theme {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme main .bg-slate-900,
+body.light-theme .modal-surface.bg-slate-900 {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
+}
+
+body.light-theme main .bg-slate-950,
+body.light-theme main .bg-slate-950\/60,
+body.light-theme main .bg-slate-950\/90,
+body.light-theme .modal-surface .bg-slate-950,
+body.light-theme .modal-surface .bg-slate-950\/60,
+body.light-theme .modal-surface .bg-slate-950\/90 {
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme .modal-surface input,
+body.light-theme .modal-surface select,
+body.light-theme main input,
+body.light-theme main select,
+body.light-theme #global-search-input {
+  background-color: #ffffff !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  font-weight: 600;
+}
+
+body.light-theme .modal-surface input::placeholder,
+body.light-theme main input::placeholder,
+body.light-theme #global-search-input::placeholder {
+  color: #64748b !important;
+  font-weight: 400;
+}
+
+body.light-theme main .text-white:not(.keep-white-text),
+body.light-theme .modal-surface .text-white:not(.keep-white-text),
+body.light-theme #global-search-results .text-white:not(.keep-white-text) {
+  color: #0f172a !important;
+}
+
+body.light-theme main .text-slate-200,
+body.light-theme main .text-slate-300,
+body.light-theme .modal-surface .text-slate-200,
+body.light-theme .modal-surface .text-slate-300 {
+  color: #1e293b !important;
+}
+
+body.light-theme main .text-slate-400,
+body.light-theme .modal-surface .text-slate-400 {
+  color: #475569 !important;
+}
+
+body.light-theme main .border-slate-800,
+body.light-theme main .border-slate-800\/80,
+body.light-theme main .border-slate-800\/90,
+body.light-theme main .border-slate-700,
+body.light-theme .modal-surface .border-slate-800,
+body.light-theme .modal-surface .border-slate-800\/80,
+body.light-theme .modal-surface .border-slate-800\/90,
+body.light-theme .modal-surface .border-slate-700 {
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme main .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
+body.light-theme main .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) {
+  border-color: #e2e8f0 !important;
+}
+
+body.light-theme main .text-emerald-400,
+body.light-theme main .text-emerald-300,
+body.light-theme .modal-surface .text-emerald-400,
+body.light-theme .modal-surface .text-emerald-300 {
+  color: #047857 !important;
+}
+
+body.light-theme main .text-amber-400,
+body.light-theme main .text-amber-300,
+body.light-theme .modal-surface .text-amber-400,
+body.light-theme .modal-surface .text-amber-300 {
+  color: #b45309 !important;
+}
+
+body.light-theme main .text-red-400,
+body.light-theme main .text-red-300,
+body.light-theme .modal-surface .text-red-400,
+body.light-theme .modal-surface .text-red-300 {
+  color: #b91c1c !important;
+}
+
+body.light-theme main .text-sky-400,
+body.light-theme main .text-sky-300,
+body.light-theme .modal-surface .text-sky-400,
+body.light-theme .modal-surface .text-sky-300 {
+  color: #0369a1 !important;
+}
+
+body.light-theme main .bg-slate-800,
+body.light-theme .modal-surface .bg-slate-800 {
+  background-color: #e2e8f0 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme main .bg-slate-800:hover,
+body.light-theme .modal-surface .bg-slate-800:hover {
+  background-color: #cbd5e1 !important;
+}
+
+body.light-theme main tr.hover\:bg-slate-800\/40:hover,
+body.light-theme main div.hover\:bg-slate-800\/40:hover {
+  background-color: #f1f5f9 !important;
+}
+
+body.light-theme #topbar-surface,
+body.light-theme #global-search-results,
+body.light-theme #pago-lista-sugerencias-alumnos {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+}
+
+body.light-theme #mobile-bottom-nav {
+  background-color: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+body.light-theme .keep-white-text,
+body.light-theme .keep-white-text *,
+body.light-theme main .keep-white-text,
+body.light-theme main .keep-white-text *,
+body.light-theme .modal-surface .keep-white-text,
+body.light-theme .modal-surface .keep-white-text * {
+  color: #ffffff !important;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #print-receipt-area,
+  #print-receipt-area * {
+    visibility: visible;
+  }
+  #print-receipt-area {
+    position: fixed;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+  }
+}

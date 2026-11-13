@@ -321,8 +321,9 @@
 
     ctx.fillStyle = '#94a3b8';
     ctx.font = '500 12px "Inter", system-ui, sans-serif';
+    const cobradoPorTexto = detalleRecibo.cobrado_por || 'Recepción';
     ctx.fillText(
-      `Comprobante Digital • ${config.nombre_academia || 'Gimnasio'} • Recibo N° ${detalleRecibo.numero_recibo}`,
+      `Atendido por: ${cobradoPorTexto} • ${config.nombre_academia || 'Gimnasio'} • Recibo N° ${detalleRecibo.numero_recibo}`,
       W / 2,
       y + 30
     );
@@ -427,6 +428,7 @@
       saldo > 0
         ? `⚠️ *Saldo Pendiente:* ${moneda} ${saldo.toFixed(2)}`
         : `🎉 *Estado:* PAGADO COMPLETO (Saldo ${moneda} 0.00)`,
+      `🧾 *Atendido por:* ${detalleRecibo.cobrado_por || 'Recepción'}`,
       `--------------------------------`,
       `¡Gracias por entrenar con nosotros! 💪`
     ].filter(Boolean);

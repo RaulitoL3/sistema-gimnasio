@@ -42,6 +42,7 @@
           <td style="text-align:right; font-weight:bold; color:#15803d;">${Number(r.monto_abonado || 0).toFixed(2)}</td>
           <td style="text-align:right; color:${Number(r.membresia?.saldo_pendiente) > 0 ? '#b45309' : '#64748b'};">${Number(r.membresia?.saldo_pendiente || 0).toFixed(2)}</td>
           <td style="text-align:center;">${escapeHtml(METODO_LABELS[r.metodo_pago] || r.metodo_pago)}</td>
+          <td style="text-align:center;">${escapeHtml(r.cobrado_por || 'Recepción')}</td>
           <td style="text-align:center;">${r.anulado ? 'ANULADO' : 'VÁLIDO'}</td>
           <td>${escapeHtml(r.observacion || '')}</td>
         </tr>`;
@@ -57,7 +58,7 @@
         <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse; font-family:Calibri, Arial, sans-serif; font-size:11pt;">
           <thead>
             <tr style="background-color:#111827; color:#ffffff; font-size:13pt; font-weight:bold;">
-              <th colspan="13" style="padding:10px; text-align:left;">
+              <th colspan="14" style="padding:10px; text-align:left;">
                 ${escapeHtml(config.nombre_academia || 'GIMNASIO ARTES MARCIALES')} - REPORTE DE RECIBOS Y CAJA (${hoy})
               </th>
             </tr>
@@ -73,6 +74,7 @@
               <th>Monto Abonado (${escapeHtml(moneda)})</th>
               <th>Saldo Pendiente (${escapeHtml(moneda)})</th>
               <th>Método de Pago</th>
+              <th>Cobrado por</th>
               <th>Estado Recibo</th>
               <th>Observación</th>
             </tr>
@@ -84,7 +86,7 @@
             <tr style="background-color:#f1f5f9; font-weight:bold; font-size:12pt;">
               <td colspan="8" style="text-align:right;">TOTAL RECAUDADO (RECIBOS VÁLIDOS):</td>
               <td style="text-align:right; color:#15803d;">${escapeHtml(moneda)} ${totalIngresos.toFixed(2)}</td>
-              <td colspan="4"></td>
+              <td colspan="5"></td>
             </tr>
           </tfoot>
         </table>

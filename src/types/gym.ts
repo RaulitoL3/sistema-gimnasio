@@ -18,7 +18,9 @@ export interface ConfiguracionGym {
   proximo_nro_recibo: number;
   dias_alerta_vencimiento: number;
   logo_url?: string;
+  pin_recepcion?: string;
   pin_admin?: string;
+  rol_actual?: 'ADMIN' | 'RECEPCION';
   supabase_url?: string;
   supabase_anon_key?: string;
 }
@@ -89,8 +91,17 @@ export interface ReciboPago {
   metodo_pago: MetodoPago;
   fecha_pago: string; // ISO string
   observacion: string;
+  cobrado_por?: string;
   anulado: boolean;
   created_at: string;
+}
+
+export interface ActividadLog {
+  id: string;
+  fecha: string;
+  actor: string;
+  accion: string;
+  detalle: string;
 }
 
 export interface AlumnoConEstado extends Alumno {

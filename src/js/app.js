@@ -33,6 +33,8 @@
   let tipoOperacionPago = 'INSCRIPCION_Y_MENSUALIDAD'; // 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
   let reciboActualEnVisor = null;
   let ultimoTotalSincronizado = 0;
+  let adminInactivityTimer = null;
+  const ADMIN_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
 
   function mostrarToast(mensaje, tipo = 'success') {
     const container = document.getElementById('toast-container');
@@ -61,7 +63,57 @@
   }
 
   function esAdmin() {
-    return (store.state.configuracion.rol_actual || 'ADMIN') === 'ADMIN';
+    return (store.state.configuracion.rol_actual || 'RECEPCION') === 'ADMIN';
+  }
+
+  function reiniciarTemporizadorInactividadAdmin() {
+    if (adminInactivityTimer) {
+      clearTimeout(adminInactivityTimer);
+      adminInactivityTimer = null;
+    }
+    if (!esAdmin()) return;
+    adminInactivityTimer = setTimeout(() => {
+      if (esAdmin()) {
+        store.setRolDispositivoActual('RECEPCION');
+        if (tabActual === 'configuracion' || tabActual === 'planes') {
+          cambiarTab('dashboard');
+        } else {
+          renderTodo();
+        }
+        mostrarToast('🔒 Sesión Admin bloqueada por 5 min de inactividad. Volviste a Modo Recepción.', 'info');
+      }
+    }, ADMIN_INACTIVITY_MS);
+  }
+
+  function verificarAccesoInicial() {
+    const yaVerificado = sessionStorage.getItem('gym_acceso_recepcion_ok') === 'true';
+    store.setRolDispositivoActual('RECEPCION');
+    if (!yaVerificado) {
+      const errEl = document.getElementById('acceso-inicial-error');
+      const inputEl = document.getElementById('acceso-inicial-pin');
+      if (errEl) errEl.classList.add('hidden');
+      if (inputEl) inputEl.value = '';
+      abrirModal('modal-acceso-inicial');
+      setTimeout(() => document.getElementById('acceso-inicial-pin')?.focus(), 100);
+    }
+  }
+
+  function setMetodoPagoUI(metodo) {
+    const val = metodo || 'EFECTIVO';
+    const hidden = document.getElementById('pago-metodo');
+    if (hidden) hidden.value = val;
+    document.querySelectorAll('.btn-metodo-pago').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-metodo') === val);
+    });
+  }
+
+  function setMetodoSaldoUI(metodo) {
+    const val = metodo || 'EFECTIVO';
+    const hidden = document.getElementById('saldo-metodo-pago');
+    if (hidden) hidden.value = val;
+    document.querySelectorAll('.btn-metodo-saldo').forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-metodo') === val);
+    });
   }
 
   /**
@@ -160,6 +212,12 @@
         : 'nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer';
     });
 
+    document.querySelectorAll('.mobile-nav-btn').forEach((btn) => {
+      const isSelected = btn.getAttribute('data-tab') === tabName;
+      btn.classList.toggle('text-red-500', isSelected);
+      btn.classList.toggle('text-slate-400', !isSelected);
+    });
+
     renderTodo();
   }
 
@@ -218,11 +276,11 @@
     const btnRol = document.getElementById('btn-cambiar-rol');
     if (badgeRol && btnRol) {
       if (esAdmin()) {
-        badgeRol.textContent = 'ADMIN (PAPÁ)';
+        badgeRol.textContent = '🔓 ADMIN';
         btnRol.className =
           'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center gap-1 transition cursor-pointer';
       } else {
-        badgeRol.textContent = 'MODO RECEPCIÓN 🔒';
+        badgeRol.textContent = '🔒 MODO RECEPCIÓN';
         btnRol.className =
           'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center gap-1 transition cursor-pointer';
       }
@@ -246,12 +304,20 @@
 
     const recibosValidos = store.getRecibosDetallados().filter((r) => !r.anulado);
 
-    // Ingresos de Hoy
+    // Ingresos de Hoy (con desglose Efectivo vs Digital)
     const recibosHoy = recibosValidos.filter((r) => getLocalDateISO(new Date(r.fecha_pago)) === hoyISO);
     const totalHoy = recibosHoy.reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+    const hoyEfectivo = recibosHoy
+      .filter((r) => r.metodo_pago === 'EFECTIVO')
+      .reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+    const hoyDigital = totalHoy - hoyEfectivo;
 
     document.getElementById('kpi-ingresos-hoy').textContent = `${moneda} ${totalHoy.toFixed(2)}`;
     document.getElementById('kpi-ingresos-hoy-detalle').textContent = `${recibosHoy.length} recibo(s) cobrado(s) hoy`;
+    const kpiHoyEfectivo = document.getElementById('kpi-hoy-efectivo');
+    const kpiHoyDigital = document.getElementById('kpi-hoy-digital');
+    if (kpiHoyEfectivo) kpiHoyEfectivo.textContent = `💵 Efectivo: ${moneda} ${hoyEfectivo.toFixed(2)}`;
+    if (kpiHoyDigital) kpiHoyDigital.textContent = `📱 Digital: ${moneda} ${hoyDigital.toFixed(2)}`;
 
     // Ingresos del Mes
     const recibosMes = recibosValidos.filter((r) => getLocalDateISO(new Date(r.fecha_pago)).startsWith(mesActualPrefix));
@@ -405,6 +471,38 @@
     tbodyUltimos.innerHTML = ultimosRecibos
       .map((r) => crearFilaReciboHTML(r, moneda, true))
       .join('');
+
+    // Bitácora de Auditoría (Solo visible en modo ADMIN)
+    const bloqueAudit = document.getElementById('bloque-auditoria-admin');
+    const listaAudit = document.getElementById('lista-auditoria-reciente');
+    if (bloqueAudit && listaAudit) {
+      if (esAdmin()) {
+        bloqueAudit.classList.remove('hidden');
+        const actividades = (store.state.actividades || []).slice(0, 25);
+        if (actividades.length === 0) {
+          listaAudit.innerHTML = `
+            <div class="p-6 text-center text-xs text-slate-400">
+              Aún no hay movimientos registrados en la bitácora de esta sesión.
+            </div>`;
+        } else {
+          listaAudit.innerHTML = actividades
+            .map(
+              (act) => `
+              <div class="px-5 py-3 flex flex-wrap items-center justify-between gap-2 text-xs hover:bg-slate-800/40">
+                <div class="flex items-center gap-2.5 min-w-0">
+                  <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-bold text-slate-300 whitespace-nowrap">${act.actor || 'Sistema'}</span>
+                  <span class="font-extrabold text-white">${act.accion}</span>
+                  <span class="text-slate-400 truncate">${act.detalle || ''}</span>
+                </div>
+                <span class="text-slate-400 tabular-nums whitespace-nowrap">${formatDateTimePE(act.fecha)}</span>
+              </div>`
+            )
+            .join('');
+        }
+      } else {
+        bloqueAudit.classList.add('hidden');
+      }
+    }
   }
 
   function crearFilaReciboHTML(r, moneda, compacto = false) {
@@ -1093,6 +1191,9 @@
     }
     document.getElementById('cfg-proximo-recibo').value = cfg.proximo_nro_recibo || 1;
     document.getElementById('cfg-dias-alerta').value = cfg.dias_alerta_vencimiento || 5;
+    if (document.getElementById('cfg-pin-recepcion')) {
+      document.getElementById('cfg-pin-recepcion').value = cfg.pin_recepcion || '2026';
+    }
     if (document.getElementById('cfg-pin-admin')) {
       document.getElementById('cfg-pin-admin').value = cfg.pin_admin || '1234';
     }
@@ -1150,25 +1251,100 @@
         .join('');
   }
 
+  function renderSugerenciasAlumnosModalPago(filtro = '') {
+    const lista = document.getElementById('pago-lista-sugerencias-alumnos');
+    if (!lista) return;
+    const q = (filtro || '').trim().toLowerCase();
+    const alumnos = store.getAlumnosConEstado();
+    const filtrados = q
+      ? alumnos.filter(
+          (a) =>
+            a.nombre_completo.toLowerCase().includes(q) ||
+            (a.telefono_whatsapp || '').toLowerCase().includes(q)
+        )
+      : alumnos.slice(0, 12);
+
+    if (filtrados.length === 0) {
+      lista.innerHTML = `<div class="p-3 text-xs text-slate-400">No se encontraron alumnos con "${filtro}".</div>`;
+      lista.classList.remove('hidden');
+      return;
+    }
+
+    lista.innerHTML = filtrados
+      .slice(0, 15)
+      .map((a) => {
+        const estadoTexto = a.ultima_membresia
+          ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
+          : a.estado_vigencia === 'SOLO_INSCRITO'
+          ? '🎓 Inscrito - Sin mensualidad'
+          : 'Sin mensualidad';
+        return `
+          <button
+            type="button"
+            data-pick-alumno="${a.id}"
+            class="w-full text-left px-3.5 py-2.5 hover:bg-slate-800/60 transition flex items-center justify-between gap-2 cursor-pointer"
+          >
+            <div>
+              <span class="block text-xs sm:text-sm font-extrabold text-white">${a.nombre_completo}</span>
+              <span class="block text-[11px] text-slate-400">${a.horario_texto || 'Sin horario'} • ${a.telefono_whatsapp || 'Sin celular'}</span>
+            </div>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 whitespace-nowrap">${estadoTexto}</span>
+          </button>`;
+      })
+      .join('');
+
+    lista.classList.remove('hidden');
+  }
+
+  function seleccionarAlumnoEnModalPago(alumnoId) {
+    const selectAlumno = document.getElementById('pago-select-alumno');
+    const hiddenId = document.getElementById('pago-alumno-id');
+    const searchInput = document.getElementById('pago-buscar-alumno-input');
+    const lista = document.getElementById('pago-lista-sugerencias-alumnos');
+
+    if (selectAlumno) selectAlumno.value = alumnoId || '';
+    if (hiddenId) hiddenId.value = alumnoId || '';
+    if (lista) lista.classList.add('hidden');
+
+    if (alumnoId) {
+      const alu = store.getAlumnosConEstado().find((a) => a.id === alumnoId);
+      if (searchInput && alu) searchInput.value = alu.nombre_completo;
+      cargarDatosAlumnoEnModal(alumnoId);
+    } else {
+      if (searchInput) searchInput.value = '';
+      cargarDatosAlumnoEnModal('');
+    }
+  }
+
   function setModoAlumnoModal(modo) {
     modoModalPago = modo;
     const btnNuevo = document.getElementById('btn-modo-alumno-nuevo');
     const btnExistente = document.getElementById('btn-modo-alumno-existente');
     const bloqueExistente = document.getElementById('bloque-selector-existente');
     const badgeInscripcion = document.getElementById('badge-estado-inscripcion-modal');
+    const bloqueDatos = document.getElementById('bloque-datos-personales-form');
+    const resumenAlu = document.getElementById('resumen-alumno-seleccionado');
 
     if (modo === 'NUEVO') {
       btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
       btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer';
       bloqueExistente.classList.add('hidden');
       document.getElementById('pago-select-alumno').value = '';
+      if (document.getElementById('pago-alumno-id')) document.getElementById('pago-alumno-id').value = '';
+      if (document.getElementById('pago-buscar-alumno-input')) document.getElementById('pago-buscar-alumno-input').value = '';
+      document.getElementById('pago-lista-sugerencias-alumnos')?.classList.add('hidden');
       document.getElementById('banner-renovacion-flexible').classList.add('hidden');
+      if (resumenAlu) resumenAlu.classList.add('hidden');
+      if (bloqueDatos) bloqueDatos.classList.remove('hidden');
       if (badgeInscripcion) badgeInscripcion.classList.add('hidden');
       setTipoOperacionModal('INSCRIPCION_Y_MENSUALIDAD');
     } else {
       btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
       btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer';
       bloqueExistente.classList.remove('hidden');
+      if (bloqueDatos && document.getElementById('pago-select-alumno').value) {
+        bloqueDatos.classList.add('hidden');
+      }
       setTipoOperacionModal('MENSUALIDAD');
     }
   }
@@ -1318,9 +1494,18 @@
     document.getElementById('pago-grado').value = 'Principiante / Blanco';
     document.getElementById('pago-emergencia').value = '';
     document.getElementById('pago-observacion').value = '';
-    document.getElementById('pago-metodo').value = 'EFECTIVO';
+    setMetodoPagoUI('EFECTIVO');
+    const cobradorInput = document.getElementById('pago-cobrado-por');
+    if (cobradorInput) cobradorInput.value = esAdmin() ? 'Administrador' : 'Recepción';
     document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
     document.getElementById('pago-numero-recibo').value = store.getProximoNumeroReciboFormateado();
+    if (document.getElementById('pago-buscar-alumno-input')) {
+      document.getElementById('pago-buscar-alumno-input').value = '';
+    }
+    if (document.getElementById('pago-alumno-id')) {
+      document.getElementById('pago-alumno-id').value = '';
+    }
+    document.getElementById('resumen-alumno-seleccionado')?.classList.add('hidden');
 
     if (horarioPreseleccionadoId && document.getElementById('pago-horario')) {
       document.getElementById('pago-horario').value = horarioPreseleccionadoId;
@@ -1328,10 +1513,10 @@
 
     if (tipoAccion === 'COBRAR_MENSUALIDAD') {
       document.getElementById('modal-pago-titulo').textContent = '🥊 2. Cobrar Mensualidad a Alumno Inscrito';
-      document.getElementById('modal-pago-subtitulo').textContent = 'Elige al alumno registrado para cobrar su mes de clases';
+      document.getElementById('modal-pago-subtitulo').textContent = 'Busca al alumno por nombre o celular para renovar al instante';
       setModoAlumnoModal('EXISTENTE');
       abrirModal('modal-nuevo-pago');
-      setTimeout(() => document.getElementById('pago-select-alumno')?.focus(), 80);
+      setTimeout(() => document.getElementById('pago-buscar-alumno-input')?.focus(), 80);
     } else {
       document.getElementById('modal-pago-titulo').textContent = '🎓 1. Inscribir Alumno Nuevo';
       document.getElementById('modal-pago-subtitulo').textContent = 'Registra los datos del nuevo alumno, su horario y su pago de inscripción';
@@ -1356,11 +1541,13 @@
       document.getElementById('pago-monto-inscripcion').value = precioInscDefault;
     }
     setModoAlumnoModal('EXISTENTE');
+    setMetodoPagoUI('EFECTIVO');
+    const cobradorInput = document.getElementById('pago-cobrado-por');
+    if (cobradorInput) cobradorInput.value = esAdmin() ? 'Administrador' : 'Recepción';
 
     document.getElementById('modal-pago-titulo').textContent = '🥊 Cobrar Mensualidad / Renovar';
-    document.getElementById('modal-pago-subtitulo').textContent = 'Verifica el horario, plan, fechas de inicio/fin y el monto que abona hoy';
-    document.getElementById('pago-select-alumno').value = alumnoId;
-    cargarDatosAlumnoEnModal(alumnoId);
+    document.getElementById('modal-pago-subtitulo').textContent = 'Verifica el plan, fechas de inicio/fin y el monto que abona hoy';
+    seleccionarAlumnoEnModalPago(alumnoId);
 
     document.getElementById('pago-numero-recibo').value = store.getProximoNumeroReciboFormateado();
     document.getElementById('pago-observacion').value = '';
@@ -1371,11 +1558,25 @@
     const alu = store.getAlumnosConEstado().find((a) => a.id === alumnoId);
     const banner = document.getElementById('banner-renovacion-flexible');
     const badgeInscripcion = document.getElementById('badge-estado-inscripcion-modal');
+    const resumenAlu = document.getElementById('resumen-alumno-seleccionado');
+    const resumenNombre = document.getElementById('resumen-alumno-nombre');
+    const resumenExtra = document.getElementById('resumen-alumno-extra');
+    const bloqueDatos = document.getElementById('bloque-datos-personales-form');
 
     if (!alu) {
       banner.classList.add('hidden');
       if (badgeInscripcion) badgeInscripcion.classList.add('hidden');
+      if (resumenAlu) resumenAlu.classList.add('hidden');
       return;
+    }
+
+    if (resumenAlu && resumenNombre && resumenExtra) {
+      resumenNombre.textContent = `${alu.nombre_completo} (${alu.grado_cinturon || 'Alumno'})`;
+      resumenExtra.textContent = `🕒 ${alu.horario_texto || 'Sin horario'} • 📱 ${alu.telefono_whatsapp || 'Sin WhatsApp'}`;
+      resumenAlu.classList.remove('hidden');
+    }
+    if (bloqueDatos && modoModalPago === 'EXISTENTE') {
+      bloqueDatos.classList.add('hidden');
     }
 
     document.getElementById('pago-nombres').value = alu.nombres || '';
@@ -1441,7 +1642,9 @@
     document.getElementById('saldo-numero-recibo').value = store.getProximoNumeroReciboFormateado();
     document.getElementById('saldo-monto-abonar').value = Number(mem.saldo_pendiente).toFixed(2);
     document.getElementById('saldo-monto-abonar').max = Number(mem.saldo_pendiente).toFixed(2);
-    document.getElementById('saldo-metodo-pago').value = 'EFECTIVO';
+    setMetodoSaldoUI('EFECTIVO');
+    const saldoCobrador = document.getElementById('saldo-cobrado-por');
+    if (saldoCobrador) saldoCobrador.value = esAdmin() ? 'Administrador' : 'Recepción';
     document.getElementById('saldo-observacion').value = '';
   }
 
@@ -1640,6 +1843,7 @@
   function editarHorario(horarioId) {
     const h = (store.state.horarios || []).find((x) => x.id === horarioId);
     if (!h) return;
+    document.getElementById('contenedor-form-horario')?.classList.remove('hidden');
     document.getElementById('form-horario-titulo').textContent = 'Editar Horario / Turno';
     document.getElementById('horario-id').value = h.id;
     document.getElementById('horario-nombre').value = h.nombre || '';
@@ -1659,6 +1863,7 @@
     }
     document.getElementById('form-horario')?.reset();
     document.getElementById('btn-cancelar-horario')?.classList.add('hidden');
+    document.getElementById('contenedor-form-horario')?.classList.add('hidden');
   }
 
   function eliminarHorario(horarioId) {
@@ -1675,6 +1880,7 @@
   function editarPlan(planId) {
     const p = store.state.planes.find((x) => x.id === planId);
     if (!p) return;
+    document.getElementById('contenedor-form-plan')?.classList.remove('hidden');
     document.getElementById('form-plan-titulo').textContent = 'Editar Plan / Mensualidad';
     document.getElementById('plan-id').value = p.id;
     document.getElementById('plan-nombre').value = p.nombre;
@@ -1682,6 +1888,7 @@
     document.getElementById('plan-duracion').value = p.duracion_dias;
     document.getElementById('plan-precio').value = p.precio_sugerido;
     document.getElementById('btn-cancelar-plan').classList.remove('hidden');
+    document.getElementById('plan-nombre')?.focus();
   }
 
   function resetFormPlan() {
@@ -1690,6 +1897,7 @@
     document.getElementById('form-plan').reset();
     document.getElementById('plan-duracion').value = 30;
     document.getElementById('btn-cancelar-plan').classList.add('hidden');
+    document.getElementById('contenedor-form-plan')?.classList.add('hidden');
   }
 
   function eliminarPlan(planId) {
@@ -1874,10 +2082,16 @@
   function initEventListeners() {
     store.subscribe(() => renderTodo());
 
-    // Navegación por menú lateral
+    // Navegación por menú lateral y barra móvil inferior
     document.querySelectorAll('.nav-tab-btn').forEach((btn) => {
       btn.addEventListener('click', () => cambiarTab(btn.getAttribute('data-tab')));
     });
+
+    document.querySelectorAll('.mobile-nav-btn').forEach((btn) => {
+      btn.addEventListener('click', () => cambiarTab(btn.getAttribute('data-tab')));
+    });
+
+    document.getElementById('btn-mobile-cobrar-rapido')?.addEventListener('click', abrirModalNuevoPago);
 
     // Conmutar vista de alumnos: Tarjetas Grandes vs Tabla
     document.getElementById('btn-vista-alumnos-tarjetas')?.addEventListener('click', () => setModoVistaAlumnos('TARJETAS'));
@@ -1947,6 +2161,43 @@
 
     document.getElementById('pago-select-alumno')?.addEventListener('change', (e) => {
       cargarDatosAlumnoEnModal(e.target.value);
+    });
+
+    // Buscador autocompletable de alumnos en Modal de Cobro
+    const inputBuscarAlu = document.getElementById('pago-buscar-alumno-input');
+    const listaSugAlu = document.getElementById('pago-lista-sugerencias-alumnos');
+    inputBuscarAlu?.addEventListener('focus', () => renderSugerenciasAlumnosModalPago(inputBuscarAlu.value));
+    inputBuscarAlu?.addEventListener('input', (e) => {
+      if (document.getElementById('pago-alumno-id')) document.getElementById('pago-alumno-id').value = '';
+      if (document.getElementById('pago-select-alumno')) document.getElementById('pago-select-alumno').value = '';
+      renderSugerenciasAlumnosModalPago(e.target.value);
+    });
+
+    listaSugAlu?.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-pick-alumno]');
+      if (!btn) return;
+      seleccionarAlumnoEnModalPago(btn.getAttribute('data-pick-alumno'));
+    });
+
+    document.addEventListener('click', (e) => {
+      if (listaSugAlu && !listaSugAlu.contains(e.target) && e.target !== inputBuscarAlu) {
+        listaSugAlu.classList.add('hidden');
+      }
+    });
+
+    document.getElementById('btn-editar-ficha-en-pago')?.addEventListener('click', () => {
+      const bloqueDatos = document.getElementById('bloque-datos-personales-form');
+      if (bloqueDatos) {
+        bloqueDatos.classList.toggle('hidden');
+      }
+    });
+
+    // Botones 1-clic de Método de Pago (Modal Cobro y Modal Saldo)
+    document.querySelectorAll('.btn-metodo-pago').forEach((btn) => {
+      btn.addEventListener('click', () => setMetodoPagoUI(btn.getAttribute('data-metodo')));
+    });
+    document.querySelectorAll('.btn-metodo-saldo').forEach((btn) => {
+      btn.addEventListener('click', () => setMetodoSaldoUI(btn.getAttribute('data-metodo')));
     });
 
     document.getElementById('saldo-select-membresia')?.addEventListener('change', (e) => {
@@ -2035,6 +2286,7 @@
         numero_recibo: document.getElementById('pago-numero-recibo').value,
         monto_abonado: document.getElementById('pago-monto-abonado').value,
         metodo_pago: document.getElementById('pago-metodo').value,
+        cobrado_por: document.getElementById('pago-cobrado-por')?.value || 'Recepción',
         observacion: document.getElementById('pago-observacion').value
       });
 
@@ -2071,6 +2323,7 @@
         numero_recibo: document.getElementById('saldo-numero-recibo').value,
         monto_abonado: document.getElementById('saldo-monto-abonar').value,
         metodo_pago: document.getElementById('saldo-metodo-pago').value,
+        cobrado_por: document.getElementById('saldo-cobrado-por')?.value || 'Recepción',
         observacion: document.getElementById('saldo-observacion').value
       });
 
@@ -2095,6 +2348,19 @@
       } catch (err) {
         mostrarToast('Usa el botón Descargar Imagen (.PNG)', 'info');
       }
+    });
+
+    document.getElementById('btn-copiar-y-whatsapp')?.addEventListener('click', async () => {
+      if (!reciboActualEnVisor) return;
+      const canvas = document.getElementById('canvas-comprobante');
+      const waUrl = generarLinkWhatsAppRecibo(reciboActualEnVisor, store.state.configuracion);
+      try {
+        await copiarCanvasAlPortapapeles(canvas);
+        mostrarToast('✅ Imagen copiada al portapapeles. Abriendo WhatsApp...');
+      } catch (err) {
+        mostrarToast('Abriendo WhatsApp con el detalle del recibo...', 'info');
+      }
+      window.open(waUrl, '_blank', 'noopener');
     });
 
     // Filtros en vista Recibos y Alumnos
@@ -2153,6 +2419,18 @@
     });
 
     document.getElementById('btn-cancelar-horario')?.addEventListener('click', resetFormHorario);
+    document.getElementById('btn-cerrar-form-horario')?.addEventListener('click', resetFormHorario);
+    document.getElementById('btn-toggle-form-horario')?.addEventListener('click', () => {
+      const box = document.getElementById('contenedor-form-horario');
+      if (!box) return;
+      const estaOculto = box.classList.contains('hidden');
+      if (estaOculto) {
+        box.classList.remove('hidden');
+        document.getElementById('horario-nombre')?.focus();
+      } else {
+        resetFormHorario();
+      }
+    });
 
     // Gestión de Planes
     document.getElementById('form-plan')?.addEventListener('submit', (e) => {
@@ -2169,6 +2447,18 @@
     });
 
     document.getElementById('btn-cancelar-plan')?.addEventListener('click', resetFormPlan);
+    document.getElementById('btn-cerrar-form-plan')?.addEventListener('click', resetFormPlan);
+    document.getElementById('btn-toggle-form-plan')?.addEventListener('click', () => {
+      const box = document.getElementById('contenedor-form-plan');
+      if (!box) return;
+      const estaOculto = box.classList.contains('hidden');
+      if (estaOculto) {
+        box.classList.remove('hidden');
+        document.getElementById('plan-nombre')?.focus();
+      } else {
+        resetFormPlan();
+      }
+    });
 
     // Configuración de la Academia
     document.getElementById('form-configuracion')?.addEventListener('submit', (e) => {
@@ -2184,13 +2474,38 @@
         precio_inscripcion: Number(document.getElementById('cfg-precio-inscripcion')?.value ?? 30),
         proximo_nro_recibo: Number(document.getElementById('cfg-proximo-recibo').value) || 1,
         dias_alerta_vencimiento: Number(document.getElementById('cfg-dias-alerta').value) || 5,
+        pin_recepcion: document.getElementById('cfg-pin-recepcion')?.value.trim() || '2026',
         pin_admin: document.getElementById('cfg-pin-admin')?.value.trim() || '1234',
         pedir_pin_inicio: Boolean(document.getElementById('cfg-pedir-pin-inicio')?.checked)
       });
-      mostrarToast('Configuración, colores y precios actualizados');
+      mostrarToast('Configuración, seguridad y precios actualizados');
     });
 
-    // Control de Acceso Admin / Modo Recepción
+    // Control de Acceso Doble Código:
+    // 1. Acceso Inicial obligatorio -> entra siempre en MODO RECEPCIÓN
+    document.getElementById('form-acceso-inicial')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const inputEl = document.getElementById('acceso-inicial-pin');
+      const errEl = document.getElementById('acceso-inicial-error');
+      const pinIngresado = (inputEl?.value || '').trim();
+      const pinRecep = store.state.configuracion.pin_recepcion || '2026';
+      const pinAdmin = store.state.configuracion.pin_admin || '1234';
+
+      if (pinIngresado === pinRecep || pinIngresado === pinAdmin) {
+        if (errEl) errEl.classList.add('hidden');
+        sessionStorage.setItem('gym_acceso_recepcion_ok', 'true');
+        store.setRolDispositivoActual('RECEPCION');
+        store.registrarActividad('Inicio de turno en Recepción', 'Acceso inicial verificado', 'Recepción');
+        cerrarModal('modal-acceso-inicial');
+        renderTodo();
+        mostrarToast('🔒 Bienvenido. Sistema iniciado en Modo Recepción.', 'info');
+      } else {
+        if (errEl) errEl.classList.remove('hidden');
+        if (inputEl) inputEl.select();
+      }
+    });
+
+    // 2. Elevación manual a Administrador / Cambio de Rol
     document.getElementById('btn-cambiar-rol')?.addEventListener('click', () => {
       document.getElementById('login-input-pin').value = '';
       abrirModal('modal-login-admin');
@@ -2202,21 +2517,40 @@
       const pinIngresado = document.getElementById('login-input-pin').value.trim();
       const pinCorrecto = store.state.configuracion.pin_admin || '1234';
       if (pinIngresado === pinCorrecto) {
-        store.actualizarConfiguracion({ rol_actual: 'ADMIN' });
+        store.setRolDispositivoActual('ADMIN');
+        store.registrarActividad('Elevación a Administrador', 'Ingreso con clave Admin', 'Administrador');
+        reiniciarTemporizadorInactividadAdmin();
         cerrarModal('modal-login-admin');
-        mostrarToast('🔓 Modo Administrador activado (Acceso Total)');
+        renderTodo();
+        mostrarToast('🔓 Modo Administrador activado (Auto-bloqueo en 5 min de inactividad)');
       } else {
         mostrarToast('Clave de Administrador incorrecta', 'error');
       }
     });
 
     document.getElementById('btn-entrar-modo-recepcion')?.addEventListener('click', () => {
-      store.actualizarConfiguracion({ rol_actual: 'RECEPCION' });
+      store.setRolDispositivoActual('RECEPCION');
+      if (adminInactivityTimer) {
+        clearTimeout(adminInactivityTimer);
+        adminInactivityTimer = null;
+      }
       cerrarModal('modal-login-admin');
       if (tabActual === 'configuracion' || tabActual === 'planes') {
         cambiarTab('dashboard');
+      } else {
+        renderTodo();
       }
       mostrarToast('🔒 Modo Recepción activo (Configuración y borrado bloqueados)', 'info');
+    });
+
+    ['click', 'keydown', 'mousemove', 'touchstart'].forEach((evtName) => {
+      document.addEventListener(
+        evtName,
+        () => {
+          if (esAdmin()) reiniciarTemporizadorInactividadAdmin();
+        },
+        { passive: true }
+      );
     });
 
     // Conexión Supabase Cloud
@@ -2302,10 +2636,7 @@
 
   document.addEventListener('DOMContentLoaded', () => {
     initEventListeners();
-    if (store.state.configuracion.pedir_pin_inicio) {
-      store.setRolDispositivoActual('RECEPCION');
-      abrirModal('modal-login-admin');
-    }
+    verificarAccesoInicial();
     if (global.SupabaseSync && typeof global.SupabaseSync.iniciarSincronizacionTiempoReal === 'function') {
       global.SupabaseSync.iniciarSincronizacionTiempoReal(store);
     }

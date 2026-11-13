@@ -15,220 +15,7 @@
   />
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <style>
-    :root {
-      --brand-600: #dc2626;
-      --brand-500: #ef4444;
-      --brand-700: #b91c1c;
-      --brand-light-bg: rgba(220, 38, 38, 0.12);
-      --brand-light-border: rgba(220, 38, 38, 0.35);
-      --brand-text: #dc2626;
-    }
-
-    body[data-brand="ROJO"] {
-      --brand-600: #dc2626;
-      --brand-500: #ef4444;
-      --brand-700: #b91c1c;
-      --brand-light-bg: rgba(220, 38, 38, 0.12);
-      --brand-light-border: rgba(220, 38, 38, 0.35);
-      --brand-text: #dc2626;
-    }
-    body[data-brand="AZUL"] {
-      --brand-600: #2563eb;
-      --brand-500: #3b82f6;
-      --brand-700: #1d4ed8;
-      --brand-light-bg: rgba(37, 99, 235, 0.12);
-      --brand-light-border: rgba(37, 99, 235, 0.35);
-      --brand-text: #2563eb;
-    }
-    body[data-brand="DORADO"] {
-      --brand-600: #d97706;
-      --brand-500: #f59e0b;
-      --brand-700: #b45309;
-      --brand-light-bg: rgba(217, 119, 6, 0.14);
-      --brand-light-border: rgba(217, 119, 6, 0.38);
-      --brand-text: #b45309;
-    }
-    body[data-brand="ESMERALDA"] {
-      --brand-600: #059669;
-      --brand-500: #10b981;
-      --brand-700: #047857;
-      --brand-light-bg: rgba(5, 150, 105, 0.12);
-      --brand-light-border: rgba(5, 150, 105, 0.35);
-      --brand-text: #059669;
-    }
-
-    body {
-      font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    }
-    .font-mono, .tabular-nums {
-      font-variant-numeric: tabular-nums;
-    }
-
-    .brand-bg {
-      background-color: var(--brand-600) !important;
-      color: #ffffff !important;
-    }
-    .brand-bg:hover {
-      background-color: var(--brand-500) !important;
-    }
-
-    /* ======================================================================
-       TEMA CLARO PROFESIONAL (POR DEFECTO PARA LECTURA FÁCIL Y NÍTIDA)
-       ====================================================================== */
-    body.light-theme {
-      background-color: #f1f5f9 !important;
-      color: #0f172a !important;
-    }
-
-    /* Área principal y modales en Tema Claro */
-    body.light-theme main .bg-slate-900,
-    body.light-theme .modal-surface.bg-slate-900 {
-      background-color: #ffffff !important;
-      border-color: #cbd5e1 !important;
-      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06) !important;
-    }
-
-    body.light-theme main .bg-slate-950,
-    body.light-theme main .bg-slate-950\/60,
-    body.light-theme main .bg-slate-950\/90,
-    body.light-theme .modal-surface .bg-slate-950,
-    body.light-theme .modal-surface .bg-slate-950\/60,
-    body.light-theme .modal-surface .bg-slate-950\/90 {
-      background-color: #f8fafc !important;
-      border-color: #cbd5e1 !important;
-    }
-
-    body.light-theme .modal-surface input,
-    body.light-theme .modal-surface select,
-    body.light-theme main input,
-    body.light-theme main select,
-    body.light-theme #global-search-input {
-      background-color: #ffffff !important;
-      border-color: #94a3b8 !important;
-      color: #0f172a !important;
-      font-weight: 600;
-    }
-    body.light-theme .modal-surface input::placeholder,
-    body.light-theme main input::placeholder,
-    body.light-theme #global-search-input::placeholder {
-      color: #64748b !important;
-      font-weight: 400;
-    }
-
-    body.light-theme main .text-white:not(.keep-white-text),
-    body.light-theme .modal-surface .text-white:not(.keep-white-text),
-    body.light-theme #global-search-results .text-white:not(.keep-white-text) {
-      color: #0f172a !important;
-    }
-
-    body.light-theme main .text-slate-200,
-    body.light-theme main .text-slate-300,
-    body.light-theme .modal-surface .text-slate-200,
-    body.light-theme .modal-surface .text-slate-300 {
-      color: #1e293b !important;
-    }
-
-    body.light-theme main .text-slate-400,
-    body.light-theme .modal-surface .text-slate-400 {
-      color: #475569 !important;
-    }
-
-    body.light-theme main .border-slate-800,
-    body.light-theme main .border-slate-800\/80,
-    body.light-theme main .border-slate-800\/90,
-    body.light-theme main .border-slate-700,
-    body.light-theme .modal-surface .border-slate-800,
-    body.light-theme .modal-surface .border-slate-800\/80,
-    body.light-theme .modal-surface .border-slate-800\/90,
-    body.light-theme .modal-surface .border-slate-700 {
-      border-color: #e2e8f0 !important;
-    }
-
-    body.light-theme main .divide-slate-800 > :not([hidden]) ~ :not([hidden]),
-    body.light-theme main .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) {
-      border-color: #e2e8f0 !important;
-    }
-
-    /* Colores de texto de alto contraste en modo claro */
-    body.light-theme main .text-emerald-400,
-    body.light-theme main .text-emerald-300,
-    body.light-theme .modal-surface .text-emerald-400,
-    body.light-theme .modal-surface .text-emerald-300 {
-      color: #047857 !important;
-    }
-    body.light-theme main .text-amber-400,
-    body.light-theme main .text-amber-300,
-    body.light-theme .modal-surface .text-amber-400,
-    body.light-theme .modal-surface .text-amber-300 {
-      color: #b45309 !important;
-    }
-    body.light-theme main .text-red-400,
-    body.light-theme main .text-red-300,
-    body.light-theme .modal-surface .text-red-400,
-    body.light-theme .modal-surface .text-red-300 {
-      color: #b91c1c !important;
-    }
-    body.light-theme main .text-sky-400,
-    body.light-theme main .text-sky-300,
-    body.light-theme .modal-surface .text-sky-400,
-    body.light-theme .modal-surface .text-sky-300 {
-      color: #0369a1 !important;
-    }
-
-    /* Botones secundarios en modo claro */
-    body.light-theme main .bg-slate-800,
-    body.light-theme .modal-surface .bg-slate-800 {
-      background-color: #e2e8f0 !important;
-      color: #0f172a !important;
-      border-color: #cbd5e1 !important;
-    }
-    body.light-theme main .bg-slate-800:hover,
-    body.light-theme .modal-surface .bg-slate-800:hover {
-      background-color: #cbd5e1 !important;
-    }
-
-    body.light-theme main tr.hover\:bg-slate-800\/40:hover,
-    body.light-theme main div.hover\:bg-slate-800\/40:hover {
-      background-color: #f1f5f9 !important;
-    }
-
-    body.light-theme #topbar-surface {
-      background-color: #ffffff !important;
-      border-color: #cbd5e1 !important;
-    }
-    body.light-theme #global-search-results {
-      background-color: #ffffff !important;
-      border-color: #cbd5e1 !important;
-    }
-
-    /* Mantener texto blanco en botones sólidos de acción */
-    body.light-theme .keep-white-text,
-    body.light-theme .keep-white-text *,
-    body.light-theme main .keep-white-text,
-    body.light-theme main .keep-white-text *,
-    body.light-theme .modal-surface .keep-white-text,
-    body.light-theme .modal-surface .keep-white-text * {
-      color: #ffffff !important;
-    }
-
-    @media print {
-      body * {
-        visibility: hidden;
-      }
-      #print-receipt-area, #print-receipt-area * {
-        visibility: visible;
-      }
-      #print-receipt-area {
-        position: fixed;
-        inset: 0;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        background: white;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="./src/css/styles.css?v=6" />
 </head>
 <body class="light-theme bg-slate-950 text-slate-100 min-h-screen selection:bg-red-600 selection:text-white" data-brand="ROJO">
 
@@ -257,11 +44,11 @@
               <button
                 id="btn-cambiar-rol"
                 type="button"
-                title="Cambiar entre Modo Administrador (Papá) y Modo Recepción"
-                class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center gap-1 transition cursor-pointer"
+                title="Cambiar entre Modo Recepción y Modo Administrador"
+                class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-700/80 hover:bg-slate-700 text-slate-200 border border-slate-600 flex items-center gap-1 transition cursor-pointer"
               >
                 <i data-lucide="key-round" class="w-3.5 h-3.5"></i>
-                <span id="badge-rol-actual">ADMIN (PAPÁ)</span>
+                <span id="badge-rol-actual">🔒 MODO RECEPCIÓN</span>
               </button>
             </div>
           </div>
@@ -416,7 +203,7 @@
       </header>
 
       <!-- CONTENEDOR PRINCIPAL DE VISTAS -->
-      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 py-6 space-y-6">
+      <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-8 pt-6 pb-24 lg:pb-8 space-y-6">
 
         <!-- ================================================================== -->
         <!-- VISTA 1: INICIO Y RECEPCIÓN (BOTONES DIRECTOS + RESUMEN CLARO)     -->
@@ -500,7 +287,11 @@
                 </div>
               </div>
               <p id="kpi-ingresos-hoy" class="text-3xl font-black text-emerald-400 tabular-nums">S/ 0.00</p>
-              <p id="kpi-ingresos-hoy-detalle" class="text-xs font-medium text-slate-400 mt-1.5">0 recibos cobrados hoy</p>
+              <p id="kpi-ingresos-hoy-detalle" class="text-xs font-medium text-slate-400 mt-1">0 recibos cobrados hoy</p>
+              <div class="mt-2.5 pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2 text-[11px] font-bold">
+                <span id="kpi-hoy-efectivo" class="text-emerald-400">💵 Efectivo: S/ 0.00</span>
+                <span id="kpi-hoy-digital" class="text-sky-400">📱 Digital: S/ 0.00</span>
+              </div>
             </div>
 
             <!-- Total del Mes -->
@@ -601,6 +392,20 @@
                 <tbody id="dashboard-ultimos-recibos" class="divide-y divide-slate-800/70 text-sm"></tbody>
               </table>
             </div>
+          </div>
+
+          <!-- Registro de Auditoría (Visible solo para Administrador) -->
+          <div id="bloque-auditoria-admin" class="hidden bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
+              <div class="flex items-center gap-2.5">
+                <i data-lucide="shield-check" class="w-5 h-5 text-amber-400"></i>
+                <div>
+                  <h3 class="font-extrabold text-base text-white">Bitácora de Auditoría y Movimientos</h3>
+                  <p class="text-xs text-slate-400">Historial interno de cobros, anulaciones y cambios administrativos</p>
+                </div>
+              </div>
+            </div>
+            <div id="lista-auditoria-reciente" class="divide-y divide-slate-800/70 max-h-72 overflow-y-auto"></div>
           </div>
         </section>
 
@@ -719,26 +524,44 @@
                   Revisa qué alumnos entrenan en cada horario, cuántos están <b>AL DÍA</b> o <b>VENCIDOS</b> en ese grupo y administra tus turnos de clase.
                 </p>
               </div>
-              <button
-                type="button"
-                onclick="window.AppUI.abrirModalAccionDirecta('INSCRIBIR_NUEVO')"
-                class="keep-white-text brand-bg font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow cursor-pointer"
-              >
-                <i data-lucide="user-plus" class="w-4 h-4"></i>
-                <span>Inscribir Alumno en un Horario</span>
-              </button>
+              <div class="flex flex-wrap items-center gap-2.5">
+                <button
+                  id="btn-toggle-form-horario"
+                  type="button"
+                  class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs sm:text-sm flex items-center gap-2 border border-slate-700 cursor-pointer"
+                >
+                  <i data-lucide="plus" class="w-4 h-4"></i>
+                  <span>+ Nuevo Horario / Turno</span>
+                </button>
+                <button
+                  type="button"
+                  onclick="window.AppUI.abrirModalAccionDirecta('INSCRIBIR_NUEVO')"
+                  class="keep-white-text brand-bg font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow cursor-pointer"
+                >
+                  <i data-lucide="user-plus" class="w-4 h-4"></i>
+                  <span>Inscribir Alumno en un Horario</span>
+                </button>
+              </div>
             </div>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Columna Izquierda: Crear o Editar un Horario / Turno -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit space-y-4">
+          <!-- Formulario Colapsable: Crear o Editar un Horario / Turno -->
+          <div id="contenedor-form-horario" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6 space-y-4">
+            <div class="flex items-center justify-between">
               <div>
                 <h3 id="form-horario-titulo" class="text-lg font-black text-white">Agregar Nuevo Horario / Turno</h3>
                 <p class="text-xs text-slate-400 mt-0.5">Crea los turnos de tu academia por días y horas de entrenamiento.</p>
               </div>
+              <button
+                id="btn-cerrar-form-horario"
+                type="button"
+                class="text-xs font-bold text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-800 cursor-pointer"
+              >
+                Ocultar
+              </button>
+            </div>
 
-              <form id="form-horario" class="space-y-4">
+              <form id="form-horario" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <input type="hidden" id="horario-id" />
 
                 <div>
@@ -748,6 +571,17 @@
                     type="text"
                     required
                     placeholder="Ej: Turno Noche (Adultos / Avanzados)"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                  />
+                </div>
+
+                <div>
+                  <label class="block text-xs font-bold text-slate-300 mb-1">Disciplina / Arte Marcial *</label>
+                  <input
+                    id="horario-disciplina"
+                    type="text"
+                    required
+                    placeholder="Ej: Muay Thai, Boxeo, Jiu-Jitsu, Kids..."
                     class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
                   />
                 </div>
@@ -789,21 +623,10 @@
                   </div>
                 </div>
 
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1">Disciplina / Arte Marcial *</label>
-                  <input
-                    id="horario-disciplina"
-                    type="text"
-                    required
-                    placeholder="Ej: Muay Thai, Boxeo, Jiu-Jitsu, Kids..."
-                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
-                  />
-                </div>
-
-                <div class="flex items-center gap-2 pt-2">
+                <div class="md:col-span-2 flex items-center gap-2 pt-2">
                   <button
                     type="submit"
-                    class="keep-white-text flex-1 brand-bg font-bold text-sm py-3 rounded-xl transition cursor-pointer shadow"
+                    class="keep-white-text px-6 brand-bg font-bold text-sm py-3 rounded-xl transition cursor-pointer shadow"
                   >
                     Guardar Horario
                   </button>
@@ -816,13 +639,10 @@
                   </button>
                 </div>
               </form>
-            </div>
-
-            <!-- Columna Derecha: Lista de Horarios con sus Alumnos Inscritos -->
-            <div class="lg:col-span-2 space-y-4">
-              <div id="lista-horarios-grupos" class="space-y-4"></div>
-            </div>
           </div>
+
+          <!-- Lista de Horarios al 100% de ancho (2 columnas en desktop) -->
+          <div id="lista-horarios-grupos" class="grid grid-cols-1 xl:grid-cols-2 gap-5"></div>
         </section>
 
         <!-- ================================================================== -->
@@ -919,82 +739,103 @@
         <!-- VISTA 4: CATÁLOGO DE PLANES Y DISCIPLINAS                          -->
         <!-- ================================================================== -->
         <section id="view-planes" class="hidden space-y-6">
-          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Formulario Crear / Editar Plan -->
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 h-fit">
-              <h3 id="form-plan-titulo" class="text-lg font-black text-white mb-1">Agregar Plan o Mensualidad</h3>
-              <p class="text-xs text-slate-400 mb-4">Configura los precios de tus disciplinas para cobrar rápido sin escribir todo cada vez.</p>
-              <form id="form-plan" class="space-y-4">
-                <input type="hidden" id="plan-id" />
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1">Nombre del Plan *</label>
-                  <input
-                    id="plan-nombre"
-                    type="text"
-                    required
-                    placeholder="Ej: Mensual Muay Thai"
-                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
-                  />
-                </div>
-                <div>
-                  <label class="block text-xs font-bold text-slate-300 mb-1">Disciplina *</label>
-                  <input
-                    id="plan-disciplina"
-                    type="text"
-                    required
-                    placeholder="Ej: Muay Thai, Boxeo, BJJ, MMA..."
-                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
-                  />
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                  <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Duración (Días) *</label>
-                    <input
-                      id="plan-duracion"
-                      type="number"
-                      min="1"
-                      value="30"
-                      required
-                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
-                    />
-                    <span class="text-[11px] text-slate-400">30 = 1 mes, 90 = 3 meses</span>
-                  </div>
-                  <div>
-                    <label class="block text-xs font-bold text-slate-300 mb-1">Precio del Plan *</label>
-                    <input
-                      id="plan-precio"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      placeholder="130.00"
-                      required
-                      class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
-                    />
-                  </div>
-                </div>
-                <div class="flex items-center gap-2 pt-2">
-                  <button
-                    type="submit"
-                    class="keep-white-text flex-1 brand-bg font-bold text-sm py-3 rounded-xl transition cursor-pointer"
-                  >
-                    Guardar Plan
-                  </button>
-                  <button
-                    id="btn-cancelar-plan"
-                    type="button"
-                    class="hidden px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </form>
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 sm:p-6 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 class="text-xl sm:text-2xl font-black text-white">🥊 Planes y Precios de Mensualidad</h2>
+              <p class="text-xs sm:text-sm text-slate-400 mt-0.5">Administra los planes disponibles para cobrar rápido sin escribir precios manualmente</p>
             </div>
+            <button
+              id="btn-toggle-form-plan"
+              type="button"
+              class="keep-white-text brand-bg font-bold text-xs sm:text-sm px-4 py-2.5 rounded-xl flex items-center gap-2 shadow cursor-pointer"
+            >
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>+ Nuevo Plan</span>
+            </button>
+          </div>
 
-            <!-- Lista de Planes -->
-            <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-6">
-              <h3 class="text-lg font-black text-white mb-4">Catálogo de Planes y Precios Activos</h3>
-              <div id="lista-planes-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4"></div>
+          <!-- Formulario Colapsable Crear / Editar Plan -->
+          <div id="contenedor-form-plan" class="hidden bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <div class="flex items-center justify-between mb-3">
+              <div>
+                <h3 id="form-plan-titulo" class="text-lg font-black text-white">Agregar Plan o Mensualidad</h3>
+                <p class="text-xs text-slate-400">Configura los precios de tus disciplinas para cobrar rápido sin escribir todo cada vez.</p>
+              </div>
+              <button
+                id="btn-cerrar-form-plan"
+                type="button"
+                class="text-xs font-bold text-slate-400 hover:text-white px-3 py-1.5 rounded-lg bg-slate-800 cursor-pointer"
+              >
+                Ocultar
+              </button>
             </div>
+            <form id="form-plan" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+              <input type="hidden" id="plan-id" />
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Nombre del Plan *</label>
+                <input
+                  id="plan-nombre"
+                  type="text"
+                  required
+                  placeholder="Ej: Mensual Muay Thai"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Disciplina *</label>
+                <input
+                  id="plan-disciplina"
+                  type="text"
+                  required
+                  placeholder="Ej: Muay Thai, Boxeo, BJJ..."
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Duración (Días) *</label>
+                <input
+                  id="plan-duracion"
+                  type="number"
+                  min="1"
+                  value="30"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                />
+              </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-300 mb-1">Precio del Plan *</label>
+                <input
+                  id="plan-precio"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  placeholder="130.00"
+                  required
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white tabular-nums outline-none focus:border-red-500"
+                />
+              </div>
+              <div class="sm:col-span-2 lg:col-span-4 flex items-center gap-2 pt-1">
+                <button
+                  type="submit"
+                  class="keep-white-text px-6 brand-bg font-bold text-sm py-3 rounded-xl transition cursor-pointer"
+                >
+                  Guardar Plan
+                </button>
+                <button
+                  id="btn-cancelar-plan"
+                  type="button"
+                  class="hidden px-4 py-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-300 cursor-pointer"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Lista de Planes al 100% de ancho -->
+          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6">
+            <h3 class="text-lg font-black text-white mb-4">Catálogo de Planes y Precios Activos</h3>
+            <div id="lista-planes-grid" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
           </div>
         </section>
 
@@ -1150,9 +991,20 @@
                     />
                   </div>
                 </div>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800 items-center">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 border-t border-slate-800 items-start">
                   <div>
-                    <label class="block text-xs font-bold text-amber-400 mb-1">🔑 Clave / PIN de Administrador (Papá)</label>
+                    <label class="block text-xs font-bold text-sky-400 mb-1">🛡️ Código de Ingreso (Modo Recepción)</label>
+                    <input
+                      id="cfg-pin-recepcion"
+                      type="text"
+                      placeholder="Ej: 2026"
+                      required
+                      class="w-full bg-slate-950 border border-sky-500/40 rounded-xl px-3.5 py-2.5 text-sm font-mono font-bold text-sky-300 outline-none focus:border-sky-400"
+                    />
+                    <span class="text-[11px] text-slate-400">Solicitado al abrir la página (entra en Recepción)</span>
+                  </div>
+                  <div>
+                    <label class="block text-xs font-bold text-amber-400 mb-1">🔑 Clave / PIN de Administrador</label>
                     <input
                       id="cfg-pin-admin"
                       type="text"
@@ -1162,13 +1014,13 @@
                     />
                     <span class="text-[11px] text-slate-400">Para desbloquear el modo Admin</span>
                   </div>
-                  <div class="pt-3">
-                    <label class="flex items-center gap-2.5 cursor-pointer select-none">
-                      <input id="cfg-pedir-pin-inicio" type="checkbox" class="w-4 h-4 accent-red-600 rounded" />
-                      <span class="text-xs font-bold text-slate-200">Pedir Clave al abrir el sistema</span>
-                    </label>
-                    <p class="text-[11px] text-slate-400 mt-1">Protege la caja si otra persona usa la PC</p>
-                  </div>
+                </div>
+                <div class="pt-1">
+                  <label class="flex items-center gap-2.5 cursor-pointer select-none">
+                    <input id="cfg-pedir-pin-inicio" type="checkbox" class="w-4 h-4 accent-red-600 rounded" />
+                    <span class="text-xs font-bold text-slate-200">Pedir Código de Ingreso al abrir el sistema</span>
+                  </label>
+                  <p class="text-[11px] text-slate-400 mt-1">Al abrir siempre iniciará en Modo Recepción por seguridad</p>
                 </div>
                 <button
                   type="submit"
@@ -1192,7 +1044,7 @@
                   </span>
                 </div>
                 <p class="text-xs text-slate-400 leading-relaxed">
-                  Todos los cobros e inscripciones se guardan automáticamente en la nube para que tu papá y sus ayudantes vean lo mismo en tiempo real.
+                  Todos los cobros e inscripciones se guardan automáticamente en la nube para que administración y recepción vean lo mismo en tiempo real.
                 </p>
                 <div class="space-y-3">
                   <div>
@@ -1319,13 +1171,40 @@
 
         <!-- Buscador de Alumno Existente (Visible al cobrar mensualidad a alumno registrado) -->
         <div id="bloque-selector-existente" class="hidden bg-slate-950/90 border-2 border-red-500/30 rounded-2xl p-4 space-y-3">
-          <label class="block text-sm font-extrabold text-white">🔍 1. Elige al Alumno Registrado:</label>
-          <select
-            id="pago-select-alumno"
-            class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm sm:text-base text-white outline-none focus:border-red-500"
-          >
-            <option value="">-- Selecciona aquí el nombre del alumno --</option>
-          </select>
+          <label class="block text-sm font-extrabold text-white">🔍 1. Busca y selecciona al Alumno Registrado:</label>
+          <div class="relative">
+            <input type="hidden" id="pago-alumno-id" />
+            <select id="pago-select-alumno" class="hidden">
+              <option value="">-- Selecciona aquí el nombre del alumno --</option>
+            </select>
+            <input
+              id="pago-buscar-alumno-input"
+              type="search"
+              autocomplete="off"
+              placeholder="Escribe nombre, apellido o celular del alumno..."
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-4 py-3 text-sm sm:text-base text-white outline-none focus:border-red-500"
+            />
+            <div
+              id="pago-lista-sugerencias-alumnos"
+              class="hidden autocomplete-dropdown absolute left-0 right-0 top-full mt-1.5 bg-slate-900 border border-slate-700 rounded-xl z-40 divide-y divide-slate-800/70"
+            ></div>
+          </div>
+
+          <!-- Resumen compacto del alumno seleccionado para evitar rellenar ficha -->
+          <div id="resumen-alumno-seleccionado" class="hidden bg-slate-900 border border-slate-700 rounded-xl p-3 flex flex-wrap items-center justify-between gap-2">
+            <div class="min-w-0">
+              <p id="resumen-alumno-nombre" class="font-black text-sm sm:text-base text-white truncate">—</p>
+              <p id="resumen-alumno-extra" class="text-xs text-slate-400 truncate">—</p>
+            </div>
+            <button
+              id="btn-editar-ficha-en-pago"
+              type="button"
+              class="text-xs font-bold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 cursor-pointer"
+            >
+              ✏️ Editar Ficha / Horario
+            </button>
+          </div>
+
           <!-- Banner de Renovación Flexible -->
           <div id="banner-renovacion-flexible" class="hidden pt-2.5 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs sm:text-sm">
             <span id="texto-vencimiento-anterior" class="text-slate-300 font-semibold">Último vencimiento: —</span>
@@ -1349,7 +1228,7 @@
         </div>
 
         <!-- 1. DATOS DEL ALUMNO -->
-        <div class="bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 space-y-3.5">
+        <div id="bloque-datos-personales-form" class="bg-slate-950/60 border border-slate-800/90 rounded-2xl p-4 space-y-3.5">
           <div class="flex items-center justify-between">
             <span class="text-xs sm:text-sm font-black uppercase tracking-wider text-red-400">Datos del Alumno</span>
             <span class="text-xs text-slate-400">* Nombres y Apellidos obligatorios</span>
@@ -1576,27 +1455,52 @@
             </div>
           </div>
 
-          <!-- Resumen en vivo de "Lo que debe" + Método de Pago -->
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2 items-center">
+          <!-- Resumen en vivo de "Lo que debe" + 4 Botones de Método de Pago -->
+          <div class="space-y-3.5 pt-2">
             <div>
-              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-1">¿Cómo pagó?</label>
-              <select
-                id="pago-metodo"
-                class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm sm:text-base text-white outline-none focus:border-red-500"
-              >
-                <option value="EFECTIVO">💵 En Efectivo</option>
-                <option value="YAPE_PLIN">📱 Por Yape / Plin</option>
-                <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
-                <option value="TARJETA">💳 Tarjeta POS</option>
-              </select>
+              <label class="block text-xs sm:text-sm font-bold text-slate-200 mb-2">¿Cómo pagó? (1 clic)</label>
+              <input type="hidden" id="pago-metodo" value="EFECTIVO" />
+              <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <button type="button" data-metodo="EFECTIVO" class="btn-metodo-pago active py-3 px-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-extrabold text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>💵</span><span>Efectivo</span>
+                </button>
+                <button type="button" data-metodo="YAPE_PLIN" class="btn-metodo-pago py-3 px-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-extrabold text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>📱</span><span>Yape / Plin</span>
+                </button>
+                <button type="button" data-metodo="TRANSFERENCIA" class="btn-metodo-pago py-3 px-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-extrabold text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>🏦</span><span>Transferencia</span>
+                </button>
+                <button type="button" data-metodo="TARJETA" class="btn-metodo-pago py-3 px-2 rounded-xl bg-slate-900 border border-slate-700 text-xs font-extrabold text-slate-200 flex items-center justify-center gap-1.5 cursor-pointer">
+                  <span>💳</span><span>Tarjeta</span>
+                </button>
+              </div>
             </div>
 
-            <div id="caja-resumen-saldo" class="rounded-xl p-3.5 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 items-center">
               <div>
-                <span class="block text-xs font-extrabold uppercase text-slate-300">Lo que resta por pagar:</span>
-                <span id="pago-estado-texto" class="text-xs font-bold text-emerald-400">PAGADO COMPLETO</span>
+                <label class="block text-xs font-bold text-slate-300 mb-1">👤 Cobrado / Atendido por</label>
+                <input
+                  id="pago-cobrado-por"
+                  type="text"
+                  list="lista-cobradores-sugeridos"
+                  placeholder="Recepción / Administrador"
+                  value="Recepción"
+                  class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-red-500"
+                />
+                <datalist id="lista-cobradores-sugeridos">
+                  <option value="Recepción"></option>
+                  <option value="Administrador"></option>
+                  <option value="Profesor / Coach"></option>
+                </datalist>
               </div>
-              <span id="pago-saldo-preview" class="text-2xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
+
+              <div id="caja-resumen-saldo" class="rounded-xl p-3.5 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between">
+                <div>
+                  <span class="block text-xs font-extrabold uppercase text-slate-300">Lo que resta por pagar:</span>
+                  <span id="pago-estado-texto" class="text-xs font-bold text-emerald-400">PAGADO COMPLETO</span>
+                </div>
+                <span id="pago-saldo-preview" class="text-2xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
+              </div>
             </div>
           </div>
 
@@ -1703,26 +1607,36 @@
         </div>
 
         <div>
-          <label class="block text-xs font-bold text-slate-200 mb-1">¿Cómo pagó?</label>
-          <select
-            id="saldo-metodo-pago"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
-          >
-            <option value="EFECTIVO">💵 Efectivo</option>
-            <option value="YAPE_PLIN">📱 Yape / Plin</option>
-            <option value="TRANSFERENCIA">🏦 Transferencia Bancaria</option>
-            <option value="TARJETA">💳 Tarjeta POS</option>
-          </select>
+          <label class="block text-xs font-bold text-slate-200 mb-1.5">¿Cómo pagó?</label>
+          <input type="hidden" id="saldo-metodo-pago" value="EFECTIVO" />
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" data-metodo="EFECTIVO" class="btn-metodo-saldo active py-2.5 px-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer">💵 Efectivo</button>
+            <button type="button" data-metodo="YAPE_PLIN" class="btn-metodo-saldo py-2.5 px-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer">📱 Yape / Plin</button>
+            <button type="button" data-metodo="TRANSFERENCIA" class="btn-metodo-saldo py-2.5 px-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer">🏦 Transferencia</button>
+            <button type="button" data-metodo="TARJETA" class="btn-metodo-saldo py-2.5 px-2 rounded-xl bg-slate-950 border border-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer">💳 Tarjeta</button>
+          </div>
         </div>
 
-        <div>
-          <label class="block text-xs font-bold text-slate-400 mb-1">Observación</label>
-          <input
-            id="saldo-observacion"
-            type="text"
-            placeholder="Cancelación de saldo pendiente"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
-          />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-xs font-bold text-slate-400 mb-1">Cobrado por</label>
+            <input
+              id="saldo-cobrado-por"
+              type="text"
+              list="lista-cobradores-sugeridos"
+              value="Recepción"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-slate-400 mb-1">Observación</label>
+            <input
+              id="saldo-observacion"
+              type="text"
+              placeholder="Cancelación de saldo pendiente"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-xs text-white outline-none"
+            />
+          </div>
         </div>
 
         <div class="flex items-center justify-end gap-2 pt-2">
@@ -1768,41 +1682,52 @@
           <canvas id="canvas-comprobante" class="w-full max-w-[380px] h-auto rounded-lg shadow-lg"></canvas>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-          <a
-            id="btn-whatsapp-recibo"
-            href="#"
-            target="_blank"
-            rel="noopener"
-            class="keep-white-text inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl transition cursor-pointer"
-          >
-            <i data-lucide="send" class="w-4 h-4"></i>
-            <span>Enviar por WhatsApp</span>
-          </a>
+        <div class="space-y-2.5">
           <button
-            id="btn-copiar-imagen-recibo"
+            id="btn-copiar-y-whatsapp"
             type="button"
-            class="keep-white-text inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs sm:text-sm py-3 px-4 rounded-xl transition cursor-pointer"
+            class="keep-white-text w-full inline-flex items-center justify-center gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-black text-xs sm:text-sm py-3.5 px-4 rounded-xl shadow-lg transition cursor-pointer"
           >
-            <i data-lucide="copy" class="w-4 h-4"></i>
-            <span>Copiar Imagen (Ctrl+V)</span>
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span>⚡ Copiar Imagen y Abrir WhatsApp (1 Clic)</span>
           </button>
-          <button
-            id="btn-descargar-png-recibo"
-            type="button"
-            class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
-          >
-            <i data-lucide="download" class="w-4 h-4"></i>
-            <span>Descargar Imagen (.PNG)</span>
-          </button>
-          <button
-            type="button"
-            onclick="window.print()"
-            class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
-          >
-            <i data-lucide="printer" class="w-4 h-4"></i>
-            <span>Imprimir Recibo</span>
-          </button>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <a
+              id="btn-whatsapp-recibo"
+              href="#"
+              target="_blank"
+              rel="noopener"
+              class="keep-white-text inline-flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+            >
+              <i data-lucide="send" class="w-4 h-4"></i>
+              <span>Solo Texto WhatsApp</span>
+            </a>
+            <button
+              id="btn-copiar-imagen-recibo"
+              type="button"
+              class="keep-white-text inline-flex items-center justify-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+            >
+              <i data-lucide="copy" class="w-4 h-4"></i>
+              <span>Solo Copiar Imagen</span>
+            </button>
+            <button
+              id="btn-descargar-png-recibo"
+              type="button"
+              class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+            >
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Descargar Imagen (.PNG)</span>
+            </button>
+            <button
+              type="button"
+              onclick="window.print()"
+              class="inline-flex items-center justify-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-bold text-xs py-2.5 px-4 rounded-xl transition cursor-pointer"
+            >
+              <i data-lucide="printer" class="w-4 h-4"></i>
+              <span>Imprimir Recibo</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -1962,7 +1887,7 @@
           🥋
         </div>
         <h3 class="font-black text-base text-white">Modo de Uso del Sistema</h3>
-        <p class="text-xs text-slate-400 mt-0.5">Elige Administrador (Papá) o Modo Recepción</p>
+        <p class="text-xs text-slate-400 mt-0.5">Selecciona Modo Administrador o Modo Recepción</p>
       </div>
       <form id="form-login-admin" class="p-6 space-y-4">
         <div>
@@ -1970,7 +1895,7 @@
           <input
             id="login-input-pin"
             type="password"
-            placeholder="Ingresa tu clave (por defecto: 1234)"
+            placeholder="Ingresa la clave de Administrador"
             class="w-full bg-slate-950 border border-slate-700 focus:border-red-500 rounded-xl px-4 py-2.5 text-center font-mono text-base font-bold text-white tracking-widest outline-none"
           />
         </div>
@@ -1982,7 +1907,7 @@
         </button>
         <div class="relative flex py-1 items-center">
           <div class="flex-grow border-t border-slate-800"></div>
-          <span class="flex-shrink mx-3 text-[11px] text-slate-400 uppercase font-semibold">o para ayudantes</span>
+          <span class="flex-shrink mx-3 text-[11px] text-slate-400 uppercase font-semibold">o para recepción</span>
           <div class="flex-grow border-t border-slate-800"></div>
         </div>
         <button
@@ -1996,15 +1921,88 @@
     </div>
   </div>
 
+  <!-- ==================================================================== -->
+  <!-- MODAL 7: ACCESO INICIAL OBLIGATORIO (ENTRA EN MODO RECEPCIÓN)        -->
+  <!-- ==================================================================== -->
+  <div
+    id="modal-acceso-inicial"
+    class="hidden fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-md flex items-center justify-center p-4"
+  >
+    <div class="modal-surface bg-slate-900 border border-slate-700 rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden">
+      <div class="px-6 py-5 border-b border-slate-800 text-center">
+        <div class="w-14 h-14 rounded-2xl brand-bg flex items-center justify-center text-3xl mx-auto mb-3 keep-white-text shadow-lg">
+          🛡️
+        </div>
+        <h3 class="font-black text-lg text-white">Control de Acceso al Sistema</h3>
+        <p class="text-xs text-slate-400 mt-1">
+          Ingresa el código de recepción para iniciar tu turno de trabajo
+        </p>
+      </div>
+      <form id="form-acceso-inicial" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">Código de Acceso (Recepción)</label>
+          <input
+            id="acceso-inicial-pin"
+            type="password"
+            inputmode="numeric"
+            autocomplete="off"
+            required
+            placeholder="••••"
+            class="w-full bg-slate-950 border border-slate-700 focus:border-red-500 rounded-xl px-4 py-3 text-center font-mono text-lg font-black text-white tracking-widest outline-none"
+          />
+          <p id="acceso-inicial-error" class="hidden text-xs font-bold text-red-400 text-center mt-2">
+            Código incorrecto. Inténtalo nuevamente.
+          </p>
+        </div>
+        <button
+          type="submit"
+          class="keep-white-text w-full brand-bg font-black text-sm py-3.5 rounded-xl shadow-lg transition cursor-pointer"
+        >
+          🔒 Ingresar en Modo Recepción
+        </button>
+        <p class="text-[11px] text-center text-slate-400">
+          Por seguridad, el sistema inicia siempre en Modo Recepción. Luego puedes activar Administrador con su clave.
+        </p>
+      </form>
+    </div>
+  </div>
+
+  <!-- BARRA DE NAVEGACIÓN INFERIOR FIJA EN MÓVILES -->
+  <nav
+    id="mobile-bottom-nav"
+    class="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-slate-900 border-t border-slate-800 px-2 py-1.5 flex items-center justify-around shadow-2xl"
+    aria-label="Navegación Móvil"
+  >
+    <button type="button" data-tab="dashboard" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-red-400 cursor-pointer">
+      <i data-lucide="home" class="w-5 h-5"></i>
+      <span>Inicio</span>
+    </button>
+    <button type="button" data-tab="alumnos" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400 cursor-pointer">
+      <i data-lucide="users" class="w-5 h-5"></i>
+      <span>Alumnos</span>
+    </button>
+    <button type="button" id="btn-mobile-cobrar-rapido" class="keep-white-text brand-bg flex items-center justify-center w-12 h-12 -mt-5 rounded-2xl shadow-lg border-2 border-white/20 cursor-pointer" title="Registrar Cobro">
+      <i data-lucide="plus" class="w-6 h-6"></i>
+    </button>
+    <button type="button" data-tab="horarios" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400 cursor-pointer">
+      <i data-lucide="clock-3" class="w-5 h-5"></i>
+      <span>Horarios</span>
+    </button>
+    <button type="button" data-tab="recibos" class="mobile-nav-btn flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-slate-400 cursor-pointer">
+      <i data-lucide="receipt" class="w-5 h-5"></i>
+      <span>Caja</span>
+    </button>
+  </nav>
+
   <!-- TOAST DE NOTIFICACIONES -->
-  <div id="toast-container" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+  <div id="toast-container" class="fixed bottom-20 lg:bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
-  <script src="./src/js/cloudConfig.js?v=5"></script>
-  <script src="./src/js/store.js?v=5"></script>
-  <script src="./src/js/receiptGenerator.js?v=5"></script>
-  <script src="./src/js/excelExporter.js?v=5"></script>
-  <script src="./src/js/supabaseSync.js?v=5"></script>
-  <script src="./src/js/app.js?v=5"></script>
+  <script src="./src/js/cloudConfig.js?v=6"></script>
+  <script src="./src/js/store.js?v=6"></script>
+  <script src="./src/js/receiptGenerator.js?v=6"></script>
+  <script src="./src/js/excelExporter.js?v=6"></script>
+  <script src="./src/js/supabaseSync.js?v=6"></script>
+  <script src="./src/js/app.js?v=6"></script>
 </body>
 </html>
