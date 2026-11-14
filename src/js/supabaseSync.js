@@ -1,6 +1,6 @@
 /**
  * MOTOR DE SINCRONIZACIÓN EN TIEMPO REAL MULTIDISPOSITIVO (SUPABASE CLOUD)
- * Permite que el Papá (Admin) y los Recepcionistas (PC / Celular) compartan
+ * Permite que Administración (Admin) y Recepción (PC / Celular) compartan
  * todos los recibos, alumnos, membresías y caja en vivo desde el link web.
  */
 (function (global) {
@@ -58,15 +58,17 @@
   }
 
   function actualizarIndicadorCloud(estado, texto) {
-    const badge = document.getElementById('cloud-sync-indicator');
+    const badge =
+      document.getElementById('badge-cloud-sync') ||
+      document.getElementById('cloud-sync-indicator');
     if (!badge) return;
     const estilos = {
-      online: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
-      syncing: 'bg-sky-500/15 text-sky-300 border-sky-500/30',
-      local: 'bg-slate-800 text-slate-400 border-slate-700',
-      error: 'bg-red-500/15 text-red-400 border-red-500/30'
+      online: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+      syncing: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+      local: 'bg-slate-800 text-slate-300 border-slate-700',
+      error: 'bg-red-500/20 text-red-300 border-red-500/30'
     };
-    badge.className = `hidden sm:inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full border ${
+    badge.className = `inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
       estilos[estado] || estilos.local
     }`;
     badge.innerHTML = `<span class="w-2 h-2 rounded-full ${
@@ -148,7 +150,7 @@
   }
 
   /**
-   * Descarga cambios realizados por las recepcionistas o por el papá desde otros dispositivos
+   * Descarga cambios realizados por el personal de recepción o administración desde otros dispositivos
    */
   async function descargarDesdeSupabase(store, forzar = false) {
     if (isPulling) return false;
@@ -184,7 +186,7 @@
       if (forzar || !lastCloudTimestamp || (remoteTime && remoteTime > lastCloudTimestamp)) {
         if (remoteState && Array.isArray(remoteState.alumnos) && Array.isArray(remoteState.recibos)) {
           lastCloudTimestamp = remoteTime;
-          // Conservar el rol del dispositivo actual (Admin en celular del papá, Recepción en PC de recepción)
+          // Conservar el rol del dispositivo actual (Admin o Recepción según este equipo)
           const rolDispositivo = store.getRolDispositivoActual();
           const mergedState = {
             ...remoteState,

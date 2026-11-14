@@ -15,7 +15,7 @@
   />
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="./src/css/styles.css?v=6" />
+  <link rel="stylesheet" href="./src/css/styles.css?v=7" />
 </head>
 <body class="light-theme bg-slate-950 text-slate-100 min-h-screen selection:bg-red-600 selection:text-white" data-brand="ROJO">
 
@@ -386,6 +386,7 @@
                     <th class="py-3.5 px-4 text-right">Total a Pagar</th>
                     <th class="py-3.5 px-4 text-right">Pagó Hoy</th>
                     <th class="py-3.5 px-4 text-right">Lo que debe</th>
+                    <th class="py-3.5 px-4">Atendido por</th>
                     <th class="py-3.5 px-4 text-center">Comprobante</th>
                   </tr>
                 </thead>
@@ -394,14 +395,14 @@
             </div>
           </div>
 
-          <!-- Registro de Auditoría (Visible solo para Administrador) -->
-          <div id="bloque-auditoria-admin" class="hidden bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+          <!-- Bitácora en Vivo de Auditoría (Visible en Inicio para transparencia de cambios) -->
+          <div id="bloque-auditoria-admin" class="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
             <div class="px-5 py-4 border-b border-slate-800 flex items-center justify-between">
               <div class="flex items-center gap-2.5">
                 <i data-lucide="shield-check" class="w-5 h-5 text-amber-400"></i>
                 <div>
-                  <h3 class="font-extrabold text-base text-white">Bitácora de Auditoría y Movimientos</h3>
-                  <p class="text-xs text-slate-400">Historial interno de cobros, anulaciones y cambios administrativos</p>
+                  <h3 class="font-extrabold text-base text-white">📋 Bitácora en Vivo: ¿Quién modificó o cobró recientemente?</h3>
+                  <p class="text-xs text-slate-400">Historial transparente con el nombre del perfil, hora y detalle de cambios (Antes → Después)</p>
                 </div>
               </div>
             </div>
@@ -657,6 +658,14 @@
               </div>
               <div class="flex flex-wrap items-center gap-2.5">
                 <button
+                  id="btn-cerrar-turno-whatsapp"
+                  type="button"
+                  class="keep-white-text inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
+                >
+                  <i data-lucide="send" class="w-4 h-4"></i>
+                  <span>📲 Enviar Cierre de Turno por WhatsApp</span>
+                </button>
+                <button
                   id="btn-exportar-recibos-excel"
                   type="button"
                   class="keep-white-text inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs px-4 py-2.5 rounded-xl transition cursor-pointer"
@@ -668,7 +677,7 @@
             </div>
 
             <!-- Filtros de Recibos -->
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-2">
               <div>
                 <label class="block text-xs font-bold text-slate-400 mb-1">Buscar N° Recibo o Alumno</label>
                 <input
@@ -703,6 +712,15 @@
                   <option value="TARJETA">💳 Tarjeta POS</option>
                 </select>
               </div>
+              <div>
+                <label class="block text-xs font-bold text-slate-400 mb-1">👤 Operador / Perfil</label>
+                <select
+                  id="filtro-recibos-operador"
+                  class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none focus:border-red-500"
+                >
+                  <option value="TODOS">Todos los perfiles</option>
+                </select>
+              </div>
               <div class="bg-slate-950 border border-slate-800 rounded-xl px-4 py-2.5 flex flex-col justify-center">
                 <span class="text-[11px] font-bold text-slate-400 uppercase">Total Dinero en Lista</span>
                 <span id="recibos-total-filtrado" class="text-xl font-black text-emerald-400 tabular-nums">S/ 0.00</span>
@@ -726,6 +744,7 @@
                     <th class="py-3.5 px-4 text-right">Pagó Hoy</th>
                     <th class="py-3.5 px-4 text-right">Lo que debe</th>
                     <th class="py-3.5 px-4 text-center">Medio Pago</th>
+                    <th class="py-3.5 px-4 text-center">Atendido por</th>
                     <th class="py-3.5 px-4 text-center">Acciones</th>
                   </tr>
                 </thead>
@@ -1021,6 +1040,16 @@
                     <span class="text-xs font-bold text-slate-200">Pedir Código de Ingreso al abrir el sistema</span>
                   </label>
                   <p class="text-[11px] text-slate-400 mt-1">Al abrir siempre iniciará en Modo Recepción por seguridad</p>
+                </div>
+                <div class="pt-2 border-t border-slate-800">
+                  <label class="block text-xs font-bold text-emerald-400 mb-1">👥 Perfiles / Nombres del Personal (separados por coma)</label>
+                  <input
+                    id="cfg-perfiles-operadores"
+                    type="text"
+                    placeholder="Ej: Raúl (Admin), Carlos (Mañana), Lucía (Tarde)"
+                    class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-white outline-none focus:border-emerald-500"
+                  />
+                  <span class="text-[11px] text-slate-400">Aparecerán para elegir quién atiende al entrar o cambiar de turno</span>
                 </div>
                 <button
                   type="submit"
@@ -1891,6 +1920,13 @@
       </div>
       <form id="form-login-admin" class="p-6 space-y-4">
         <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">👤 Perfil / Operador en Turno</label>
+          <select
+            id="login-select-operador"
+            class="w-full bg-slate-950 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+          ></select>
+        </div>
+        <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">🔑 Clave de Administrador</label>
           <input
             id="login-input-pin"
@@ -1915,7 +1951,7 @@
           type="button"
           class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs py-2.5 rounded-xl border border-slate-700 transition cursor-pointer"
         >
-          🔒 Usar en Modo Recepción (Solo cobrar)
+          🔒 Usar como Perfil Seleccionado (Modo Recepción)
         </button>
       </form>
     </div>
@@ -1935,10 +1971,24 @@
         </div>
         <h3 class="font-black text-lg text-white">Control de Acceso al Sistema</h3>
         <p class="text-xs text-slate-400 mt-1">
-          Ingresa el código de recepción para iniciar tu turno de trabajo
+          Elige tu perfil e ingresa el código de recepción para iniciar tu turno
         </p>
       </div>
       <form id="form-acceso-inicial" class="p-6 space-y-4">
+        <div>
+          <label class="block text-xs font-bold text-slate-300 mb-1.5">👤 ¿Quién está iniciando turno?</label>
+          <select
+            id="acceso-inicial-operador"
+            required
+            class="w-full bg-slate-950 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+          ></select>
+          <input
+            id="acceso-inicial-operador-otro"
+            type="text"
+            placeholder="Escribe tu nombre completo..."
+            class="hidden w-full mt-2 bg-slate-950 border border-slate-700 focus:border-red-500 rounded-xl px-3.5 py-2.5 text-sm text-white outline-none"
+          />
+        </div>
         <div>
           <label class="block text-xs font-bold text-slate-300 mb-1.5">Código de Acceso (Recepción)</label>
           <input
@@ -1998,11 +2048,11 @@
   <div id="toast-container" class="fixed bottom-20 lg:bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
-  <script src="./src/js/cloudConfig.js?v=6"></script>
-  <script src="./src/js/store.js?v=6"></script>
-  <script src="./src/js/receiptGenerator.js?v=6"></script>
-  <script src="./src/js/excelExporter.js?v=6"></script>
-  <script src="./src/js/supabaseSync.js?v=6"></script>
-  <script src="./src/js/app.js?v=6"></script>
+  <script src="./src/js/cloudConfig.js?v=7"></script>
+  <script src="./src/js/store.js?v=7"></script>
+  <script src="./src/js/receiptGenerator.js?v=7"></script>
+  <script src="./src/js/excelExporter.js?v=7"></script>
+  <script src="./src/js/supabaseSync.js?v=7"></script>
+  <script src="./src/js/app.js?v=7"></script>
 </body>
 </html>

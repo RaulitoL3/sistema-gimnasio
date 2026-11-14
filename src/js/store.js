@@ -154,6 +154,13 @@ function crearHorariosPorDefecto() {
   ];
 }
 
+const DEFAULT_PERFILES_OPERADORES = [
+  'Administrador',
+  'Recepción - Turno Mañana',
+  'Recepción - Turno Tarde',
+  'Profesor / Coach'
+];
+
 // Datos semilla de demostración para que el sistema se vea vivo desde el primer segundo
 function crearDatosIniciales() {
   const hoy = getLocalDateISO();
@@ -378,6 +385,7 @@ function crearDatosIniciales() {
     rol_actual: 'RECEPCION', // ADMIN | RECEPCION
     pin_recepcion: '2026',
     pin_admin: '1234',
+    perfiles_operadores: [...DEFAULT_PERFILES_OPERADORES],
     supabase_url: '',
     supabase_anon_key: ''
   };
@@ -417,13 +425,41 @@ class GymStore {
     }
   }
 
-  registrarActividad(accion, detalle = '', actor = null) {
+  getOperadorActual() {
+    try {
+      const sesionOp = sessionStorage.getItem('gym_operador_activo');
+      if (sesionOp && sesionOp.trim()) return sesionOp.trim();
+      const savedOp = localStorage.getItem('dojo_gym_device_operator');
+      if (savedOp && savedOp.trim()) return savedOp.trim();
+    } catch (e) {}
+    const perfiles = this.state?.configuracion?.perfiles_operadores;
+    if (Array.isArray(perfiles) && perfiles.length > 0) {
+      return perfiles[1] || perfiles[0];
+    }
+    return 'Recepción - Turno Mañana';
+  }
+
+  setOperadorActual(nombre) {
+    const limpio = String(nombre || '').trim() || 'Recepción';
+    try {
+      sessionStorage.setItem('gym_operador_activo', limpio);
+      localStorage.setItem('dojo_gym_device_operator', limpio);
+    } catch (e) {}
+    return limpio;
+  }
+
+  getEtiquetaActorActual() {
+    const operador = this.getOperadorActual();
+    const rolLabel = this.getRolDispositivoActual() === 'ADMIN' ? 'Admin' : 'Recepción';
+    return `${operador} (${rolLabel})`;
+  }
+
+  registrarActividad(accion, detalle = '', actor = null, persist = false) {
     if (!this.state) return;
     if (!Array.isArray(this.state.actividades)) {
       this.state.actividades = [];
     }
-    const rolActual = this.getRolDispositivoActual();
-    const actorFinal = actor || (rolActual === 'ADMIN' ? 'Administrador' : 'Recepción');
+    const actorFinal = actor || this.getEtiquetaActorActual();
     this.state.actividades.unshift({
       id: generarUUID(),
       fecha: new Date().toISOString(),
@@ -433,6 +469,9 @@ class GymStore {
     });
     if (this.state.actividades.length > 150) {
       this.state.actividades = this.state.actividades.slice(0, 150);
+    }
+    if (persist) {
+      this.saveState();
     }
   }
 
@@ -453,6 +492,9 @@ class GymStore {
       }
       if (!objState.configuracion.pin_admin) {
         objState.configuracion.pin_admin = '1234';
+      }
+      if (!Array.isArray(objState.configuracion.perfiles_operadores) || objState.configuracion.perfiles_operadores.length === 0) {
+        objState.configuracion.perfiles_operadores = [...DEFAULT_PERFILES_OPERADORES];
       }
     }
     if (!Array.isArray(objState.actividades)) {
@@ -735,10 +777,11 @@ class GymStore {
     this.recalcularMembresia(membresiaId);
     const moneda = this.state.configuracion.moneda || 'S/';
     const nombreCompletoLog = `${alumnoObj.nombres} ${alumnoObj.apellidos}`.trim();
+    const rolLabel = this.getRolDispositivoActual() === 'ADMIN' ? 'Admin' : 'Recepción';
     this.registrarActividad(
       'Cobro registrado',
       `Recibo N° ${nroReciboFormateado} - ${nombreCompletoLog} (${moneda} ${abonadoNum.toFixed(2)} - ${metodo_pago})`,
-      nuevoRecibo.cobrado_por
+      `${nuevoRecibo.cobrado_por} (${rolLabel})`
     );
     this.saveState();
 
@@ -794,10 +837,11 @@ class GymStore {
     this.recalcularMembresia(mem.id);
     const moneda = this.state.configuracion.moneda || 'S/';
     const nombreAlumno = alumno ? `${alumno.nombres} ${alumno.apellidos}`.trim() : 'Alumno';
+    const rolLabel = this.getRolDispositivoActual() === 'ADMIN' ? 'Admin' : 'Recepción';
     this.registrarActividad(
       'Cobro de saldo',
       `Recibo N° ${nroReciboFormateado} - ${nombreAlumno} (${moneda} ${abonadoNum.toFixed(2)})`,
-      nuevoRecibo.cobrado_por
+      `${nuevoRecibo.cobrado_por} (${rolLabel})`
     );
     this.saveState();
 
@@ -881,17 +925,43 @@ class GymStore {
     if (datos.id) {
       const idx = this.state.alumnos.findIndex((a) => a.id === datos.id);
       if (idx !== -1) {
-        this.state.alumnos[idx] = {
-          ...this.state.alumnos[idx],
+        const prev = this.state.alumnos[idx];
+        const actualizado = {
+          ...prev,
           ...datos,
-          nombres: (datos.nombres ?? this.state.alumnos[idx].nombres).trim(),
-          apellidos: (datos.apellidos ?? this.state.alumnos[idx].apellidos).trim(),
-          telefono_whatsapp: (datos.telefono_whatsapp ?? this.state.alumnos[idx].telefono_whatsapp ?? '').trim(),
-          contacto_emergencia: (datos.contacto_emergencia ?? this.state.alumnos[idx].contacto_emergencia ?? '').trim(),
-          telefono_emergencia: (datos.telefono_emergencia ?? this.state.alumnos[idx].telefono_emergencia ?? '').trim(),
-          horario_texto: horarioTextoResuelto !== undefined ? horarioTextoResuelto : (this.state.alumnos[idx].horario_texto || '')
+          nombres: (datos.nombres ?? prev.nombres).trim(),
+          apellidos: (datos.apellidos ?? prev.apellidos).trim(),
+          telefono_whatsapp: (datos.telefono_whatsapp ?? prev.telefono_whatsapp ?? '').trim(),
+          contacto_emergencia: (datos.contacto_emergencia ?? prev.contacto_emergencia ?? '').trim(),
+          telefono_emergencia: (datos.telefono_emergencia ?? prev.telefono_emergencia ?? '').trim(),
+          horario_texto: horarioTextoResuelto !== undefined ? horarioTextoResuelto : (prev.horario_texto || '')
         };
-        this.registrarActividad('Alumno actualizado', `${this.state.alumnos[idx].nombres} ${this.state.alumnos[idx].apellidos}`.trim());
+
+        const cambios = [];
+        const prevNombre = `${prev.nombres || ''} ${prev.apellidos || ''}`.trim();
+        const nextNombre = `${actualizado.nombres || ''} ${actualizado.apellidos || ''}`.trim();
+        if (prevNombre !== nextNombre) {
+          cambios.push(`Nombre: ${prevNombre} → ${nextNombre}`);
+        }
+        if ((prev.horario_texto || 'Sin horario') !== (actualizado.horario_texto || 'Sin horario')) {
+          cambios.push(`Horario: ${prev.horario_texto || 'Sin horario'} → ${actualizado.horario_texto || 'Sin horario'}`);
+        }
+        if ((prev.grado_cinturon || '') !== (actualizado.grado_cinturon || '')) {
+          cambios.push(`Grado: ${prev.grado_cinturon || '—'} → ${actualizado.grado_cinturon || '—'}`);
+        }
+        if ((prev.telefono_whatsapp || '') !== (actualizado.telefono_whatsapp || '')) {
+          cambios.push(`WhatsApp: ${prev.telefono_whatsapp || '—'} → ${actualizado.telefono_whatsapp || '—'}`);
+        }
+        if ((prev.contacto_emergencia || '') !== (actualizado.contacto_emergencia || '')) {
+          cambios.push(`Emergencia: ${prev.contacto_emergencia || '—'} → ${actualizado.contacto_emergencia || '—'}`);
+        }
+        if (Boolean(prev.inscripcion_pagada) !== Boolean(actualizado.inscripcion_pagada)) {
+          cambios.push(`Inscripción: ${prev.inscripcion_pagada ? 'Pagada' : 'Pendiente'} → ${actualizado.inscripcion_pagada ? 'Pagada' : 'Pendiente'}`);
+        }
+
+        this.state.alumnos[idx] = actualizado;
+        const resumenCambios = cambios.length > 0 ? ` (${cambios.join(' | ')})` : '';
+        this.registrarActividad('Alumno editado', `${nextNombre}${resumenCambios}`);
         this.saveState();
         return this.state.alumnos[idx];
       }

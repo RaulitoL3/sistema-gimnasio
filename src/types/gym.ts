@@ -21,6 +21,7 @@ export interface ConfiguracionGym {
   pin_recepcion?: string;
   pin_admin?: string;
   rol_actual?: 'ADMIN' | 'RECEPCION';
+  perfiles_operadores?: string[];
   supabase_url?: string;
   supabase_anon_key?: string;
 }

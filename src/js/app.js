@@ -85,9 +85,124 @@
     }, ADMIN_INACTIVITY_MS);
   }
 
+  function obtenerPerfilesOperadores() {
+    const raw = store.state.configuracion.perfiles_operadores;
+    const base =
+      Array.isArray(raw) && raw.length > 0
+        ? raw
+        : ['Recepción', 'Profesor / Coach', 'Administrador'];
+    const limpios = [];
+    base.forEach((item) => {
+      const val = String(item || '').trim();
+      if (val && val.toUpperCase() !== 'OTRO' && !limpios.includes(val)) {
+        limpios.push(val);
+      }
+    });
+    return limpios.length > 0 ? limpios : ['Recepción'];
+  }
+
+  function agregarOpcionesSelect(selectEl, items) {
+    selectEl.innerHTML = '';
+    items.forEach(({ value, text }) => {
+      const opt = document.createElement('option');
+      opt.value = value;
+      if (text !== undefined) opt.textContent = text;
+      selectEl.appendChild(opt);
+    });
+  }
+
+  function poblarSelectoresOperadores() {
+    const perfiles = obtenerPerfilesOperadores();
+    const operadorActual = store.getOperadorActual();
+
+    const selAcceso = document.getElementById('acceso-inicial-operador');
+    const inputOtroAcceso = document.getElementById('acceso-inicial-operador-otro');
+    if (selAcceso) {
+      const modalAbierto = !document.getElementById('modal-acceso-inicial')?.classList.contains('hidden');
+      const valorPrevio = modalAbierto ? selAcceso.value : operadorActual;
+
+      agregarOpcionesSelect(selAcceso, [
+        ...perfiles.map((p) => ({ value: p, text: p })),
+        { value: 'OTRO', text: '✏️ Otro nombre (escribir)...' }
+      ]);
+
+      if (valorPrevio === 'OTRO') {
+        selAcceso.value = 'OTRO';
+        inputOtroAcceso?.classList.remove('hidden');
+      } else if (perfiles.includes(valorPrevio)) {
+        selAcceso.value = valorPrevio;
+        inputOtroAcceso?.classList.add('hidden');
+      } else if (
+        !modalAbierto &&
+        operadorActual &&
+        operadorActual !== 'Recepción' &&
+        operadorActual !== 'Administrador'
+      ) {
+        selAcceso.value = 'OTRO';
+        if (inputOtroAcceso) {
+          inputOtroAcceso.value = operadorActual;
+          inputOtroAcceso.classList.remove('hidden');
+        }
+      } else {
+        selAcceso.value = perfiles[0];
+        inputOtroAcceso?.classList.add('hidden');
+      }
+    }
+
+    const selLogin = document.getElementById('login-select-operador');
+    if (selLogin) {
+      const modalLoginAbierto = !document.getElementById('modal-login-admin')?.classList.contains('hidden');
+      const opcionesLogin = [];
+      ['Administrador', ...perfiles, operadorActual].forEach((n) => {
+        const val = String(n || '').trim();
+        if (val && !opcionesLogin.includes(val)) opcionesLogin.push(val);
+      });
+      const valorPrevioLogin = modalLoginAbierto && selLogin.value ? selLogin.value : operadorActual;
+      agregarOpcionesSelect(
+        selLogin,
+        opcionesLogin.map((p) => ({ value: p, text: p }))
+      );
+      selLogin.value = opcionesLogin.includes(valorPrevioLogin) ? valorPrevioLogin : 'Administrador';
+    }
+
+    const datalist = document.getElementById('lista-cobradores-sugeridos');
+    if (datalist) {
+      const sugerencias = [];
+      [...perfiles, 'Recepción', 'Administrador', operadorActual].forEach((n) => {
+        const val = String(n || '').trim();
+        if (val && !sugerencias.includes(val)) sugerencias.push(val);
+      });
+      agregarOpcionesSelect(
+        datalist,
+        sugerencias.map((p) => ({ value: p }))
+      );
+    }
+
+    const filtroOp = document.getElementById('filtro-recibos-operador');
+    if (filtroOp) {
+      const previoFiltro = filtroOp.value || 'TODOS';
+      const operadoresCaja = [...perfiles];
+      (store.state.recibos || []).forEach((r) => {
+        const cob = String(r.cobrado_por || '').trim();
+        if (cob && !operadoresCaja.some((x) => x.toLowerCase() === cob.toLowerCase())) {
+          operadoresCaja.push(cob);
+        }
+      });
+      agregarOpcionesSelect(filtroOp, [
+        { value: 'TODOS', text: 'Todos los operadores' },
+        ...operadoresCaja.map((p) => ({ value: p, text: `👤 ${p}` }))
+      ]);
+      const matchOption = Array.from(filtroOp.options).find(
+        (opt) => opt.value.toLowerCase() === previoFiltro.toLowerCase()
+      );
+      filtroOp.value = matchOption ? matchOption.value : 'TODOS';
+    }
+  }
+
   function verificarAccesoInicial() {
     const yaVerificado = sessionStorage.getItem('gym_acceso_recepcion_ok') === 'true';
     store.setRolDispositivoActual('RECEPCION');
+    poblarSelectoresOperadores();
     if (!yaVerificado) {
       const errEl = document.getElementById('acceso-inicial-error');
       const inputEl = document.getElementById('acceso-inicial-pin');
@@ -260,6 +375,7 @@
     const moneda = cfg.moneda || 'S/';
 
     aplicarIdentidadVisual();
+    poblarSelectoresOperadores();
     actualizarFiltroHorariosAlumnos();
 
     // Cabecera / Sidebar
@@ -272,15 +388,16 @@
       badgeHorarios.textContent = (store.state.horarios || []).length;
     }
 
+    const operadorActual = store.getOperadorActual();
     const badgeRol = document.getElementById('badge-rol-actual');
     const btnRol = document.getElementById('btn-cambiar-rol');
     if (badgeRol && btnRol) {
       if (esAdmin()) {
-        badgeRol.textContent = '🔓 ADMIN';
+        badgeRol.textContent = `🔓 ADMIN • ${operadorActual}`;
         btnRol.className =
           'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center gap-1 transition cursor-pointer';
       } else {
-        badgeRol.textContent = '🔒 MODO RECEPCIÓN';
+        badgeRol.textContent = `🔒 RECEPCIÓN • ${operadorActual}`;
         btnRol.className =
           'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center gap-1 transition cursor-pointer';
       }
@@ -472,35 +589,31 @@
       .map((r) => crearFilaReciboHTML(r, moneda, true))
       .join('');
 
-    // Bitácora de Auditoría (Solo visible en modo ADMIN)
+    // Bitácora de Auditoría en vivo (visible para saber quién realizó cada cambio)
     const bloqueAudit = document.getElementById('bloque-auditoria-admin');
     const listaAudit = document.getElementById('lista-auditoria-reciente');
     if (bloqueAudit && listaAudit) {
-      if (esAdmin()) {
-        bloqueAudit.classList.remove('hidden');
-        const actividades = (store.state.actividades || []).slice(0, 25);
-        if (actividades.length === 0) {
-          listaAudit.innerHTML = `
-            <div class="p-6 text-center text-xs text-slate-400">
-              Aún no hay movimientos registrados en la bitácora de esta sesión.
-            </div>`;
-        } else {
-          listaAudit.innerHTML = actividades
-            .map(
-              (act) => `
-              <div class="px-5 py-3 flex flex-wrap items-center justify-between gap-2 text-xs hover:bg-slate-800/40">
-                <div class="flex items-center gap-2.5 min-w-0">
-                  <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-bold text-slate-300 whitespace-nowrap">${act.actor || 'Sistema'}</span>
-                  <span class="font-extrabold text-white">${act.accion}</span>
-                  <span class="text-slate-400 truncate">${act.detalle || ''}</span>
-                </div>
-                <span class="text-slate-400 tabular-nums whitespace-nowrap">${formatDateTimePE(act.fecha)}</span>
-              </div>`
-            )
-            .join('');
-        }
+      bloqueAudit.classList.remove('hidden');
+      const actividades = (store.state.actividades || []).slice(0, 25);
+      if (actividades.length === 0) {
+        listaAudit.innerHTML = `
+          <div class="p-6 text-center text-xs text-slate-400">
+            Aún no hay movimientos registrados en la bitácora de esta sesión.
+          </div>`;
       } else {
-        bloqueAudit.classList.add('hidden');
+        listaAudit.innerHTML = actividades
+          .map(
+            (act) => `
+            <div class="px-5 py-3 flex flex-wrap items-center justify-between gap-2 text-xs hover:bg-slate-800/40">
+              <div class="flex items-center gap-2.5 min-w-0">
+                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-bold text-slate-300 whitespace-nowrap">${act.actor || 'Sistema'}</span>
+                <span class="font-extrabold text-white">${act.accion}</span>
+                <span class="text-slate-400 truncate">${act.detalle || ''}</span>
+              </div>
+              <span class="text-slate-400 tabular-nums whitespace-nowrap">${formatDateTimePE(act.fecha)}</span>
+            </div>`
+          )
+          .join('');
       }
     }
   }
@@ -555,6 +668,11 @@
             : ''
         }
         <td class="py-3.5 px-4 text-center whitespace-nowrap">
+          <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800/80 text-sky-300 border border-slate-700/80">
+            👤 ${r.cobrado_por || 'Recepción'}
+          </span>
+        </td>
+        <td class="py-3.5 px-4 text-center whitespace-nowrap">
           <div class="inline-flex items-center gap-1.5">
             <button
               type="button"
@@ -601,6 +719,7 @@
     const texto = (document.getElementById('filtro-recibos-texto')?.value || '').trim().toLowerCase();
     const periodo = document.getElementById('filtro-recibos-periodo')?.value || 'TODOS';
     const metodo = document.getElementById('filtro-recibos-metodo')?.value || 'TODOS';
+    const operador = (document.getElementById('filtro-recibos-operador')?.value || 'TODOS').trim();
 
     const hoyISO = getLocalDateISO();
     const mesActualPrefix = hoyISO.slice(0, 7);
@@ -610,10 +729,15 @@
         const matchRecibo = String(r.numero_recibo).toLowerCase().includes(texto);
         const matchNombre = String(r.nombre_completo).toLowerCase().includes(texto);
         const matchConcepto = String(r.membresia?.concepto || '').toLowerCase().includes(texto);
-        if (!matchRecibo && !matchNombre && !matchConcepto) return false;
+        const matchCobrador = String(r.cobrado_por || '').toLowerCase().includes(texto);
+        if (!matchRecibo && !matchNombre && !matchConcepto && !matchCobrador) return false;
       }
 
       if (metodo !== 'TODOS' && r.metodo_pago !== metodo) return false;
+      if (operador !== 'TODOS') {
+        const cobrador = String(r.cobrado_por || 'Recepción').trim().toLowerCase();
+        if (cobrador !== operador.toLowerCase()) return false;
+      }
 
       const fechaReciboISO = getLocalDateISO(new Date(r.fecha_pago));
       if (periodo === 'HOY' && fechaReciboISO !== hoyISO) return false;
@@ -639,7 +763,7 @@
     if (filtrados.length === 0) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="11" class="py-10 text-center text-slate-400 text-sm font-medium">
+          <td colspan="12" class="py-10 text-center text-slate-400 text-sm font-medium">
             No se encontraron recibos con esos filtros.
           </td>
         </tr>`;
@@ -1200,6 +1324,9 @@
     if (document.getElementById('cfg-pedir-pin-inicio')) {
       document.getElementById('cfg-pedir-pin-inicio').checked = Boolean(cfg.pedir_pin_inicio);
     }
+    if (document.getElementById('cfg-perfiles-operadores')) {
+      document.getElementById('cfg-perfiles-operadores').value = obtenerPerfilesOperadores().join(', ');
+    }
     const creds = global.SupabaseSync ? global.SupabaseSync.obtenerCredenciales(store) : { url: '', anonKey: '' };
     document.getElementById('cfg-supabase-url').value = cfg.supabase_url || creds.url || '';
     document.getElementById('cfg-supabase-key').value = cfg.supabase_anon_key || creds.anonKey || '';
@@ -1496,7 +1623,7 @@
     document.getElementById('pago-observacion').value = '';
     setMetodoPagoUI('EFECTIVO');
     const cobradorInput = document.getElementById('pago-cobrado-por');
-    if (cobradorInput) cobradorInput.value = esAdmin() ? 'Administrador' : 'Recepción';
+    if (cobradorInput) cobradorInput.value = store.getOperadorActual();
     document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
     document.getElementById('pago-numero-recibo').value = store.getProximoNumeroReciboFormateado();
     if (document.getElementById('pago-buscar-alumno-input')) {
@@ -1543,7 +1670,7 @@
     setModoAlumnoModal('EXISTENTE');
     setMetodoPagoUI('EFECTIVO');
     const cobradorInput = document.getElementById('pago-cobrado-por');
-    if (cobradorInput) cobradorInput.value = esAdmin() ? 'Administrador' : 'Recepción';
+    if (cobradorInput) cobradorInput.value = store.getOperadorActual();
 
     document.getElementById('modal-pago-titulo').textContent = '🥊 Cobrar Mensualidad / Renovar';
     document.getElementById('modal-pago-subtitulo').textContent = 'Verifica el plan, fechas de inicio/fin y el monto que abona hoy';
@@ -1644,7 +1771,7 @@
     document.getElementById('saldo-monto-abonar').max = Number(mem.saldo_pendiente).toFixed(2);
     setMetodoSaldoUI('EFECTIVO');
     const saldoCobrador = document.getElementById('saldo-cobrado-por');
-    if (saldoCobrador) saldoCobrador.value = esAdmin() ? 'Administrador' : 'Recepción';
+    if (saldoCobrador) saldoCobrador.value = store.getOperadorActual();
     document.getElementById('saldo-observacion').value = '';
   }
 
@@ -1841,6 +1968,11 @@
   // ACCIONES DE HORARIOS, PLANES, RECIBOS Y SUBIDA DE LOGO
   // =========================================================================
   function editarHorario(horarioId) {
+    if (!esAdmin()) {
+      mostrarToast('Solo el Administrador puede editar horarios', 'warning');
+      abrirModal('modal-login-admin');
+      return;
+    }
     const h = (store.state.horarios || []).find((x) => x.id === horarioId);
     if (!h) return;
     document.getElementById('contenedor-form-horario')?.classList.remove('hidden');
@@ -2364,8 +2496,17 @@
     });
 
     // Filtros en vista Recibos y Alumnos
-    ['filtro-recibos-texto', 'filtro-recibos-periodo', 'filtro-recibos-metodo'].forEach((id) => {
-      document.getElementById(id)?.addEventListener('input', () =>
+    [
+      'filtro-recibos-texto',
+      'filtro-recibos-periodo',
+      'filtro-recibos-metodo',
+      'filtro-recibos-operador'
+    ].forEach((id) => {
+      const el = document.getElementById(id);
+      el?.addEventListener('input', () =>
+        renderTablaRecibos(store.state.configuracion.moneda || 'S/')
+      );
+      el?.addEventListener('change', () =>
         renderTablaRecibos(store.state.configuracion.moneda || 'S/')
       );
     });
@@ -2379,10 +2520,106 @@
       );
     });
 
-    // Exportación a Excel
+    // Exportación a Excel y Cierre de Turno WhatsApp
     document.getElementById('btn-exportar-recibos-excel')?.addEventListener('click', () => {
       exportarRecibosExcel(getRecibosFiltrados(), store.state.configuracion);
       mostrarToast('Reporte de Recibos exportado a Excel (.xls)');
+    });
+
+    document.getElementById('btn-cerrar-turno-whatsapp')?.addEventListener('click', () => {
+      const cfg = store.state.configuracion;
+      const moneda = cfg.moneda || 'S/';
+      const hoyISO = getLocalDateISO();
+      const filtroOp = (document.getElementById('filtro-recibos-operador')?.value || 'TODOS').trim();
+
+      const todosHoy = store
+        .getRecibosDetallados()
+        .filter((r) => getLocalDateISO(new Date(r.fecha_pago)) === hoyISO);
+
+      const validosHoy = todosHoy.filter((r) => !r.anulado);
+      const recibosTurno =
+        filtroOp !== 'TODOS'
+          ? validosHoy.filter(
+              (r) => String(r.cobrado_por || 'Recepción').trim().toLowerCase() === filtroOp.toLowerCase()
+            )
+          : validosHoy;
+
+      const anuladosTurno =
+        filtroOp !== 'TODOS'
+          ? todosHoy.filter(
+              (r) =>
+                r.anulado &&
+                String(r.cobrado_por || 'Recepción').trim().toLowerCase() === filtroOp.toLowerCase()
+            )
+          : todosHoy.filter((r) => r.anulado);
+
+      const total = recibosTurno.reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+      const efectivo = recibosTurno
+        .filter((r) => r.metodo_pago === 'EFECTIVO')
+        .reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+      const yapePlin = recibosTurno
+        .filter((r) => r.metodo_pago === 'YAPE_PLIN')
+        .reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+      const transferencia = recibosTurno
+        .filter((r) => r.metodo_pago === 'TRANSFERENCIA')
+        .reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+      const tarjeta = recibosTurno
+        .filter((r) => r.metodo_pago === 'TARJETA')
+        .reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+      const digital = total - efectivo;
+
+      const porOperador = {};
+      recibosTurno.forEach((r) => {
+        const op = (r.cobrado_por || 'Recepción').trim() || 'Recepción';
+        porOperador[op] = (porOperador[op] || 0) + Number(r.monto_abonado || 0);
+      });
+
+      const operadorTexto =
+        filtroOp !== 'TODOS'
+          ? `👤 *Turno / Operador:* ${filtroOp}`
+          : `👤 *Responsable que cierra:* ${store.getOperadorActual()}`;
+
+      const resumenPorOperador =
+        filtroOp === 'TODOS' && Object.keys(porOperador).length > 0
+          ? [
+              `--------------------------------`,
+              `👥 *Desglose por operador:*`,
+              ...Object.entries(porOperador).map(
+                ([op, monto]) => `   • ${op}: ${moneda} ${monto.toFixed(2)}`
+              )
+            ]
+          : [];
+
+      const lineas = [
+        `📊 *CIERRE DE TURNO - ${(cfg.nombre_academia || 'GIMNASIO').toUpperCase()}*`,
+        `📅 *Fecha:* ${formatDatePE(hoyISO)}`,
+        operadorTexto,
+        `🧾 *Recibos cobrados:* ${recibosTurno.length}${anuladosTurno.length > 0 ? ` (${anuladosTurno.length} anulado(s))` : ''}`,
+        `--------------------------------`,
+        `💵 *Efectivo en caja:* ${moneda} ${efectivo.toFixed(2)}`,
+        `📱 *Pagos digitales (total):* ${moneda} ${digital.toFixed(2)}`,
+        `   • Yape / Plin: ${moneda} ${yapePlin.toFixed(2)}`,
+        `   • Transferencia: ${moneda} ${transferencia.toFixed(2)}`,
+        `   • Tarjeta: ${moneda} ${tarjeta.toFixed(2)}`,
+        ...resumenPorOperador,
+        `--------------------------------`,
+        `💰 *TOTAL COBRADO HOY:* ${moneda} ${total.toFixed(2)}`
+      ];
+
+      const rawDigits = String(cfg.telefono || '').replace(/\D/g, '');
+      const telWA =
+        rawDigits.length === 9 && rawDigits.startsWith('9') ? `51${rawDigits}` : rawDigits;
+      const texto = encodeURIComponent(lineas.join('\n'));
+      const waUrl = telWA ? `https://wa.me/${telWA}?text=${texto}` : `https://wa.me/?text=${texto}`;
+
+      store.registrarActividad(
+        'Cierre de turno WhatsApp',
+        `Total ${moneda} ${total.toFixed(2)} (${recibosTurno.length} recibo(s))`,
+        null,
+        true
+      );
+      window.open(waUrl, '_blank', 'noopener');
+      mostrarToast('📲 Abriendo WhatsApp con el cierre de turno');
     });
 
     document.getElementById('btn-exportar-alumnos-excel')?.addEventListener('click', () => {
@@ -2407,6 +2644,11 @@
 
     document.getElementById('form-horario')?.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede crear o editar horarios', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       store.guardarHorario({
         id: document.getElementById('horario-id').value || null,
         nombre: document.getElementById('horario-nombre').value,
@@ -2421,6 +2663,11 @@
     document.getElementById('btn-cancelar-horario')?.addEventListener('click', resetFormHorario);
     document.getElementById('btn-cerrar-form-horario')?.addEventListener('click', resetFormHorario);
     document.getElementById('btn-toggle-form-horario')?.addEventListener('click', () => {
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede crear o editar horarios', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       const box = document.getElementById('contenedor-form-horario');
       if (!box) return;
       const estaOculto = box.classList.contains('hidden');
@@ -2476,17 +2723,55 @@
         dias_alerta_vencimiento: Number(document.getElementById('cfg-dias-alerta').value) || 5,
         pin_recepcion: document.getElementById('cfg-pin-recepcion')?.value.trim() || '2026',
         pin_admin: document.getElementById('cfg-pin-admin')?.value.trim() || '1234',
-        pedir_pin_inicio: Boolean(document.getElementById('cfg-pedir-pin-inicio')?.checked)
+        pedir_pin_inicio: Boolean(document.getElementById('cfg-pedir-pin-inicio')?.checked),
+        perfiles_operadores: (() => {
+          const rawPerfiles = document.getElementById('cfg-perfiles-operadores')?.value || '';
+          const parsed = [];
+          rawPerfiles.split(',').forEach((item) => {
+            const limpia = item.trim();
+            if (limpia && limpia.toUpperCase() !== 'OTRO' && !parsed.includes(limpia)) {
+              parsed.push(limpia);
+            }
+          });
+          return parsed.length > 0 ? parsed : ['Recepción', 'Profesor / Coach', 'Administrador'];
+        })()
       });
-      mostrarToast('Configuración, seguridad y precios actualizados');
+      mostrarToast('Configuración, perfiles, seguridad y precios actualizados');
     });
 
-    // Control de Acceso Doble Código:
-    // 1. Acceso Inicial obligatorio -> entra siempre en MODO RECEPCIÓN
+    // Control de Acceso Doble Código con Perfiles Identificables:
+    document.getElementById('acceso-inicial-operador')?.addEventListener('change', (e) => {
+      const boxOtro = document.getElementById('acceso-inicial-operador-otro');
+      if (!boxOtro) return;
+      if (e.target.value === 'OTRO') {
+        boxOtro.classList.remove('hidden');
+        boxOtro.focus();
+      } else {
+        boxOtro.classList.add('hidden');
+      }
+    });
+
+    // 1. Acceso Inicial obligatorio -> entra siempre en MODO RECEPCIÓN con operador identificado
     document.getElementById('form-acceso-inicial')?.addEventListener('submit', (e) => {
       e.preventDefault();
       const inputEl = document.getElementById('acceso-inicial-pin');
       const errEl = document.getElementById('acceso-inicial-error');
+      const selOp = document.getElementById('acceso-inicial-operador');
+      const inputOtro = document.getElementById('acceso-inicial-operador-otro');
+
+      let nombreOperador = (selOp?.value || 'Recepción').trim();
+      if (nombreOperador === 'OTRO') {
+        nombreOperador = (inputOtro?.value || '').trim();
+        if (!nombreOperador) {
+          if (errEl) {
+            errEl.textContent = '⚠️ Escribe tu nombre para identificar quién atiende este turno.';
+            errEl.classList.remove('hidden');
+          }
+          inputOtro?.focus();
+          return;
+        }
+      }
+
       const pinIngresado = (inputEl?.value || '').trim();
       const pinRecep = store.state.configuracion.pin_recepcion || '2026';
       const pinAdmin = store.state.configuracion.pin_admin || '1234';
@@ -2494,19 +2779,29 @@
       if (pinIngresado === pinRecep || pinIngresado === pinAdmin) {
         if (errEl) errEl.classList.add('hidden');
         sessionStorage.setItem('gym_acceso_recepcion_ok', 'true');
+        store.setOperadorActual(nombreOperador);
         store.setRolDispositivoActual('RECEPCION');
-        store.registrarActividad('Inicio de turno en Recepción', 'Acceso inicial verificado', 'Recepción');
+        store.registrarActividad(
+          'Inicio de turno en Recepción',
+          `Acceso verificado para ${nombreOperador}`,
+          `${nombreOperador} (Recepción)`,
+          true
+        );
         cerrarModal('modal-acceso-inicial');
         renderTodo();
-        mostrarToast('🔒 Bienvenido. Sistema iniciado en Modo Recepción.', 'info');
+        mostrarToast(`🔒 Turno iniciado como ${nombreOperador} (Modo Recepción).`, 'info');
       } else {
-        if (errEl) errEl.classList.remove('hidden');
+        if (errEl) {
+          errEl.textContent = '❌ Código incorrecto. Pide el código de acceso al administrador.';
+          errEl.classList.remove('hidden');
+        }
         if (inputEl) inputEl.select();
       }
     });
 
-    // 2. Elevación manual a Administrador / Cambio de Rol
+    // 2. Elevación manual a Administrador / Cambio de Rol o Perfil
     document.getElementById('btn-cambiar-rol')?.addEventListener('click', () => {
+      poblarSelectoresOperadores();
       document.getElementById('login-input-pin').value = '';
       abrirModal('modal-login-admin');
       setTimeout(() => document.getElementById('login-input-pin')?.focus(), 80);
@@ -2516,20 +2811,43 @@
       e.preventDefault();
       const pinIngresado = document.getElementById('login-input-pin').value.trim();
       const pinCorrecto = store.state.configuracion.pin_admin || '1234';
+      const nombreSel =
+        (document.getElementById('login-select-operador')?.value || store.getOperadorActual() || 'Administrador').trim() ||
+        'Administrador';
+
       if (pinIngresado === pinCorrecto) {
+        store.setOperadorActual(nombreSel);
         store.setRolDispositivoActual('ADMIN');
-        store.registrarActividad('Elevación a Administrador', 'Ingreso con clave Admin', 'Administrador');
+        store.registrarActividad(
+          'Elevación a Administrador',
+          `Ingreso autorizado con clave Admin`,
+          `${nombreSel} (Admin)`,
+          true
+        );
         reiniciarTemporizadorInactividadAdmin();
         cerrarModal('modal-login-admin');
         renderTodo();
-        mostrarToast('🔓 Modo Administrador activado (Auto-bloqueo en 5 min de inactividad)');
+        mostrarToast(`🔓 Modo Administrador activo para ${nombreSel} (Auto-bloqueo en 5 min)`);
       } else {
         mostrarToast('Clave de Administrador incorrecta', 'error');
       }
     });
 
     document.getElementById('btn-entrar-modo-recepcion')?.addEventListener('click', () => {
+      const nombreSel = (document.getElementById('login-select-operador')?.value || '').trim();
+      const nombreFinal =
+        nombreSel && nombreSel !== 'Administrador'
+          ? nombreSel
+          : obtenerPerfilesOperadores().find((p) => p !== 'Administrador') || 'Recepción';
+
+      store.setOperadorActual(nombreFinal);
       store.setRolDispositivoActual('RECEPCION');
+      store.registrarActividad(
+        'Cambio a Modo Recepción',
+        `Turno asignado a ${nombreFinal}`,
+        `${nombreFinal} (Recepción)`,
+        true
+      );
       if (adminInactivityTimer) {
         clearTimeout(adminInactivityTimer);
         adminInactivityTimer = null;
@@ -2540,7 +2858,7 @@
       } else {
         renderTodo();
       }
-      mostrarToast('🔒 Modo Recepción activo (Configuración y borrado bloqueados)', 'info');
+      mostrarToast(`🔒 Modo Recepción activo (${nombreFinal})`, 'info');
     });
 
     ['click', 'keydown', 'mousemove', 'touchstart'].forEach((evtName) => {
