@@ -7,6 +7,7 @@
   let syncTimeout = null;
   let lastCloudTimestamp = null;
   let isPulling = false;
+  let isUploading = false;
   let pendingLocalChanges = false;
   const PENDING_SYNC_KEY = 'dojo_gym_pending_sync';
 
@@ -106,21 +107,78 @@
     });
   }
 
-  function fusionarColeccionPorId(localArr = [], remoteArr = [], preferLocal = true, sortDescKey = null) {
+  function obtenerTimestampItem(item) {
+    if (!item || typeof item !== 'object') return '';
+    return String(item.updated_at || item.created_at || item.fecha_pago || item.fecha || '');
+  }
+
+  function fusionarMapasEliminados(localDel = {}, remoteDel = {}) {
+    const merged = {};
+    const san = global.GymStore?.sanitizarId;
+    [localDel, remoteDel].forEach((src) => {
+      if (!src || typeof src !== 'object' || Array.isArray(src)) return;
+      Object.keys(src).forEach((rawKey) => {
+        const key = typeof san === 'function' ? san(rawKey) : rawKey;
+        const ts = typeof src[rawKey] === 'string' ? src[rawKey] : '';
+        if (!key || !ts) return;
+        if (!merged[key] || ts > merged[key]) {
+          merged[key] = ts;
+        }
+      });
+    });
+    return merged;
+  }
+
+  function fusionarColeccionPorId(
+    localArr = [],
+    remoteArr = [],
+    eliminadosMap = {},
+    preferLocalTie = true,
+    sortDescKey = null
+  ) {
     const map = new Map();
-    const baseArr = preferLocal ? remoteArr : localArr;
-    const overrideArr = preferLocal ? localArr : remoteArr;
+    const metaLocal = new Map();
+    const san = global.GymStore?.sanitizarId;
 
-    (Array.isArray(baseArr) ? baseArr : []).forEach((item) => {
-      if (item && item.id) map.set(item.id, item);
-    });
-    (Array.isArray(overrideArr) ? overrideArr : []).forEach((item) => {
+    (Array.isArray(localArr) ? localArr : []).forEach((item) => {
       if (!item || !item.id) return;
-      const existing = map.get(item.id);
-      map.set(item.id, existing ? { ...existing, ...item } : item);
+      const key = typeof san === 'function' ? (san(item.id) || item.id) : item.id;
+      map.set(key, item);
+      metaLocal.set(key, obtenerTimestampItem(item));
     });
 
-    const result = Array.from(map.values());
+    (Array.isArray(remoteArr) ? remoteArr : []).forEach((remoteItem) => {
+      if (!remoteItem || !remoteItem.id) return;
+      const key = typeof san === 'function' ? (san(remoteItem.id) || remoteItem.id) : remoteItem.id;
+      const localItem = map.get(key);
+      if (!localItem) {
+        map.set(key, remoteItem);
+        return;
+      }
+
+      const tsLocal = metaLocal.get(key) || '';
+      const tsRemote = obtenerTimestampItem(remoteItem);
+
+      if (tsRemote > tsLocal) {
+        map.set(key, { ...localItem, ...remoteItem });
+      } else if (tsLocal > tsRemote) {
+        map.set(key, { ...remoteItem, ...localItem });
+      } else {
+        map.set(key, preferLocalTie ? { ...remoteItem, ...localItem } : { ...localItem, ...remoteItem });
+      }
+    });
+
+    const result = [];
+    map.forEach((item, key) => {
+      const tsDeleted = eliminadosMap && typeof eliminadosMap === 'object' ? (eliminadosMap[key] || '') : '';
+      const tsItem = obtenerTimestampItem(item);
+      // Respetar eliminaciones registradas (tombstone >= timestamp del registro, Codex A)
+      if (tsDeleted && tsDeleted >= tsItem) {
+        return;
+      }
+      result.push(item);
+    });
+
     if (sortDescKey) {
       result.sort((a, b) => {
         const va = String(a[sortDescKey] || a.created_at || '');
@@ -131,15 +189,28 @@
     return result;
   }
 
-  function fusionarEstados(localState, remoteState, rolDispositivo, url, anonKey, preferLocal = false) {
+  function fusionarEstados(localState, remoteState, rolDispositivo, url, anonKey, preferLocalTie = false) {
     if (!remoteState || typeof remoteState !== 'object') {
       return localState;
     }
+    const eliminadosMerged = fusionarMapasEliminados(
+      localState?.eliminados || {},
+      remoteState?.eliminados || {}
+    );
+
     const localCfg = localState?.configuracion || {};
     const remoteCfg = remoteState?.configuracion || {};
-    const cfgMerged = preferLocal
-      ? { ...remoteCfg, ...localCfg }
-      : { ...localCfg, ...remoteCfg };
+    const tsLocalCfg = obtenerTimestampItem(localCfg);
+    const tsRemoteCfg = obtenerTimestampItem(remoteCfg);
+
+    let cfgMerged;
+    if (tsLocalCfg > tsRemoteCfg) {
+      cfgMerged = { ...remoteCfg, ...localCfg };
+    } else if (tsRemoteCfg > tsLocalCfg) {
+      cfgMerged = { ...localCfg, ...remoteCfg };
+    } else {
+      cfgMerged = preferLocalTie ? { ...remoteCfg, ...localCfg } : { ...localCfg, ...remoteCfg };
+    }
 
     const proxLocal = Number(localCfg.proximo_nro_recibo || 1);
     const proxRemoto = Number(remoteCfg.proximo_nro_recibo || 1);
@@ -147,18 +218,20 @@
     const actividadesCombinadas = fusionarColeccionPorId(
       localState?.actividades || [],
       remoteState?.actividades || [],
-      preferLocal,
+      {},
+      preferLocalTie,
       'fecha'
     ).slice(0, 150);
 
     return {
       ...remoteState,
-      ...(preferLocal ? localState : {}),
-      alumnos: fusionarColeccionPorId(localState?.alumnos || [], remoteState?.alumnos || [], preferLocal, null),
-      membresias: fusionarColeccionPorId(localState?.membresias || [], remoteState?.membresias || [], preferLocal, 'created_at'),
-      recibos: fusionarColeccionPorId(localState?.recibos || [], remoteState?.recibos || [], preferLocal, 'fecha_pago'),
-      planes: fusionarColeccionPorId(localState?.planes || [], remoteState?.planes || [], preferLocal, null),
-      horarios: fusionarColeccionPorId(localState?.horarios || [], remoteState?.horarios || [], preferLocal, null),
+      ...(preferLocalTie ? localState : {}),
+      eliminados: eliminadosMerged,
+      alumnos: fusionarColeccionPorId(localState?.alumnos || [], remoteState?.alumnos || [], eliminadosMerged, preferLocalTie, null),
+      membresias: fusionarColeccionPorId(localState?.membresias || [], remoteState?.membresias || [], eliminadosMerged, preferLocalTie, 'created_at'),
+      recibos: fusionarColeccionPorId(localState?.recibos || [], remoteState?.recibos || [], eliminadosMerged, preferLocalTie, 'fecha_pago'),
+      planes: fusionarColeccionPorId(localState?.planes || [], remoteState?.planes || [], eliminadosMerged, preferLocalTie, null),
+      horarios: fusionarColeccionPorId(localState?.horarios || [], remoteState?.horarios || [], eliminadosMerged, preferLocalTie, null),
       actividades: actividadesCombinadas,
       configuracion: {
         ...cfgMerged,
@@ -191,18 +264,26 @@
    * Sube el estado actual del gimnasio a la nube para que todos los celulares/PCs lo vean al instante
    */
   async function subirDatosASupabase(store) {
+    if (isUploading) {
+      marcarPendienteSync(true);
+      return false;
+    }
     const { url, anonKey } = obtenerCredenciales(store);
     if (!url || !anonKey) {
       actualizarIndicadorCloud('local', 'Modo Local');
       return false;
     }
 
+    isUploading = true;
     try {
-      actualizarIndicadorCloud('syncing', 'Sincronizando...');
+      actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando...');
       const rolDispositivo = store.getRolDispositivoActual();
-      let estadoParaSubir = store.state;
+      const revAntesDeSubir = store.localRevision || 0;
+      const snapshotLocal = JSON.parse(JSON.stringify(store.state));
+      let estadoParaSubir = snapshotLocal;
+      let huboMergeConNube = false;
 
-      // Combinar primero con el snapshot remoto más reciente para no perder cobros hechos desde otro equipo
+      // Combinar primero con el snapshot remoto más reciente usando comparación por registro/timestamp y tombstones
       try {
         const prevRes = await supabaseFetch(`${url}/rest/v1/gym_cloud_state?id=eq.main_gym&select=state_json,updated_at`, anonKey, {
           method: 'GET'
@@ -210,7 +291,8 @@
         if (prevRes.ok) {
           const prevRows = await prevRes.json();
           if (Array.isArray(prevRows) && prevRows.length > 0 && prevRows[0]?.state_json) {
-            estadoParaSubir = fusionarEstados(store.state, prevRows[0].state_json, rolDispositivo, url, anonKey, true);
+            estadoParaSubir = fusionarEstados(snapshotLocal, prevRows[0].state_json, rolDispositivo, url, anonKey, true);
+            huboMergeConNube = true;
           }
         }
       } catch (mergeErr) {
@@ -242,17 +324,32 @@
 
       if (res.ok) {
         lastCloudTimestamp = nowISO;
-        marcarPendienteSync(false);
-        if (estadoParaSubir !== store.state) {
+        const cambioLocalMientrasSubia = (store.localRevision || 0) !== revAntesDeSubir;
+        if (cambioLocalMientrasSubia) {
+          const estadoReconciliado = fusionarEstados(store.state, estadoParaSubir, rolDispositivo, url, anonKey, true);
           store.aplicarEstadoRemotoSinRebote({
-            ...estadoParaSubir,
+            ...estadoReconciliado,
             configuracion: {
-              ...estadoParaSubir.configuracion,
+              ...estadoReconciliado.configuracion,
               rol_actual: rolDispositivo
             }
           });
+          marcarPendienteSync(true);
+          actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando...');
+          programarSubidaAutomatica(store);
+        } else {
+          marcarPendienteSync(false);
+          if (huboMergeConNube) {
+            store.aplicarEstadoRemotoSinRebote({
+              ...estadoParaSubir,
+              configuracion: {
+                ...estadoParaSubir.configuracion,
+                rol_actual: rolDispositivo
+              }
+            });
+          }
+          actualizarIndicadorCloud('online', 'Confirmado en Nube');
         }
-        actualizarIndicadorCloud('online', 'Nube Conectada');
         return true;
       } else {
         marcarPendienteSync(true);
@@ -264,6 +361,8 @@
       marcarPendienteSync(true);
       actualizarIndicadorCloud('error', 'Sin Red Cloud');
       return false;
+    } finally {
+      isUploading = false;
     }
   }
 
@@ -271,7 +370,7 @@
    * Descarga cambios realizados por el personal de recepción o administración desde otros dispositivos
    */
   async function descargarDesdeSupabase(store, forzar = false) {
-    if (isPulling) return false;
+    if (isPulling || isUploading) return false;
     const { url, anonKey } = obtenerCredenciales(store);
     if (!url || !anonKey) {
       actualizarIndicadorCloud('local', 'Modo Local');
@@ -284,6 +383,7 @@
     }
 
     isPulling = true;
+    const revAntesPull = store.localRevision || 0;
     try {
       const res = await supabaseFetch(`${url}/rest/v1/gym_cloud_state?id=eq.main_gym&select=state_json,updated_at`, anonKey, {
         method: 'GET'
@@ -298,26 +398,28 @@
       const rows = await res.json();
       if (!Array.isArray(rows) || rows.length === 0) {
         // Si la nube está vacía por primera vez, subimos el estado actual
-        await subirDatosASupabase(store);
         isPulling = false;
+        await subirDatosASupabase(store);
         return true;
       }
 
       const remoteRow = rows[0];
       const remoteTime = remoteRow.updated_at;
       const remoteState = remoteRow.state_json;
+      const cambioDuranteFetch = (store.localRevision || 0) !== revAntesPull;
+      const pendienteAhora = hayPendienteLocal || cambioDuranteFetch || tienePendienteSync();
 
       if (forzar || !lastCloudTimestamp || (remoteTime && remoteTime > lastCloudTimestamp)) {
         if (remoteState && Array.isArray(remoteState.alumnos) && Array.isArray(remoteState.recibos)) {
           lastCloudTimestamp = remoteTime;
           const rolDispositivo = store.getRolDispositivoActual();
           const baseLocal =
-            store.isFreshInitialState && !hayPendienteLocal
-              ? { alumnos: [], membresias: [], recibos: [], planes: [], horarios: [], actividades: [], configuracion: {} }
+            store.isFreshInitialState && !pendienteAhora
+              ? { alumnos: [], membresias: [], recibos: [], planes: [], horarios: [], actividades: [], eliminados: {}, configuracion: {} }
               : store.state;
-          const mergedState = fusionarEstados(baseLocal, remoteState, rolDispositivo, url, anonKey, hayPendienteLocal);
+          const mergedState = fusionarEstados(baseLocal, remoteState, rolDispositivo, url, anonKey, pendienteAhora);
           store.aplicarEstadoRemotoSinRebote(mergedState);
-          if (hayPendienteLocal) {
+          if (pendienteAhora) {
             isPulling = false;
             await subirDatosASupabase(store);
             return true;
@@ -338,6 +440,7 @@
     const { url, anonKey } = obtenerCredenciales(store);
     if (!url || !anonKey) return;
     marcarPendienteSync(true);
+    actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando...');
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
       subirDatosASupabase(store);

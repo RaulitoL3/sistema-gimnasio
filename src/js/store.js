@@ -101,6 +101,10 @@ function formatearNumeroRecibo(num, digits = 6) {
   return limpio;
 }
 
+function sanitizarId(val) {
+  return String(val || '').replace(/[^a-zA-Z0-9_-]/g, '');
+}
+
 function crearHorariosPorDefecto() {
   return [
     {
@@ -398,13 +402,15 @@ function crearDatosIniciales() {
     alumnos,
     membresias,
     recibos,
-    actividades: []
+    actividades: [],
+    eliminados: {}
   };
 }
 
 class GymStore {
   constructor() {
     this.listeners = [];
+    this.localRevision = 0;
     this.state = this.loadState();
     this.recalcularTodasLasMembresias();
   }
@@ -538,6 +544,45 @@ class GymStore {
     if (!Array.isArray(objState.horarios) || objState.horarios.length === 0) {
       objState.horarios = crearHorariosPorDefecto();
     }
+    if (!objState.eliminados || typeof objState.eliminados !== 'object' || Array.isArray(objState.eliminados)) {
+      objState.eliminados = {};
+    } else {
+      const cleanEliminados = {};
+      Object.keys(objState.eliminados).forEach((k) => {
+        const cleanKey = sanitizarId(k);
+        if (cleanKey && typeof objState.eliminados[k] === 'string') {
+          cleanEliminados[cleanKey] = objState.eliminados[k];
+        }
+      });
+      objState.eliminados = cleanEliminados;
+    }
+
+    objState.horarios.forEach((h, i) => {
+      if (h && typeof h === 'object') h.id = sanitizarId(h.id) || `hr_fix_${i}`;
+    });
+    objState.planes.forEach((p, i) => {
+      if (p && typeof p === 'object') p.id = sanitizarId(p.id) || `plan_fix_${i}`;
+    });
+    objState.alumnos.forEach((a, i) => {
+      if (a && typeof a === 'object') {
+        a.id = sanitizarId(a.id) || `alu_fix_${i}`;
+        if (a.horario_id) a.horario_id = sanitizarId(a.horario_id) || 'SIN_HORARIO';
+      }
+    });
+    objState.membresias.forEach((m, i) => {
+      if (m && typeof m === 'object') {
+        m.id = sanitizarId(m.id) || `mem_fix_${i}`;
+        if (m.alumno_id) m.alumno_id = sanitizarId(m.alumno_id);
+        if (m.plan_id) m.plan_id = sanitizarId(m.plan_id);
+      }
+    });
+    objState.recibos.forEach((r, i) => {
+      if (r && typeof r === 'object') {
+        r.id = sanitizarId(r.id) || `rec_fix_${i}`;
+        if (r.alumno_id) r.alumno_id = sanitizarId(r.alumno_id);
+        if (r.membresia_id) r.membresia_id = sanitizarId(r.membresia_id);
+      }
+    });
     // Asignar horarios por defecto a los 4 alumnos de demostración si aún no tenían
     const mapaDemoHorarios = {
       'alu-1': { id: 'hor-noche-730pm', texto: '7:30 PM - 9:00 PM (Lun - Mié - Vie)' },
@@ -580,6 +625,7 @@ class GymStore {
     this.state = newState;
     if (syncCloud) {
       this.isFreshInitialState = false;
+      this.localRevision = (this.localRevision || 0) + 1;
     }
     if (this.state?.configuracion?.rol_actual) {
       try {
@@ -606,6 +652,19 @@ class GymStore {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.state));
     } catch (e) {}
     this.notify();
+  }
+
+  registrarEliminacion(ids = [], timestampISO = new Date().toISOString()) {
+    if (!this.state.eliminados || typeof this.state.eliminados !== 'object') {
+      this.state.eliminados = {};
+    }
+    const ts = typeof timestampISO === 'string' && timestampISO ? timestampISO : new Date().toISOString();
+    (Array.isArray(ids) ? ids : [ids]).forEach((rawId) => {
+      const cleanId = sanitizarId(rawId);
+      if (cleanId) {
+        this.state.eliminados[cleanId] = ts;
+      }
+    });
   }
 
   subscribe(listener) {
@@ -731,6 +790,7 @@ class GymStore {
       (horario_texto || '').trim() ||
       (horarioObj ? `${horarioObj.hora} (${horarioObj.dias})` : '');
 
+    const nowISO = new Date().toISOString();
     let targetAlumnoId = alumnoId;
     let alumnoObj = null;
 
@@ -758,6 +818,7 @@ class GymStore {
           alumnoObj.inscripcion_pagada = true;
           alumnoObj.fecha_inscripcion = fecha_inicio || getLocalDateISO();
         }
+        alumnoObj.updated_at = nowISO;
       }
     }
 
@@ -778,7 +839,8 @@ class GymStore {
         fecha_inscripcion: cobraInscripcion ? (fecha_inicio || getLocalDateISO()) : null,
         notas: (notas_alumno || '').trim(),
         activo: true,
-        fecha_registro: getLocalDateISO()
+        fecha_registro: getLocalDateISO(),
+        updated_at: nowISO
       };
       this.state.alumnos.unshift(alumnoObj);
     }
@@ -808,7 +870,8 @@ class GymStore {
       saldo_pendiente: saldoNum,
       estado_pago: estadoPago,
       notas: observacion || '',
-      created_at: new Date().toISOString()
+      created_at: nowISO,
+      updated_at: nowISO
     };
 
     const reciboId = generarUUID();
@@ -819,7 +882,7 @@ class GymStore {
       numero_recibo: nroReciboFormateado,
       monto_abonado: abonadoNum,
       metodo_pago,
-      fecha_pago: fecha_pago || new Date().toISOString(),
+      fecha_pago: fecha_pago || nowISO,
       observacion:
         observacion.trim() ||
         (saldoNum > 0
@@ -827,7 +890,8 @@ class GymStore {
           : `Pago completo ${nuevaMembresia.concepto}`),
       cobrado_por: (cobrado_por || 'Recepción').trim() || 'Recepción',
       anulado: false,
-      created_at: new Date().toISOString()
+      created_at: nowISO,
+      updated_at: nowISO
     };
 
     this.state.membresias.unshift(nuevaMembresia);
@@ -837,6 +901,7 @@ class GymStore {
     const numEntero = parseInt(nroReciboFormateado, 10);
     if (!isNaN(numEntero) && numEntero >= this.state.configuracion.proximo_nro_recibo) {
       this.state.configuracion.proximo_nro_recibo = numEntero + 1;
+      this.state.configuracion.updated_at = nowISO;
     }
 
     this.recalcularMembresia(membresiaId);
@@ -891,6 +956,7 @@ class GymStore {
     }
 
     const nuevoSaldoEstimado = Math.max(0, Number((mem.saldo_pendiente - abonadoNum).toFixed(2)));
+    const nowISO = new Date().toISOString();
 
     const nuevoRecibo = {
       id: generarUUID(),
@@ -899,7 +965,7 @@ class GymStore {
       numero_recibo: nroReciboFormateado,
       monto_abonado: abonadoNum,
       metodo_pago: metodo_pago || 'EFECTIVO',
-      fecha_pago: new Date().toISOString(),
+      fecha_pago: nowISO,
       observacion:
         observacion.trim() ||
         (nuevoSaldoEstimado === 0
@@ -907,7 +973,8 @@ class GymStore {
           : `Abono parcial a cuenta - ${mem.concepto} (Resta ${moneda} ${nuevoSaldoEstimado.toFixed(2)})`),
       cobrado_por: (cobrado_por || 'Recepción').trim() || 'Recepción',
       anulado: false,
-      created_at: new Date().toISOString()
+      created_at: nowISO,
+      updated_at: nowISO
     };
 
     this.state.recibos.unshift(nuevoRecibo);
@@ -915,8 +982,10 @@ class GymStore {
     const numEntero = parseInt(nroReciboFormateado, 10);
     if (!isNaN(numEntero) && numEntero >= this.state.configuracion.proximo_nro_recibo) {
       this.state.configuracion.proximo_nro_recibo = numEntero + 1;
+      this.state.configuracion.updated_at = nowISO;
     }
 
+    mem.updated_at = nowISO;
     this.recalcularMembresia(mem.id);
     const nombreAlumno = alumno ? `${alumno.nombres} ${alumno.apellidos}`.trim() : 'Alumno';
     const rolLabel = this.getRolDispositivoActual() === 'ADMIN' ? 'Admin' : 'Recepción';
@@ -946,53 +1015,108 @@ class GymStore {
     if (rec.anulado && this.existeNumeroRecibo(rec.numero_recibo, rec.id)) {
       throw new Error(`No se puede reactivar: el N° de recibo #${rec.numero_recibo} ya está en uso en otro recibo activo.`);
     }
+    const nowISO = new Date().toISOString();
     rec.anulado = !rec.anulado;
+    rec.updated_at = nowISO;
+    const mem = this.state.membresias.find((m) => m.id === rec.membresia_id);
+    if (mem) mem.updated_at = nowISO;
     this.recalcularMembresia(rec.membresia_id);
     this.registrarActividad(
       rec.anulado ? 'Recibo anulado' : 'Recibo reactivado',
-      `Recibo N° ${rec.numero_recibo} (S/ ${Number(rec.monto_abonado || 0).toFixed(2)})`
+      `Recibo N° ${rec.numero_recibo} (${this.state.configuracion.moneda || 'S/'} ${Number(rec.monto_abonado || 0).toFixed(2)})`
     );
     this.saveState();
     return rec;
   }
 
-  // Editar un recibo/membresía existente (por si hubo error de digitación en N° de recibo o fechas)
+  // Editar un recibo/membresía existente (por si hubo error de digitación en N° de recibo, montos o fechas)
   actualizarReciboYMembresia(reciboId, cambios) {
     const rec = this.state.recibos.find((r) => r.id === reciboId);
     if (!rec) return null;
     const mem = this.state.membresias.find((m) => m.id === rec.membresia_id);
     const alu = this.state.alumnos.find((a) => a.id === rec.alumno_id);
 
+    // Validaciones previas antes de mutar cualquier registro
+    let nextNro = rec.numero_recibo;
     if (cambios.numero_recibo !== undefined) {
-      rec.numero_recibo = formatearNumeroRecibo(cambios.numero_recibo);
+      const rawNro = String(cambios.numero_recibo || '').trim();
+      if (!rawNro) throw new Error('El N° de recibo no puede quedar vacío.');
+      nextNro = formatearNumeroRecibo(rawNro);
+      if (!rec.anulado && this.existeNumeroRecibo(nextNro, rec.id)) {
+        throw new Error(`El N° de recibo #${nextNro} ya está registrado en otro recibo activo.`);
+      }
+    }
+
+    let nextAbono = Number(rec.monto_abonado || 0);
+    if (cambios.monto_abonado !== undefined) {
+      nextAbono = Number(Number(cambios.monto_abonado).toFixed(2));
+      if (!Number.isFinite(nextAbono) || nextAbono <= 0) {
+        throw new Error('El monto abonado en el recibo debe ser mayor a 0.');
+      }
+    }
+
+    let nextTotal = mem ? Number(mem.total_a_pagar || 0) : 0;
+    if (mem && cambios.total_a_pagar !== undefined) {
+      nextTotal = Number(Number(cambios.total_a_pagar).toFixed(2));
+      if (!Number.isFinite(nextTotal) || nextTotal < 0) {
+        throw new Error('El total pactado de la membresía debe ser un monto numérico válido.');
+      }
+    }
+
+    if (mem && !rec.anulado) {
+      const otrosRecibosSum = this.state.recibos
+        .filter((r) => r.membresia_id === mem.id && !r.anulado && r.id !== rec.id)
+        .reduce((acc, r) => acc + Number(r.monto_abonado || 0), 0);
+      if (otrosRecibosSum + nextAbono > nextTotal + 0.009) {
+        throw new Error('La suma de recibos activos supera el total pactado de la membresía.');
+      }
+    }
+
+    if (mem && mem.tipo_operacion !== 'SOLO_INSCRIPCION') {
+      const fIni = cambios.fecha_inicio || mem.fecha_inicio;
+      const fFin = cambios.fecha_fin || mem.fecha_fin;
+      if (fIni && fFin && fFin < fIni) {
+        throw new Error('La fecha de fin no puede ser anterior a la fecha de inicio.');
+      }
+    }
+
+    const nowISO = new Date().toISOString();
+
+    if (cambios.numero_recibo !== undefined) {
+      rec.numero_recibo = nextNro;
     }
     if (cambios.monto_abonado !== undefined) {
-      rec.monto_abonado = Number(Number(cambios.monto_abonado).toFixed(2));
+      rec.monto_abonado = nextAbono;
     }
     if (cambios.metodo_pago !== undefined) {
       rec.metodo_pago = cambios.metodo_pago;
     }
     if (cambios.observacion !== undefined) {
-      rec.observacion = cambios.observacion;
+      rec.observacion = String(cambios.observacion || '').trim();
     }
     if (cambios.cobrado_por !== undefined) {
-      rec.cobrado_por = cambios.cobrado_por;
+      rec.cobrado_por = String(cambios.cobrado_por || '').trim() || 'Recepción';
     }
+    rec.updated_at = nowISO;
 
     if (mem) {
       if (cambios.fecha_inicio) mem.fecha_inicio = cambios.fecha_inicio;
       if (cambios.fecha_fin) mem.fecha_fin = cambios.fecha_fin;
       if (cambios.total_a_pagar !== undefined) {
-        mem.total_a_pagar = Number(Number(cambios.total_a_pagar).toFixed(2));
+        mem.total_a_pagar = nextTotal;
       }
-      if (cambios.concepto) mem.concepto = cambios.concepto;
+      if (cambios.concepto !== undefined && String(cambios.concepto).trim()) {
+        mem.concepto = String(cambios.concepto).trim();
+      }
+      mem.updated_at = nowISO;
       this.recalcularMembresia(mem.id);
     }
 
-    if (alu) {
-      if (cambios.nombres) alu.nombres = cambios.nombres.trim();
-      if (cambios.apellidos) alu.apellidos = cambios.apellidos.trim();
-      if (cambios.telefono_whatsapp !== undefined) alu.telefono_whatsapp = cambios.telefono_whatsapp.trim();
+    if (alu && (cambios.nombres !== undefined || cambios.apellidos !== undefined || cambios.telefono_whatsapp !== undefined)) {
+      if (cambios.nombres && String(cambios.nombres).trim()) alu.nombres = String(cambios.nombres).trim();
+      if (cambios.apellidos && String(cambios.apellidos).trim()) alu.apellidos = String(cambios.apellidos).trim();
+      if (cambios.telefono_whatsapp !== undefined) alu.telefono_whatsapp = String(cambios.telefono_whatsapp).trim();
+      alu.updated_at = nowISO;
     }
 
     this.registrarActividad('Recibo/membresía editados', `Recibo N° ${rec.numero_recibo}`);
@@ -1024,7 +1148,8 @@ class GymStore {
           telefono_whatsapp: (datos.telefono_whatsapp ?? prev.telefono_whatsapp ?? '').trim(),
           contacto_emergencia: (datos.contacto_emergencia ?? prev.contacto_emergencia ?? '').trim(),
           telefono_emergencia: (datos.telefono_emergencia ?? prev.telefono_emergencia ?? '').trim(),
-          horario_texto: horarioTextoResuelto !== undefined ? horarioTextoResuelto : (prev.horario_texto || '')
+          horario_texto: horarioTextoResuelto !== undefined ? horarioTextoResuelto : (prev.horario_texto || ''),
+          updated_at: new Date().toISOString()
         };
 
         const cambios = [];
@@ -1056,6 +1181,7 @@ class GymStore {
         return this.state.alumnos[idx];
       }
     }
+    const nowISO = new Date().toISOString();
     const nuevo = {
       id: generarUUID(),
       nombres: (datos.nombres || '').trim(),
@@ -1070,7 +1196,8 @@ class GymStore {
       inscripcion_pagada: datos.inscripcion_pagada !== undefined ? Boolean(datos.inscripcion_pagada) : false,
       notas: (datos.notas || '').trim(),
       activo: true,
-      fecha_registro: getLocalDateISO()
+      fecha_registro: getLocalDateISO(),
+      updated_at: nowISO
     };
     this.state.alumnos.unshift(nuevo);
     this.registrarActividad('Alumno registrado', `${nuevo.nombres} ${nuevo.apellidos}`.trim());
@@ -1081,9 +1208,17 @@ class GymStore {
   eliminarAlumno(alumnoId) {
     const alu = this.state.alumnos.find((a) => a.id === alumnoId);
     const nombre = alu ? `${alu.nombres} ${alu.apellidos}`.trim() : alumnoId;
+    const memIds = (this.state.membresias || [])
+      .filter((m) => m.alumno_id === alumnoId)
+      .map((m) => m.id);
+    const recIds = (this.state.recibos || [])
+      .filter((r) => r.alumno_id === alumnoId)
+      .map((r) => r.id);
+
     this.state.alumnos = this.state.alumnos.filter((a) => a.id !== alumnoId);
     this.state.membresias = this.state.membresias.filter((m) => m.alumno_id !== alumnoId);
     this.state.recibos = this.state.recibos.filter((r) => r.alumno_id !== alumnoId);
+    this.registrarEliminacion([alumnoId, ...memIds, ...recIds]);
     this.registrarActividad('Alumno eliminado', nombre);
     this.saveState();
   }
@@ -1098,6 +1233,7 @@ class GymStore {
     const horaLimpia = (horario.hora || '').trim();
     const disciplinaLimpia = (horario.disciplina || 'General').trim();
     const etiquetaCompleta = `${horaLimpia} (${diasLimpio})`;
+    const nowISO = new Date().toISOString();
 
     if (horario.id) {
       const idx = this.state.horarios.findIndex((h) => h.id === horario.id);
@@ -1108,12 +1244,14 @@ class GymStore {
           dias: diasLimpio,
           hora: horaLimpia,
           disciplina: disciplinaLimpia,
-          activo: horario.activo !== undefined ? horario.activo : true
+          activo: horario.activo !== undefined ? horario.activo : true,
+          updated_at: nowISO
         };
         // Actualizar también el texto de horario en los alumnos que tienen este horario_id
         this.state.alumnos.forEach((alu) => {
           if (alu.horario_id === horario.id) {
             alu.horario_texto = etiquetaCompleta;
+            alu.updated_at = nowISO;
           }
         });
         this.registrarActividad('Horario actualizado', `${nombreLimpio} (${etiquetaCompleta})`);
@@ -1128,7 +1266,8 @@ class GymStore {
       dias: diasLimpio,
       hora: horaLimpia,
       disciplina: disciplinaLimpia,
-      activo: true
+      activo: true,
+      updated_at: nowISO
     };
     this.state.horarios.push(nuevoHorario);
     this.registrarActividad('Horario creado', `${nombreLimpio} (${etiquetaCompleta})`);
@@ -1140,12 +1279,14 @@ class GymStore {
     if (!Array.isArray(this.state.horarios)) return;
     const h = this.state.horarios.find((item) => item.id === horarioId);
     this.state.horarios = this.state.horarios.filter((item) => item.id !== horarioId);
+    this.registrarEliminacion([horarioId]);
     this.registrarActividad('Horario eliminado', h ? h.nombre : horarioId);
     this.saveState();
   }
 
   // Gestión de Planes / Disciplinas
   guardarPlan(plan) {
+    const nowISO = new Date().toISOString();
     if (plan.id) {
       const idx = this.state.planes.findIndex((p) => p.id === plan.id);
       if (idx !== -1) {
@@ -1155,7 +1296,8 @@ class GymStore {
           disciplina: plan.disciplina.trim(),
           duracion_dias: Number(plan.duracion_dias) || 30,
           precio_sugerido: Number(plan.precio_sugerido) || 0,
-          activo: plan.activo !== undefined ? plan.activo : true
+          activo: plan.activo !== undefined ? plan.activo : true,
+          updated_at: nowISO
         };
         this.registrarActividad('Plan actualizado', plan.nombre.trim());
         this.saveState();
@@ -1168,7 +1310,8 @@ class GymStore {
       disciplina: plan.disciplina.trim(),
       duracion_dias: Number(plan.duracion_dias) || 30,
       precio_sugerido: Number(plan.precio_sugerido) || 0,
-      activo: true
+      activo: true,
+      updated_at: nowISO
     };
     this.state.planes.push(nuevo);
     this.registrarActividad('Plan creado', nuevo.nombre);
@@ -1179,6 +1322,7 @@ class GymStore {
   eliminarPlan(planId) {
     const p = this.state.planes.find((item) => item.id === planId);
     this.state.planes = this.state.planes.filter((item) => item.id !== planId);
+    this.registrarEliminacion([planId]);
     this.registrarActividad('Plan eliminado', p ? p.nombre : planId);
     this.saveState();
   }
@@ -1190,7 +1334,8 @@ class GymStore {
       ...nuevosDatos,
       precio_inscripcion: Number(nuevosDatos.precio_inscripcion ?? this.state.configuracion.precio_inscripcion ?? 30),
       proximo_nro_recibo: Number(nuevosDatos.proximo_nro_recibo ?? this.state.configuracion.proximo_nro_recibo),
-      dias_alerta_vencimiento: Number(nuevosDatos.dias_alerta_vencimiento ?? this.state.configuracion.dias_alerta_vencimiento)
+      dias_alerta_vencimiento: Number(nuevosDatos.dias_alerta_vencimiento ?? this.state.configuracion.dias_alerta_vencimiento),
+      updated_at: new Date().toISOString()
     };
     this.registrarActividad('Configuración actualizada', this.state.configuracion.nombre_academia || 'Ajustes generales');
     this.saveState();
@@ -1209,8 +1354,14 @@ class GymStore {
 
       const hoyISO = getLocalDateISO();
       const memsMensuales = memsAlumno.filter((m) => m.tipo_operacion !== 'SOLO_INSCRIPCION');
-      const memVigenteHoy = memsMensuales.find((m) => m.fecha_inicio <= hoyISO && m.fecha_fin >= hoyISO);
-      const ultimaMembresia = memVigenteHoy || memsMensuales[0] || null;
+      const memVigenteHoy = memsMensuales.find((m) => m.fecha_inicio <= hoyISO && m.fecha_fin >= hoyISO) || null;
+      const memProxima =
+        memsMensuales
+          .filter((m) => m.fecha_inicio > hoyISO)
+          .sort((a, b) => a.fecha_inicio.localeCompare(b.fecha_inicio))[0] || null;
+      const ultimoContrato = memsMensuales[0] || null;
+      const memPasadaReciente = memsMensuales.find((m) => m.fecha_fin < hoyISO) || null;
+      const ultimaMembresia = memVigenteHoy || memPasadaReciente || memProxima || null;
       const saldoTotalPendiente = memsAlumno.reduce((acc, m) => acc + Number(m.saldo_pendiente || 0), 0);
 
       // Resolver horario del alumno
@@ -1235,15 +1386,20 @@ class GymStore {
       let estadoVigencia = 'SIN_MEMBRESIA';
       let diasRestantes = null;
 
-      if (ultimaMembresia) {
-        diasRestantes = calcularDiasRestantes(ultimaMembresia.fecha_fin);
-        if (diasRestantes < 0) {
-          estadoVigencia = 'VENCIDO';
-        } else if (diasRestantes <= diasAlerta) {
+      if (memVigenteHoy) {
+        diasRestantes = calcularDiasRestantes(memVigenteHoy.fecha_fin);
+        if (diasRestantes <= diasAlerta) {
           estadoVigencia = 'POR_VENCER';
         } else {
           estadoVigencia = 'ACTIVO';
         }
+      } else if (memPasadaReciente) {
+        diasRestantes = calcularDiasRestantes(memPasadaReciente.fecha_fin);
+        estadoVigencia = 'VENCIDO';
+      } else if (memProxima) {
+        // Membresía pagada pero que inicia a futuro (Codex E: no contar como vigente hoy)
+        diasRestantes = null;
+        estadoVigencia = 'SOLO_INSCRITO';
       } else if (tieneInscripcionPagada) {
         estadoVigencia = 'SOLO_INSCRITO';
       }
@@ -1256,6 +1412,9 @@ class GymStore {
         inscripcion_pagada: tieneInscripcionPagada,
         nombre_completo: `${alumno.nombres} ${alumno.apellidos}`.trim(),
         ultima_membresia: ultimaMembresia,
+        membresia_vigente: memVigenteHoy,
+        proxima_membresia: memProxima,
+        ultimo_contrato: ultimoContrato,
         membresias_historial: memsAlumno,
         estado_vigencia: estadoVigencia,
         dias_restantes: diasRestantes,
@@ -1297,6 +1456,14 @@ class GymStore {
     const demoMemIds = new Set(['mem-1', 'mem-2', 'mem-3', 'mem-4']);
     const demoRecIds = new Set(['rec-1', 'rec-2', 'rec-3', 'rec-4']);
 
+    const idsEliminados = [...demoAluIds, ...demoMemIds, ...demoRecIds];
+    (this.state.membresias || []).forEach((m) => {
+      if (demoAluIds.has(m.alumno_id)) idsEliminados.push(m.id);
+    });
+    (this.state.recibos || []).forEach((r) => {
+      if (demoAluIds.has(r.alumno_id) || demoMemIds.has(r.membresia_id)) idsEliminados.push(r.id);
+    });
+
     this.state.alumnos = (this.state.alumnos || []).filter((a) => !demoAluIds.has(a.id));
     this.state.membresias = (this.state.membresias || []).filter(
       (m) => !demoMemIds.has(m.id) && !demoAluIds.has(m.alumno_id)
@@ -1304,8 +1471,13 @@ class GymStore {
     this.state.recibos = (this.state.recibos || []).filter(
       (r) => !demoRecIds.has(r.id) && !demoAluIds.has(r.alumno_id) && !demoMemIds.has(r.membresia_id)
     );
+
+    const nowISO = new Date().toISOString();
+    this.registrarEliminacion(idsEliminados, nowISO);
+
     if (this.state.recibos.length === 0) {
       this.state.configuracion.proximo_nro_recibo = 1;
+      this.state.configuracion.updated_at = nowISO;
     }
     this.registrarActividad('Datos de ejemplo eliminados', 'Se retiraron los 4 registros de demostración');
     this.saveState();
@@ -1313,6 +1485,16 @@ class GymStore {
 
   restaurarDatosDemo() {
     const demo = crearDatosIniciales();
+    const nowISO = new Date().toISOString();
+    demo.eliminados = {};
+    if (demo.configuracion) demo.configuracion.updated_at = nowISO;
+    ['horarios', 'planes', 'alumnos', 'membresias', 'recibos'].forEach((col) => {
+      if (Array.isArray(demo[col])) {
+        demo[col].forEach((item) => {
+          item.updated_at = nowISO;
+        });
+      }
+    });
     this.saveState(demo);
   }
 }
@@ -1328,6 +1510,7 @@ global.GymStore = {
   addDaysISO,
   calcularDiasRestantes,
   generarUUID,
-  formatearNumeroRecibo
+  formatearNumeroRecibo,
+  sanitizarId
 };
 })(window);

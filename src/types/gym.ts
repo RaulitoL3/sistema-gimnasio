@@ -27,6 +27,7 @@ export interface ConfiguracionGym {
   tema_visual?: 'CLARO' | 'OSCURO';
   supabase_url?: string;
   supabase_anon_key?: string;
+  updated_at?: string;
 }
 
 export interface PlanDisciplina {
@@ -36,6 +37,7 @@ export interface PlanDisciplina {
   duracion_dias: number;
   precio_sugerido: number;
   activo: boolean;
+  updated_at?: string;
 }
 
 export interface HorarioClase {
@@ -45,6 +47,7 @@ export interface HorarioClase {
   hora: string;       // Ej: '7:00 PM - 8:30 PM'
   disciplina: string; // Ej: 'Muay Thai / Boxeo'
   activo: boolean;
+  updated_at?: string;
 }
 
 export interface Alumno {
@@ -63,6 +66,7 @@ export interface Alumno {
   notas: string;
   activo: boolean;
   fecha_registro: string;
+  updated_at?: string;
 }
 
 export interface Membresia {
@@ -84,6 +88,7 @@ export interface Membresia {
   estado_pago: EstadoPagoMembresia;
   notas?: string;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface ReciboPago {
@@ -98,6 +103,7 @@ export interface ReciboPago {
   cobrado_por?: string;
   anulado: boolean;
   created_at: string;
+  updated_at?: string;
 }
 
 export interface ActividadLog {
@@ -112,6 +118,9 @@ export interface AlumnoConEstado extends Alumno {
   nombre_completo: string;
   horario_nombre?: string;
   ultima_membresia?: Membresia;
+  membresia_vigente?: Membresia | null;
+  proxima_membresia?: Membresia | null;
+  ultimo_contrato?: Membresia | null;
   membresias_historial: Membresia[];
   estado_vigencia: EstadoVigencia;
   dias_restantes: number | null;

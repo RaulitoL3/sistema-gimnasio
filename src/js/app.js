@@ -34,6 +34,7 @@
   let reciboActualEnVisor = null;
   let ultimoTotalSincronizado = 0;
   let adminInactivityTimer = null;
+  let configFormDirty = false;
   const ADMIN_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
 
   function escapeHTML(val) {
@@ -43,6 +44,13 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
       .replace(/'/g, '&#39;');
+  }
+
+  function safeId(val) {
+    if (global.GymStore && typeof global.GymStore.sanitizarId === 'function') {
+      return global.GymStore.sanitizarId(val);
+    }
+    return String(val ?? '').replace(/[^a-zA-Z0-9_-]/g, '');
   }
 
   function mostrarToast(mensaje, tipo = 'success') {
@@ -332,6 +340,9 @@
       setTimeout(() => document.getElementById('login-input-pin')?.focus(), 80);
       return;
     }
+    if (tabName !== tabActual) {
+      configFormDirty = false;
+    }
     tabActual = tabName;
     const tabs = ['dashboard', 'alumnos', 'horarios', 'recibos', 'planes', 'configuracion'];
     tabs.forEach((t) => {
@@ -484,7 +495,7 @@
     const porVencer = alumnosConEstado.filter((a) => a.estado_vigencia === 'POR_VENCER');
     const vencidos = alumnosConEstado.filter((a) => a.estado_vigencia === 'VENCIDO');
 
-    document.getElementById('kpi-alumnos-activos').textContent = `${activos.length} Al Día`;
+    document.getElementById('kpi-alumnos-activos').textContent = `${activos.length} Vigentes`;
     document.getElementById('kpi-alumnos-alertas').textContent = `${porVencer.length} por vencer • ${vencidos.length} vencidos`;
 
     // Bandeja 1: Alertas de Vencimiento
@@ -534,7 +545,7 @@
                 </a>
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirModalRenovar('${alu.id}')"
+                  onclick="window.AppUI.abrirModalRenovar('${safeId(alu.id)}')"
                   class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-white text-xs font-extrabold cursor-pointer"
                 >
                   Cobrar Mes
@@ -571,11 +582,11 @@
                 <div class="flex items-center gap-2 flex-wrap">
                   <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(alu.nombre_completo)}</span>
                   <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">
-                    ⚠️ Debe ${moneda} ${Number(mem.saldo_pendiente).toFixed(2)}
+                    ⚠️ Debe ${escapeHTML(moneda)} ${Number(mem.saldo_pendiente).toFixed(2)}
                   </span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${escapeHTML(mem.concepto)} • Total: ${moneda} ${Number(mem.total_a_pagar).toFixed(2)} (Ya pagó: ${moneda} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
+                  ${escapeHTML(mem.concepto)} • Total: ${escapeHTML(moneda)} ${Number(mem.total_a_pagar).toFixed(2)} (Ya pagó: ${escapeHTML(moneda)} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -590,7 +601,7 @@
                 </a>
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirModalCobrarSaldo('${mem.id}')"
+                  onclick="window.AppUI.abrirModalCobrarSaldo('${safeId(mem.id)}')"
                   class="keep-white-text px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer"
                 >
                   Cobrar Saldo
@@ -645,7 +656,7 @@
     const badgeSaldo = r.anulado
       ? `<span class="text-xs font-bold text-red-400">ANULADO</span>`
       : saldo > 0
-      ? `<span class="inline-flex items-center gap-1 text-xs font-black text-amber-400 tabular-nums">Debe ${moneda} ${saldo.toFixed(2)}</span>`
+      ? `<span class="inline-flex items-center gap-1 text-xs font-black text-amber-400 tabular-nums">Debe ${escapeHTML(moneda)} ${saldo.toFixed(2)}</span>`
       : `<span class="text-xs font-bold text-emerald-400 tabular-nums">No debe nada</span>`;
 
     return `
@@ -661,7 +672,7 @@
         <td class="py-3.5 px-4">
           <button
             type="button"
-            onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(r.alumno_id)}')"
+            onclick="window.AppUI.abrirHistorialAlumno('${safeId(r.alumno_id)}')"
             class="font-extrabold text-white hover:text-red-400 text-left transition cursor-pointer"
           >
             ${escapeHTML(r.nombre_completo)}
@@ -674,8 +685,8 @@
             ? `<span class="text-xs font-extrabold text-emerald-400">PAGO ÚNICO (INSCRITO)</span>`
             : formatDatePE(m.fecha_fin)
         }</td>
-        <td class="py-3.5 px-4 text-right font-bold text-slate-200 tabular-nums whitespace-nowrap">${moneda} ${Number(m.total_a_pagar || 0).toFixed(2)}</td>
-        <td class="py-3.5 px-4 text-right font-black text-emerald-400 tabular-nums whitespace-nowrap">${moneda} ${Number(r.monto_abonado || 0).toFixed(2)}</td>
+        <td class="py-3.5 px-4 text-right font-bold text-slate-200 tabular-nums whitespace-nowrap">${escapeHTML(moneda)} ${Number(m.total_a_pagar || 0).toFixed(2)}</td>
+        <td class="py-3.5 px-4 text-right font-black text-emerald-400 tabular-nums whitespace-nowrap">${escapeHTML(moneda)} ${Number(r.monto_abonado || 0).toFixed(2)}</td>
         <td class="py-3.5 px-4 text-right tabular-nums whitespace-nowrap">${badgeSaldo}</td>
         ${
           !compacto
@@ -695,7 +706,7 @@
           <div class="inline-flex items-center gap-1.5">
             <button
               type="button"
-              onclick="window.AppUI.verComprobanteDigital('${r.id}')"
+              onclick="window.AppUI.verComprobanteDigital('${safeId(r.id)}')"
               title="Ver Comprobante Digital / Enviar por WhatsApp"
               class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
             >
@@ -705,7 +716,7 @@
               !r.anulado && saldo > 0
                 ? `<button
                     type="button"
-                    onclick="window.AppUI.abrirModalCobrarSaldo('${m.id}')"
+                    onclick="window.AppUI.abrirModalCobrarSaldo('${safeId(m.id)}')"
                     title="Cobrar lo que debe de esta membresía"
                     class="keep-white-text px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white cursor-pointer"
                   >
@@ -717,7 +728,15 @@
               !compacto
                 ? `<button
                     type="button"
-                    onclick="window.AppUI.anularOReactivarRecibo('${r.id}')"
+                    onclick="window.AppUI.abrirModalEditarRecibo('${safeId(r.id)}')"
+                    title="Editar recibo o corregir fechas/montos (Admin)"
+                    class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-300 cursor-pointer"
+                  >
+                    ✏️ Editar
+                  </button>
+                  <button
+                    type="button"
+                    onclick="window.AppUI.anularOReactivarRecibo('${safeId(r.id)}')"
                     title="${r.anulado ? 'Reactivar recibo' : 'Anular recibo'}"
                     class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 text-xs font-bold text-slate-400 hover:text-red-300 cursor-pointer"
                   >
@@ -883,16 +902,23 @@
 
           if (a.estado_vigencia === 'ACTIVO') {
             estadoBannerClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
-            estadoBannerTexto = `🟢 AL DÍA • Quedan ${a.dias_restantes} día(s)`;
+            estadoBannerTexto =
+              a.saldo_total_pendiente > 0
+                ? `🟢 VIGENTE (${a.dias_restantes}d) • ⚠️ DEBE SALDO`
+                : `🟢 VIGENTE • SIN DEUDA (${a.dias_restantes}d)`;
           } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
             estadoBannerClass = 'bg-sky-500/15 text-sky-400 border-sky-500/30';
-            estadoBannerTexto = `🎓 INSCRITO • FALTA PAGAR 1ER MES`;
+            estadoBannerTexto = a.proxima_membresia
+              ? `⏳ INICIA EL ${formatDatePE(a.proxima_membresia.fecha_inicio)}${a.saldo_total_pendiente > 0 ? ' • ⚠️ DEBE SALDO' : ''}`
+              : `🎓 INSCRITO • FALTA PAGAR 1ER MES`;
           } else if (a.estado_vigencia === 'POR_VENCER') {
             estadoBannerClass = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
-            estadoBannerTexto = `🟡 POR VENCER • En ${a.dias_restantes} día(s)`;
+            estadoBannerTexto = `🟡 POR VENCER • En ${a.dias_restantes} día(s)${a.saldo_total_pendiente > 0 ? ' • ⚠️ DEBE' : ''}`;
           } else if (a.estado_vigencia === 'VENCIDO') {
             estadoBannerClass = 'bg-red-500/15 text-red-400 border-red-500/30';
-            estadoBannerTexto = `🔴 MENSUALIDAD VENCIDA • Hace ${Math.abs(a.dias_restantes)} día(s)`;
+            estadoBannerTexto = a.proxima_membresia
+              ? `🔴 HUECO SIN VIGENCIA • PRÓX. ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
+              : `🔴 MENSUALIDAD VENCIDA • Hace ${Math.abs(a.dias_restantes)} día(s)`;
           }
 
           const memConDeuda = a.membresias_historial?.find((m) => Number(m.saldo_pendiente) > 0);
@@ -918,7 +944,7 @@
                   <div class="min-w-0 flex-1">
                     <button
                       type="button"
-                      onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
+                      onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
                       class="font-black text-base sm:text-lg text-white hover:text-red-400 text-left truncate block w-full cursor-pointer"
                     >
                       ${escapeHTML(a.nombre_completo)}
@@ -941,8 +967,16 @@
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-slate-400 font-semibold">Vigencia del Mes:</span>
-                    <span class="font-bold text-slate-200 tabular-nums">
-                      ${mem ? `${formatDatePE(mem.fecha_inicio)} al <b class="text-red-400">${formatDatePE(mem.fecha_fin)}</b>` : 'Pendiente de iniciar mes'}
+                    <span class="font-bold text-slate-200 tabular-nums text-right">
+                      ${
+                        mem
+                          ? `${formatDatePE(mem.fecha_inicio)} al <b class="text-red-400">${formatDatePE(mem.fecha_fin)}</b>${
+                              a.proxima_membresia && a.proxima_membresia.id !== mem.id
+                                ? `<br><span class="text-sky-400">⏳ Próx: ${formatDatePE(a.proxima_membresia.fecha_inicio)} al ${formatDatePE(a.proxima_membresia.fecha_fin)}</span>`
+                                : ''
+                            }`
+                          : 'Pendiente de iniciar mes'
+                      }
                     </span>
                   </div>
                   <div class="flex items-center justify-between pt-1.5 border-t border-slate-800">
@@ -960,14 +994,14 @@
               <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
+                  onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
                   class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
                 >
                   📄 Ficha (${a.total_membresias})
                 </button>
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirModalEditarAlumno('${escapeHTML(a.id)}')"
+                  onclick="window.AppUI.abrirModalEditarAlumno('${safeId(a.id)}')"
                   title="Cambiar Horario, Cinturón o Datos del Alumno"
                   class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
                 >
@@ -977,7 +1011,7 @@
                   memConDeuda
                     ? `<button
                         type="button"
-                        onclick="window.AppUI.abrirModalCobrarSaldo('${escapeHTML(memConDeuda.id)}')"
+                        onclick="window.AppUI.abrirModalCobrarSaldo('${safeId(memConDeuda.id)}')"
                         class="keep-white-text py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-black text-white cursor-pointer"
                       >
                         💰 Deuda
@@ -986,10 +1020,10 @@
                 }
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirModalRenovar('${escapeHTML(a.id)}')"
+                  onclick="window.AppUI.abrirModalRenovar('${safeId(a.id)}')"
                   class="keep-white-text flex-1 py-2 px-3 rounded-xl brand-bg text-xs font-black text-white cursor-pointer"
                 >
-                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '🥊 Cobrar 1er Mes' : '🥊 Cobrar Mes'}
+                  ${a.estado_vigencia === 'SOLO_INSCRITO' && !a.proxima_membresia ? '🥊 Cobrar 1er Mes' : '🥊 Cobrar Mes'}
                 </button>
               </div>
             </div>
@@ -1005,9 +1039,11 @@
           const mem = a.ultima_membresia;
           let badgeVigencia = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Sin membresía</span>`;
           if (a.estado_vigencia === 'ACTIVO') {
-            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tabular-nums">🟢 Al Día (${a.dias_restantes}d)</span>`;
+            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tabular-nums">🟢 Vigente (${a.dias_restantes}d)</span>`;
           } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
-            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">🎓 Inscrito (Falta 1er Mes)</span>`;
+            badgeVigencia = a.proxima_membresia
+              ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 tabular-nums">⏳ Inicia ${formatDatePE(a.proxima_membresia.fecha_inicio)}</span>`
+              : `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">🎓 Inscrito (Falta 1er Mes)</span>`;
           } else if (a.estado_vigencia === 'POR_VENCER') {
             badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">🟡 Vence en ${a.dias_restantes}d</span>`;
           } else if (a.estado_vigencia === 'VENCIDO') {
@@ -1030,7 +1066,7 @@
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
+                    onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
                     class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
                   >
                     ${escapeHTML(a.nombre_completo)}
@@ -1056,7 +1092,7 @@
                 <div class="inline-flex items-center gap-1.5">
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirModalEditarAlumno('${escapeHTML(a.id)}')"
+                    onclick="window.AppUI.abrirModalEditarAlumno('${safeId(a.id)}')"
                     title="Cambiar horario, cinturón o datos"
                     class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
                   >
@@ -1064,17 +1100,17 @@
                   </button>
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
+                    onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
                     class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
                   >
                     Ver Ficha
                   </button>
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirModalRenovar('${escapeHTML(a.id)}')"
+                    onclick="window.AppUI.abrirModalRenovar('${safeId(a.id)}')"
                     class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
                   >
-                    ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
+                    ${a.estado_vigencia === 'SOLO_INSCRITO' && !a.proxima_membresia ? '+ 1er Mes' : 'Cobrar Mes'}
                   </button>
                 </div>
               </td>
@@ -1099,9 +1135,11 @@
       const belt = obtenerEstiloCinturon(alu.grado_cinturon);
       let badgeEstado = `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Sin plan</span>`;
       if (alu.estado_vigencia === 'ACTIVO') {
-        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 Al Día (${alu.dias_restantes}d)</span>`;
+        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 Vigente (${alu.dias_restantes}d)</span>`;
       } else if (alu.estado_vigencia === 'SOLO_INSCRITO') {
-        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">🎓 Solo Inscrito</span>`;
+        badgeEstado = alu.proxima_membresia
+          ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">⏳ Inicia ${formatDatePE(alu.proxima_membresia.fecha_inicio)}</span>`
+          : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">🎓 Solo Inscrito</span>`;
       } else if (alu.estado_vigencia === 'POR_VENCER') {
         badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">🟡 Vence en ${alu.dias_restantes}d</span>`;
       } else if (alu.estado_vigencia === 'VENCIDO') {
@@ -1118,7 +1156,7 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(alu.id)}')"
+                  onclick="window.AppUI.abrirHistorialAlumno('${safeId(alu.id)}')"
                   class="font-bold text-xs sm:text-sm text-white hover:text-red-400 truncate cursor-pointer"
                 >
                   ${escapeHTML(alu.nombre_completo)}
@@ -1136,7 +1174,7 @@
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              onclick="window.AppUI.abrirModalEditarAlumno('${escapeHTML(alu.id)}')"
+              onclick="window.AppUI.abrirModalEditarAlumno('${safeId(alu.id)}')"
               title="Cambiar de horario o editar datos"
               class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
             >
@@ -1144,10 +1182,10 @@
             </button>
             <button
               type="button"
-              onclick="window.AppUI.abrirModalRenovar('${escapeHTML(alu.id)}')"
+              onclick="window.AppUI.abrirModalRenovar('${safeId(alu.id)}')"
               class="keep-white-text px-3 py-1.5 rounded-lg brand-bg text-xs font-bold text-white cursor-pointer"
             >
-              ${alu.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
+              ${alu.estado_vigencia === 'SOLO_INSCRITO' && !alu.proxima_membresia ? '+ 1er Mes' : 'Cobrar Mes'}
             </button>
           </div>
         </div>
@@ -1188,7 +1226,7 @@
                   👥 ${alumnosDelGrupo.length} Alumno(s)
                 </span>
                 <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-400">
-                  🟢 ${cantAlDia} Al Día
+                  🟢 ${cantAlDia} Vigentes
                 </span>
                 ${
                   cantAlerta > 0
@@ -1218,7 +1256,7 @@
             <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
               <button
                 type="button"
-                onclick="window.AppUI.inscribirEnHorario('${escapeHTML(h.id)}')"
+                onclick="window.AppUI.inscribirEnHorario('${safeId(h.id)}')"
                 class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
               >
                 + Inscribir Alumno en este Turno
@@ -1226,14 +1264,14 @@
               <div class="flex items-center gap-2">
                 <button
                   type="button"
-                  onclick="window.AppUI.editarHorario('${escapeHTML(h.id)}')"
+                  onclick="window.AppUI.editarHorario('${safeId(h.id)}')"
                   class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
                 >
                   Editar Horario
                 </button>
                 <button
                   type="button"
-                  onclick="window.AppUI.eliminarHorario('${escapeHTML(h.id)}')"
+                  onclick="window.AppUI.eliminarHorario('${safeId(h.id)}')"
                   class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
                 >
                   Eliminar
@@ -1294,14 +1332,14 @@
           <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
             <button
               type="button"
-              onclick="window.AppUI.editarPlan('${escapeHTML(p.id)}')"
+              onclick="window.AppUI.editarPlan('${safeId(p.id)}')"
               class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
             >
               Editar Precio
             </button>
             <button
               type="button"
-              onclick="window.AppUI.eliminarPlan('${escapeHTML(p.id)}')"
+              onclick="window.AppUI.eliminarPlan('${safeId(p.id)}')"
               class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
             >
               Eliminar
@@ -1317,15 +1355,7 @@
   // 5. RENDER CONFIGURACIÓN
   // =========================================================================
   function renderConfiguracion() {
-    const activeEl = document.activeElement;
-    if (
-      tabActual === 'configuracion' &&
-      activeEl &&
-      activeEl.matches('input, textarea, select') &&
-      (document.getElementById('form-configuracion')?.contains(activeEl) ||
-        activeEl.id === 'cfg-supabase-url' ||
-        activeEl.id === 'cfg-supabase-key')
-    ) {
+    if (tabActual === 'configuracion' && configFormDirty) {
       return;
     }
     const cfg = store.state.configuracion;
@@ -1398,7 +1428,9 @@
         .map(
           (a) =>
             `<option value="${escapeHTML(a.id)}">${escapeHTML(a.nombre_completo)} (${
-              a.ultima_membresia
+              a.proxima_membresia && !a.membresia_vigente && a.estado_vigencia === 'SOLO_INSCRITO'
+                ? `Inicia: ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
+                : a.ultima_membresia
                 ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
                 : a.estado_vigencia === 'SOLO_INSCRITO'
                 ? '🎓 Inscrito - Falta pagar 1er Mes'
@@ -1430,15 +1462,18 @@
     lista.innerHTML = filtrados
       .slice(0, 15)
       .map((a) => {
-        const estadoTexto = a.ultima_membresia
-          ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
-          : a.estado_vigencia === 'SOLO_INSCRITO'
-          ? '🎓 Inscrito - Sin mensualidad'
-          : 'Sin mensualidad';
+        const estadoTexto =
+          a.proxima_membresia && !a.membresia_vigente && a.estado_vigencia === 'SOLO_INSCRITO'
+            ? `Inicia: ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
+            : a.ultima_membresia
+            ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
+            : a.estado_vigencia === 'SOLO_INSCRITO'
+            ? '🎓 Inscrito - Sin mensualidad'
+            : 'Sin mensualidad';
         return `
           <button
             type="button"
-            data-pick-alumno="${escapeHTML(a.id)}"
+            data-pick-alumno="${safeId(a.id)}"
             class="w-full text-left px-3.5 py-2.5 hover:bg-slate-800/60 transition flex items-center justify-between gap-2 cursor-pointer"
           >
             <div>
@@ -1473,6 +1508,29 @@
     }
   }
 
+  function toggleMasOpcionesPagoModal(mostrarForzado = null) {
+    const bloqueFechas = document.getElementById('bloque-fechas-manuales-pago');
+    const bloqueRecibo = document.getElementById('bloque-nro-recibo-manual');
+    const bloqueObs = document.getElementById('bloque-observacion-pago');
+    const gridMontos = document.getElementById('grid-montos-pago');
+    const btnToggle = document.getElementById('btn-toggle-mas-opciones-pago');
+    if (!bloqueFechas || !bloqueRecibo || !bloqueObs) return;
+
+    const estaOculto = bloqueFechas.classList.contains('hidden');
+    const mostrar = mostrarForzado !== null ? Boolean(mostrarForzado) : estaOculto;
+
+    bloqueFechas.classList.toggle('hidden', !mostrar);
+    bloqueRecibo.classList.toggle('hidden', !mostrar);
+    bloqueObs.classList.toggle('hidden', !mostrar);
+    if (gridMontos) {
+      gridMontos.classList.toggle('sm:grid-cols-3', mostrar);
+      gridMontos.classList.toggle('sm:grid-cols-2', !mostrar);
+    }
+    if (btnToggle) {
+      btnToggle.textContent = mostrar ? '🔽 Ocultar opciones avanzadas' : '⚙️ Ajustar fechas / recibo / nota';
+    }
+  }
+
   function setModoAlumnoModal(modo) {
     modoModalPago = modo;
     const btnNuevo = document.getElementById('btn-modo-alumno-nuevo');
@@ -1481,6 +1539,7 @@
     const badgeInscripcion = document.getElementById('badge-estado-inscripcion-modal');
     const bloqueDatos = document.getElementById('bloque-datos-personales-form');
     const resumenAlu = document.getElementById('resumen-alumno-seleccionado');
+    const bloqueModalidad = document.getElementById('bloque-modalidad-cobro');
 
     if (modo === 'NUEVO') {
       btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
@@ -1494,6 +1553,8 @@
       if (resumenAlu) resumenAlu.classList.add('hidden');
       if (bloqueDatos) bloqueDatos.classList.remove('hidden');
       if (badgeInscripcion) badgeInscripcion.classList.add('hidden');
+      if (bloqueModalidad) bloqueModalidad.classList.remove('hidden');
+      toggleMasOpcionesPagoModal(false);
       setTipoOperacionModal('INSCRIPCION_Y_MENSUALIDAD');
     } else {
       btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
@@ -1502,6 +1563,8 @@
       if (bloqueDatos && document.getElementById('pago-select-alumno').value) {
         bloqueDatos.classList.add('hidden');
       }
+      if (bloqueModalidad) bloqueModalidad.classList.add('hidden');
+      toggleMasOpcionesPagoModal(false);
       setTipoOperacionModal('MENSUALIDAD');
     }
   }
@@ -1612,9 +1675,23 @@
       txtSaldo.className = 'text-2xl font-black text-amber-400 tabular-nums';
     }
 
+    const previewPeriodoEl = document.getElementById('texto-preview-periodo-venta');
+    if (previewPeriodoEl) {
+      const fIni = document.getElementById('pago-fecha-inicio')?.value || getLocalDateISO();
+      const fFin = document.getElementById('pago-fecha-fin')?.value || fIni;
+      const nroRecDisplay = (document.getElementById('pago-numero-recibo')?.value || store.getProximoNumeroReciboFormateado()).trim();
+      previewPeriodoEl.textContent =
+        tipoOperacionPago === 'SOLO_INSCRIPCION'
+          ? `📝 Inscripción única (${formatDatePE(fIni)}) • 🧾 Recibo #${nroRecDisplay}`
+          : `📅 Período: ${formatDatePE(fIni)} → ${formatDatePE(fFin)} • 🧾 Recibo #${nroRecDisplay}`;
+    }
+
     const nroRecibo = document.getElementById('pago-numero-recibo').value;
     const duplicado = store.existeNumeroRecibo(nroRecibo);
     document.getElementById('aviso-recibo-duplicado').classList.toggle('hidden', !duplicado);
+    if (duplicado && document.getElementById('bloque-nro-recibo-manual')?.classList.contains('hidden')) {
+      toggleMasOpcionesPagoModal(true);
+    }
   }
 
   /**
@@ -1681,13 +1758,13 @@
     }
 
     if (tipoAccion === 'COBRAR_MENSUALIDAD') {
-      document.getElementById('modal-pago-titulo').textContent = '🥊 2. Cobrar Mensualidad a Alumno Inscrito';
+      document.getElementById('modal-pago-titulo').textContent = '🥊 Cobrar Mensualidad a Alumno Inscrito';
       document.getElementById('modal-pago-subtitulo').textContent = 'Busca al alumno por nombre o celular para renovar al instante';
       setModoAlumnoModal('EXISTENTE');
       abrirModal('modal-nuevo-pago');
       setTimeout(() => document.getElementById('pago-buscar-alumno-input')?.focus(), 80);
     } else {
-      document.getElementById('modal-pago-titulo').textContent = '🎓 1. Inscribir Alumno Nuevo';
+      document.getElementById('modal-pago-titulo').textContent = '🎓 Inscribir Alumno Nuevo';
       document.getElementById('modal-pago-subtitulo').textContent = 'Registra los datos del nuevo alumno, su horario y su pago de inscripción';
       setModoAlumnoModal('NUEVO');
       abrirModal('modal-nuevo-pago');
@@ -1771,22 +1848,28 @@
       }
     }
 
-    const mem = alu.ultima_membresia;
-    if (mem) {
+    const memBase = alu.ultimo_contrato || alu.ultima_membresia;
+    if (memBase) {
       banner.classList.remove('hidden');
-      document.getElementById('texto-vencimiento-anterior').innerHTML =
-        `Último vencimiento: <b class="text-white">${formatDatePE(mem.fecha_fin)}</b>`;
+      let textoBanner = `Último vencimiento: <b class="text-white">${formatDatePE(memBase.fecha_fin)}</b>`;
+      if (alu.membresia_vigente && alu.ultimo_contrato && alu.membresia_vigente.id !== alu.ultimo_contrato.id) {
+        textoBanner = `Vigente hasta: <b class="text-white">${formatDatePE(alu.membresia_vigente.fecha_fin)}</b> • Próx. renovación termina: <b class="text-sky-300">${formatDatePE(alu.ultimo_contrato.fecha_fin)}</b>`;
+      } else if (alu.proxima_membresia && !alu.membresia_vigente) {
+        textoBanner = `Próximo inicio: <b class="text-sky-300">${formatDatePE(alu.proxima_membresia.fecha_inicio)}</b> • Termina: <b class="text-white">${formatDatePE(alu.proxima_membresia.fecha_fin)}</b>`;
+      }
+      document.getElementById('texto-vencimiento-anterior').innerHTML = textoBanner;
 
-      if (mem.plan_id && store.state.planes.some((p) => p.id === mem.plan_id)) {
-        document.getElementById('pago-select-plan').value = mem.plan_id;
+      if (memBase.plan_id && store.state.planes.some((p) => p.id === memBase.plan_id)) {
+        document.getElementById('pago-select-plan').value = memBase.plan_id;
       }
 
-      document.getElementById('pago-fecha-inicio').value = mem.fecha_fin;
+      document.getElementById('pago-fecha-inicio').value = memBase.fecha_fin;
     } else {
       banner.classList.add('hidden');
       document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
     }
 
+    document.getElementById('bloque-modalidad-cobro')?.classList.toggle('hidden', yaTieneInscripcion);
     setTipoOperacionModal(yaTieneInscripcion ? 'MENSUALIDAD' : 'INSCRIPCION_Y_MENSUALIDAD');
   }
 
@@ -1893,7 +1976,7 @@
                   Number(m.saldo_pendiente) > 0
                     ? `<button
                         type="button"
-                        onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalCobrarSaldo('${escapeHTML(m.id)}')"
+                        onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalCobrarSaldo('${safeId(m.id)}')"
                         class="keep-white-text mt-1.5 px-3 py-1 rounded-lg bg-amber-600 text-white font-black text-xs cursor-pointer"
                       >
                         Cobrar lo que debe
@@ -1925,7 +2008,7 @@
                 <span class="font-black text-sm text-emerald-400 tabular-nums">${escapeHTML(moneda)} ${Number(r.monto_abonado).toFixed(2)}</span>
                 <button
                   type="button"
-                  onclick="window.AppUI.verComprobanteDigital('${escapeHTML(r.id)}')"
+                  onclick="window.AppUI.verComprobanteDigital('${safeId(r.id)}')"
                   class="keep-white-text px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
                 >
                   Ver Recibo
@@ -1940,14 +2023,14 @@
         <div class="flex flex-wrap gap-2">
           <button
             type="button"
-            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${escapeHTML(alu.id)}')"
+            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${safeId(alu.id)}')"
             class="keep-white-text px-4 py-2.5 rounded-xl brand-bg text-white font-extrabold text-xs sm:text-sm cursor-pointer"
           >
             + Cobrar Nueva Mensualidad
           </button>
           <button
             type="button"
-            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalEditarAlumno('${escapeHTML(alu.id)}')"
+            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalEditarAlumno('${safeId(alu.id)}')"
             class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs sm:text-sm cursor-pointer"
           >
             ✏️ Cambiar Horario / Cinturón / Datos
@@ -1955,7 +2038,7 @@
         </div>
         <button
           type="button"
-          onclick="window.AppUI.eliminarAlumnoConfirm('${escapeHTML(alu.id)}')"
+          onclick="window.AppUI.eliminarAlumnoConfirm('${safeId(alu.id)}')"
           class="text-xs font-bold text-red-400 hover:text-red-300 cursor-pointer"
         >
           Eliminar Alumno
@@ -2092,6 +2175,32 @@
     mostrarToast('Plan eliminado del catálogo', 'info');
   }
 
+  function abrirModalEditarRecibo(reciboId) {
+    if (!esAdmin()) {
+      mostrarToast('Solo el Administrador puede editar recibos o fechas', 'warning');
+      abrirModal('modal-login-admin');
+      return;
+    }
+    const rec = store.getRecibosDetallados().find((r) => r.id === reciboId);
+    if (!rec) return;
+    const mem = rec.membresia || {};
+
+    document.getElementById('edit-rec-id').value = rec.id;
+    document.getElementById('edit-rec-alumno-info').textContent = `${rec.nombre_completo} • Recibo #${rec.numero_recibo}`;
+    document.getElementById('edit-rec-numero').value = rec.numero_recibo || '';
+    document.getElementById('edit-rec-metodo').value = rec.metodo_pago || 'EFECTIVO';
+    document.getElementById('edit-rec-concepto').value = mem.concepto || '';
+    document.getElementById('edit-rec-fecha-inicio').value = mem.fecha_inicio || '';
+    document.getElementById('edit-rec-fecha-fin').value = mem.fecha_fin || '';
+    document.getElementById('edit-rec-total').value = Number(mem.total_a_pagar || 0).toFixed(2);
+    document.getElementById('edit-rec-abonado').value = Number(rec.monto_abonado || 0).toFixed(2);
+    document.getElementById('edit-rec-cobrado-por').value = rec.cobrado_por || 'Recepción';
+    document.getElementById('edit-rec-observacion').value = rec.observacion || '';
+
+    abrirModal('modal-editar-recibo');
+    refreshIcons();
+  }
+
   function anularOReactivarRecibo(reciboId) {
     if (!esAdmin()) {
       mostrarToast('Solo el Administrador puede anular o reactivar recibos', 'warning');
@@ -2195,9 +2304,11 @@
           const mem = a.ultima_membresia;
           const semaforo =
             a.estado_vigencia === 'ACTIVO'
-              ? '🟢 AL DÍA'
+              ? '🟢 VIGENTE'
               : a.estado_vigencia === 'SOLO_INSCRITO'
-              ? '🎓 SOLO INSCRITO (FALTA 1ER MES)'
+              ? a.proxima_membresia
+                ? `⏳ INICIA EL ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
+                : '🎓 SOLO INSCRITO (FALTA 1ER MES)'
               : a.estado_vigencia === 'POR_VENCER'
               ? `🟡 VENCE EN ${a.dias_restantes}D`
               : a.estado_vigencia === 'VENCIDO'
@@ -2212,24 +2323,34 @@
                   <span class="text-xs font-extrabold">${semaforo}</span>
                 </div>
                 <p class="text-xs text-slate-400 tabular-nums mt-0.5">
-                  ${mem ? `${escapeHTML(mem.concepto)} • Vence: ${formatDatePE(mem.fecha_fin)}` : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Inscrito (Pendiente 1ra Mensualidad)' : 'Sin membresía'}
+                  ${
+                    mem
+                      ? `${escapeHTML(mem.concepto)} • ${
+                          a.proxima_membresia && !a.membresia_vigente && a.estado_vigencia === 'SOLO_INSCRITO'
+                            ? `Inicia: ${formatDatePE(mem.fecha_inicio)} al ${formatDatePE(mem.fecha_fin)}`
+                            : `Vence: ${formatDatePE(mem.fecha_fin)}`
+                        }`
+                      : a.estado_vigencia === 'SOLO_INSCRITO'
+                      ? 'Inscrito (Pendiente 1ra Mensualidad)'
+                      : 'Sin membresía'
+                  }
                   ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Lo que debe: ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
                 </p>
               </div>
               <div class="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
+                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
                   class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white cursor-pointer"
                 >
                   Ver Ficha
                 </button>
                 <button
                   type="button"
-                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${escapeHTML(a.id)}')"
+                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${safeId(a.id)}')"
                   class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
                 >
-                  ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
+                  ${a.estado_vigencia === 'SOLO_INSCRITO' && !a.proxima_membresia ? '+ 1er Mes' : 'Cobrar Mes'}
                 </button>
               </div>
             </div>`;
@@ -2252,7 +2373,7 @@
             </div>
             <button
               type="button"
-              onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.verComprobanteDigital('${escapeHTML(r.id)}')"
+              onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.verComprobanteDigital('${safeId(r.id)}')"
               class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold cursor-pointer"
             >
               Ver Recibo
@@ -2319,7 +2440,8 @@
           'modal-cobrar-saldo',
           'modal-comprobante',
           'modal-historial-alumno',
-          'modal-editar-alumno'
+          'modal-editar-alumno',
+          'modal-editar-recibo'
         ].forEach(cerrarModal);
         document.getElementById('global-search-results')?.classList.add('hidden');
       }
@@ -2394,12 +2516,17 @@
       cargarMembresiaEnModalSaldo(e.target.value);
     });
 
+    document.getElementById('btn-toggle-mas-opciones-pago')?.addEventListener('click', () => {
+      toggleMasOpcionesPagoModal();
+    });
+
     // Botones de renovación flexible
     document.getElementById('btn-renovar-continuar')?.addEventListener('click', () => {
       const aluId = document.getElementById('pago-select-alumno').value;
       const alu = store.getAlumnosConEstado().find((a) => a.id === aluId);
-      if (alu?.ultima_membresia) {
-        document.getElementById('pago-fecha-inicio').value = alu.ultima_membresia.fecha_fin;
+      const memBase = alu?.ultimo_contrato || alu?.ultima_membresia;
+      if (memBase) {
+        document.getElementById('pago-fecha-inicio').value = memBase.fecha_fin;
         aplicarPlanSeleccionado(true);
       }
     });
@@ -2414,13 +2541,17 @@
     document.getElementById('pago-fecha-inicio')?.addEventListener('change', (e) => {
       if (tipoOperacionPago === 'SOLO_INSCRIPCION') {
         document.getElementById('pago-fecha-fin').value = e.target.value;
+        actualizarPreviewSaldoModal();
         return;
       }
       const planId = document.getElementById('pago-select-plan').value;
       const plan = store.state.planes.find((p) => p.id === planId);
       const dias = plan ? plan.duracion_dias : 30;
       document.getElementById('pago-fecha-fin').value = calcularFechaFin(e.target.value, dias);
+      actualizarPreviewSaldoModal();
     });
+
+    document.getElementById('pago-fecha-fin')?.addEventListener('change', actualizarPreviewSaldoModal);
 
     // Botones rápidos de duración (+1 Mes, +3 Meses, +15 Días)
     document.querySelectorAll('.quick-dur-btn').forEach((btn) => {
@@ -2428,6 +2559,7 @@
         const dias = Number(btn.getAttribute('data-quick-duration')) || 30;
         const inicio = document.getElementById('pago-fecha-inicio').value || getLocalDateISO();
         document.getElementById('pago-fecha-fin').value = calcularFechaFin(inicio, dias);
+        actualizarPreviewSaldoModal();
       });
     });
 
@@ -2489,9 +2621,15 @@
 
       try {
         const resultado = store.registrarInscripcionOPago(payloadPago);
+        const creds = global.SupabaseSync?.obtenerCredenciales?.(store);
+        const tieneNube = Boolean(creds?.url && creds?.anonKey);
 
         cerrarModal('modal-nuevo-pago');
-        mostrarToast(`Recibo #${resultado.recibo.numero_recibo} guardado correctamente`);
+        mostrarToast(
+          tieneNube
+            ? `💾 Recibo #${resultado.recibo.numero_recibo} guardado en este equipo • Sincronizando nube...`
+            : `Recibo #${resultado.recibo.numero_recibo} guardado correctamente`
+        );
 
         if (submitMode === 'digital') {
           verComprobanteDigital(resultado.recibo.id);
@@ -2530,12 +2668,50 @@
           cobrado_por: document.getElementById('saldo-cobrado-por')?.value || 'Recepción',
           observacion: document.getElementById('saldo-observacion').value
         });
+        const creds = global.SupabaseSync?.obtenerCredenciales?.(store);
+        const tieneNube = Boolean(creds?.url && creds?.anonKey);
 
         cerrarModal('modal-cobrar-saldo');
-        mostrarToast(`Saldo cobrado en Recibo #${resultado.recibo.numero_recibo}`);
+        mostrarToast(
+          tieneNube
+            ? `💾 Saldo en Recibo #${resultado.recibo.numero_recibo} guardado localmente • Sincronizando nube...`
+            : `Saldo cobrado en Recibo #${resultado.recibo.numero_recibo}`
+        );
         verComprobanteDigital(resultado.recibo.id);
       } catch (err) {
         mostrarToast(err?.message || 'No se pudo registrar el abono de saldo', 'error');
+      }
+    });
+
+    // Submit Formulario Editar Recibo / Membresía (Solo Admin)
+    document.getElementById('form-editar-recibo')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede editar recibos o fechas', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
+      const reciboId = document.getElementById('edit-rec-id').value;
+      try {
+        const res = store.actualizarReciboYMembresia(reciboId, {
+          numero_recibo: document.getElementById('edit-rec-numero').value,
+          metodo_pago: document.getElementById('edit-rec-metodo').value,
+          concepto: document.getElementById('edit-rec-concepto').value,
+          fecha_inicio: document.getElementById('edit-rec-fecha-inicio').value,
+          fecha_fin: document.getElementById('edit-rec-fecha-fin').value,
+          total_a_pagar: document.getElementById('edit-rec-total').value,
+          monto_abonado: document.getElementById('edit-rec-abonado').value,
+          cobrado_por: document.getElementById('edit-rec-cobrado-por').value,
+          observacion: document.getElementById('edit-rec-observacion').value
+        });
+        if (!res) {
+          mostrarToast('No se encontró el recibo para actualizar', 'error');
+          return;
+        }
+        cerrarModal('modal-editar-recibo');
+        mostrarToast(`Recibo #${res.recibo.numero_recibo} corregido correctamente`);
+      } catch (err) {
+        mostrarToast(err?.message || 'No se pudo corregir el recibo. Verifica montos, fechas y correlativo.', 'error');
       }
     });
 
@@ -2816,8 +2992,25 @@
       }
     });
 
-    // Configuración de la Academia
-    document.getElementById('form-configuracion')?.addEventListener('submit', (e) => {
+    // Configuración de la Academia (dirty flag evita pisar edición mientras sincroniza la nube)
+    const formConfig = document.getElementById('form-configuracion');
+    formConfig?.addEventListener('input', () => {
+      configFormDirty = true;
+    });
+    formConfig?.addEventListener('change', () => {
+      configFormDirty = true;
+    });
+    ['cfg-supabase-url', 'cfg-supabase-key'].forEach((idEl) => {
+      const el = document.getElementById(idEl);
+      el?.addEventListener('input', () => {
+        configFormDirty = true;
+      });
+      el?.addEventListener('change', () => {
+        configFormDirty = true;
+      });
+    });
+
+    formConfig?.addEventListener('submit', (e) => {
       e.preventDefault();
       if (!esAdmin()) {
         mostrarToast('Solo el Administrador puede guardar la configuración', 'warning');
@@ -2850,6 +3043,7 @@
           return parsed.length > 0 ? parsed : ['Recepción', 'Profesor / Coach', 'Administrador'];
         })()
       });
+      configFormDirty = false;
       mostrarToast('Configuración, perfiles, seguridad y precios actualizados');
     });
 
@@ -2995,6 +3189,7 @@
       const url = document.getElementById('cfg-supabase-url').value.trim();
       const key = document.getElementById('cfg-supabase-key').value.trim();
       store.actualizarConfiguracion({ supabase_url: url, supabase_anon_key: key });
+      configFormDirty = false;
       try {
         await probarConexionSupabase(url, key);
         await subirDatosASupabase(store);
@@ -3047,8 +3242,9 @@
           copiaValidada.configuracion.operador_actual = operadorLocal;
 
           store.isFreshInitialState = false;
-          store.saveState(copiaValidada);
+          store.state = copiaValidada;
           store.recalcularTodasLasMembresias();
+          store.saveState(store.state);
           mostrarToast('Copia de seguridad restaurada y normalizada con éxito');
         } catch (err) {
           try {
@@ -3111,6 +3307,7 @@
     editarPlan,
     eliminarPlan,
     anularOReactivarRecibo,
+    abrirModalEditarRecibo,
     eliminarAlumnoConfirm
   };
 
