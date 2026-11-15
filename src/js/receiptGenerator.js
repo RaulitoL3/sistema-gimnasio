@@ -410,7 +410,9 @@
 
     const lineas = [
       `🥋 *${(config.nombre_academia || 'GIMNASIO ARTES MARCIALES').toUpperCase()}*`,
-      `📄 *COMPROBANTE DE PAGO - RECIBO N° ${detalleRecibo.numero_recibo}*`,
+      detalleRecibo.anulado
+        ? `🚫 *COMPROBANTE ANULADO - RECIBO N° ${detalleRecibo.numero_recibo}*`
+        : `📄 *COMPROBANTE DE PAGO - RECIBO N° ${detalleRecibo.numero_recibo}*`,
       `--------------------------------`,
       `👤 *Alumno:* ${nombreCompleto}`,
       `🥊 *Concepto:* ${membresia.concepto}`,
@@ -425,22 +427,26 @@
       `--------------------------------`,
       `💰 *Total a Pagar:* ${moneda} ${Number(membresia.total_a_pagar).toFixed(2)}`,
       `✅ *Monto Abonado (Recibo #${detalleRecibo.numero_recibo}):* ${moneda} ${Number(detalleRecibo.monto_abonado).toFixed(2)} (${METODO_LABELS[detalleRecibo.metodo_pago] || detalleRecibo.metodo_pago})`,
-      saldo > 0
+      detalleRecibo.anulado
+        ? `🚫 *Estado:* RECIBO ANULADO (Sin validez de cobro)`
+        : saldo > 0
         ? `⚠️ *Saldo Pendiente:* ${moneda} ${saldo.toFixed(2)}`
         : `🎉 *Estado:* PAGADO COMPLETO (Saldo ${moneda} 0.00)`,
       `🧾 *Atendido por:* ${detalleRecibo.cobrado_por || 'Recepción'}`,
       `--------------------------------`,
-      `¡Gracias por entrenar con nosotros! 💪`
+      detalleRecibo.anulado
+        ? `Este comprobante fue anulado en el sistema.`
+        : `¡Gracias por entrenar con nosotros! 💪`
     ].filter(Boolean);
 
     const texto = encodeURIComponent(lineas.join('\n'));
     return tel ? `https://wa.me/${tel}?text=${texto}` : `https://wa.me/?text=${texto}`;
   }
 
-  function generarLinkWhatsAppRecordatorio(alumnoConEstado, config, tipo = 'VENCIMIENTO') {
+  function generarLinkWhatsAppRecordatorio(alumnoConEstado, config, tipo = 'VENCIMIENTO', membresiaEspecifica = null) {
     const tel = limpiarTelefonoPE(alumnoConEstado.telefono_whatsapp || alumnoConEstado.telefono_emergencia);
     const moneda = config.moneda || 'S/';
-    const mem = alumnoConEstado.ultima_membresia;
+    const mem = membresiaEspecifica || alumnoConEstado.ultima_membresia;
     const academia = config.nombre_academia || 'la Academia';
 
     let mensaje = '';

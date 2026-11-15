@@ -7,6 +7,28 @@
   let syncTimeout = null;
   let lastCloudTimestamp = null;
   let isPulling = false;
+  let pendingLocalChanges = false;
+  const PENDING_SYNC_KEY = 'dojo_gym_pending_sync';
+
+  function marcarPendienteSync(pendiente) {
+    pendingLocalChanges = Boolean(pendiente);
+    try {
+      if (pendingLocalChanges) {
+        localStorage.setItem(PENDING_SYNC_KEY, '1');
+      } else {
+        localStorage.removeItem(PENDING_SYNC_KEY);
+      }
+    } catch (e) {}
+  }
+
+  function tienePendienteSync() {
+    if (pendingLocalChanges) return true;
+    try {
+      return localStorage.getItem(PENDING_SYNC_KEY) === '1';
+    } catch (e) {
+      return false;
+    }
+  }
 
   function limpiarSupabaseUrl(rawUrl) {
     return (rawUrl || '')
@@ -58,28 +80,94 @@
   }
 
   function actualizarIndicadorCloud(estado, texto) {
-    const badge =
-      document.getElementById('badge-cloud-sync') ||
-      document.getElementById('cloud-sync-indicator');
-    if (!badge) return;
+    const ids = ['badge-cloud-sync', 'badge-cloud-sync-mobile', 'cloud-sync-indicator'];
     const estilos = {
       online: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
       syncing: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
       local: 'bg-slate-800 text-slate-300 border-slate-700',
       error: 'bg-red-500/20 text-red-300 border-red-500/30'
     };
-    badge.className = `inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-      estilos[estado] || estilos.local
-    }`;
-    badge.innerHTML = `<span class="w-2 h-2 rounded-full ${
-      estado === 'online'
-        ? 'bg-emerald-400'
-        : estado === 'syncing'
-        ? 'bg-sky-400 animate-ping'
-        : estado === 'error'
-        ? 'bg-red-400'
-        : 'bg-slate-400'
-    }"></span><span>${texto}</span>`;
+    ids.forEach((id) => {
+      const badge = document.getElementById(id);
+      if (!badge) return;
+      const extraClass = id === 'badge-cloud-sync-mobile' ? 'lg:hidden ' : '';
+      badge.className = `${extraClass}inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
+        estilos[estado] || estilos.local
+      }`;
+      badge.innerHTML = `<span class="w-2 h-2 rounded-full ${
+        estado === 'online'
+          ? 'bg-emerald-400'
+          : estado === 'syncing'
+          ? 'bg-sky-400 animate-ping'
+          : estado === 'error'
+          ? 'bg-red-400'
+          : 'bg-slate-400'
+      }"></span><span>${texto}</span>`;
+    });
+  }
+
+  function fusionarColeccionPorId(localArr = [], remoteArr = [], preferLocal = true, sortDescKey = null) {
+    const map = new Map();
+    const baseArr = preferLocal ? remoteArr : localArr;
+    const overrideArr = preferLocal ? localArr : remoteArr;
+
+    (Array.isArray(baseArr) ? baseArr : []).forEach((item) => {
+      if (item && item.id) map.set(item.id, item);
+    });
+    (Array.isArray(overrideArr) ? overrideArr : []).forEach((item) => {
+      if (!item || !item.id) return;
+      const existing = map.get(item.id);
+      map.set(item.id, existing ? { ...existing, ...item } : item);
+    });
+
+    const result = Array.from(map.values());
+    if (sortDescKey) {
+      result.sort((a, b) => {
+        const va = String(a[sortDescKey] || a.created_at || '');
+        const vb = String(b[sortDescKey] || b.created_at || '');
+        return vb.localeCompare(va);
+      });
+    }
+    return result;
+  }
+
+  function fusionarEstados(localState, remoteState, rolDispositivo, url, anonKey, preferLocal = false) {
+    if (!remoteState || typeof remoteState !== 'object') {
+      return localState;
+    }
+    const localCfg = localState?.configuracion || {};
+    const remoteCfg = remoteState?.configuracion || {};
+    const cfgMerged = preferLocal
+      ? { ...remoteCfg, ...localCfg }
+      : { ...localCfg, ...remoteCfg };
+
+    const proxLocal = Number(localCfg.proximo_nro_recibo || 1);
+    const proxRemoto = Number(remoteCfg.proximo_nro_recibo || 1);
+
+    const actividadesCombinadas = fusionarColeccionPorId(
+      localState?.actividades || [],
+      remoteState?.actividades || [],
+      preferLocal,
+      'fecha'
+    ).slice(0, 150);
+
+    return {
+      ...remoteState,
+      ...(preferLocal ? localState : {}),
+      alumnos: fusionarColeccionPorId(localState?.alumnos || [], remoteState?.alumnos || [], preferLocal, null),
+      membresias: fusionarColeccionPorId(localState?.membresias || [], remoteState?.membresias || [], preferLocal, 'created_at'),
+      recibos: fusionarColeccionPorId(localState?.recibos || [], remoteState?.recibos || [], preferLocal, 'fecha_pago'),
+      planes: fusionarColeccionPorId(localState?.planes || [], remoteState?.planes || [], preferLocal, null),
+      horarios: fusionarColeccionPorId(localState?.horarios || [], remoteState?.horarios || [], preferLocal, null),
+      actividades: actividadesCombinadas,
+      configuracion: {
+        ...cfgMerged,
+        proximo_nro_recibo: Math.max(proxLocal, proxRemoto),
+        supabase_url: url || cfgMerged.supabase_url || '',
+        supabase_anon_key: anonKey || cfgMerged.supabase_anon_key || '',
+        rol_actual: rolDispositivo || localCfg.rol_actual || 'RECEPCION'
+      }
+    };
   }
 
   async function probarConexionSupabase(url, anonKey) {
@@ -111,13 +199,31 @@
 
     try {
       actualizarIndicadorCloud('syncing', 'Sincronizando...');
+      const rolDispositivo = store.getRolDispositivoActual();
+      let estadoParaSubir = store.state;
+
+      // Combinar primero con el snapshot remoto más reciente para no perder cobros hechos desde otro equipo
+      try {
+        const prevRes = await supabaseFetch(`${url}/rest/v1/gym_cloud_state?id=eq.main_gym&select=state_json,updated_at`, anonKey, {
+          method: 'GET'
+        });
+        if (prevRes.ok) {
+          const prevRows = await prevRes.json();
+          if (Array.isArray(prevRows) && prevRows.length > 0 && prevRows[0]?.state_json) {
+            estadoParaSubir = fusionarEstados(store.state, prevRows[0].state_json, rolDispositivo, url, anonKey, true);
+          }
+        }
+      } catch (mergeErr) {
+        console.warn('No se pudo pre-fusionar con nube antes de subir:', mergeErr);
+      }
+
       const nowISO = new Date().toISOString();
 
       // No sobrescribir el rol individual de cada dispositivo ni las llaves locales
       const stateToSync = {
-        ...store.state,
+        ...estadoParaSubir,
         configuracion: {
-          ...store.state.configuracion,
+          ...estadoParaSubir.configuracion,
           rol_actual: undefined
         },
         _updated_at: nowISO
@@ -136,14 +242,26 @@
 
       if (res.ok) {
         lastCloudTimestamp = nowISO;
+        marcarPendienteSync(false);
+        if (estadoParaSubir !== store.state) {
+          store.aplicarEstadoRemotoSinRebote({
+            ...estadoParaSubir,
+            configuracion: {
+              ...estadoParaSubir.configuracion,
+              rol_actual: rolDispositivo
+            }
+          });
+        }
         actualizarIndicadorCloud('online', 'Nube Conectada');
         return true;
       } else {
+        marcarPendienteSync(true);
         actualizarIndicadorCloud('error', 'Error Cloud');
         return false;
       }
     } catch (err) {
       console.warn('Error al sincronizar con Supabase:', err);
+      marcarPendienteSync(true);
       actualizarIndicadorCloud('error', 'Sin Red Cloud');
       return false;
     }
@@ -160,6 +278,11 @@
       return false;
     }
 
+    const hayPendienteLocal = tienePendienteSync();
+    if (hayPendienteLocal && !forzar) {
+      return await subirDatosASupabase(store);
+    }
+
     isPulling = true;
     try {
       const res = await supabaseFetch(`${url}/rest/v1/gym_cloud_state?id=eq.main_gym&select=state_json,updated_at`, anonKey, {
@@ -167,6 +290,7 @@
       });
 
       if (!res.ok) {
+        actualizarIndicadorCloud('error', 'Error Cloud');
         isPulling = false;
         return false;
       }
@@ -186,25 +310,25 @@
       if (forzar || !lastCloudTimestamp || (remoteTime && remoteTime > lastCloudTimestamp)) {
         if (remoteState && Array.isArray(remoteState.alumnos) && Array.isArray(remoteState.recibos)) {
           lastCloudTimestamp = remoteTime;
-          // Conservar el rol del dispositivo actual (Admin o Recepción según este equipo)
           const rolDispositivo = store.getRolDispositivoActual();
-          const mergedState = {
-            ...remoteState,
-            configuracion: {
-              ...store.state.configuracion,
-              ...(remoteState.configuracion || {}),
-              supabase_url: url,
-              supabase_anon_key: anonKey,
-              rol_actual: rolDispositivo
-            }
-          };
+          const baseLocal =
+            store.isFreshInitialState && !hayPendienteLocal
+              ? { alumnos: [], membresias: [], recibos: [], planes: [], horarios: [], actividades: [], configuracion: {} }
+              : store.state;
+          const mergedState = fusionarEstados(baseLocal, remoteState, rolDispositivo, url, anonKey, hayPendienteLocal);
           store.aplicarEstadoRemotoSinRebote(mergedState);
+          if (hayPendienteLocal) {
+            isPulling = false;
+            await subirDatosASupabase(store);
+            return true;
+          }
         }
       }
       actualizarIndicadorCloud('online', 'Nube en Vivo');
       isPulling = false;
       return true;
     } catch (err) {
+      actualizarIndicadorCloud('error', 'Sin Red Cloud');
       isPulling = false;
       return false;
     }
@@ -213,6 +337,7 @@
   function programarSubidaAutomatica(store) {
     const { url, anonKey } = obtenerCredenciales(store);
     if (!url || !anonKey) return;
+    marcarPendienteSync(true);
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
       subirDatosASupabase(store);

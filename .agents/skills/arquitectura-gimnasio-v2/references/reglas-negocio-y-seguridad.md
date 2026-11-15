@@ -14,8 +14,8 @@
 - Objetos raíz en `store.state`:
   - `alumnos`, `membresias`, `recibos`, `planes`, `horarios`, `configuracion`, `actividades`.
 - `configuracion`:
-  - Conserva `nombre_academia`, `ruc`, `direccion`, `telefono`, `monto_inscripcion_default`, `pin_admin`, `logo_data_url`, `mensajes_whatsapp`.
-  - Agrega `pin_recepcion` (default `'2026'`).
+  - Campos vigentes: `nombre_academia`, `subtitulo`, `telefono`, `direccion`, `moneda`, `precio_inscripcion`, `serie_recibo`, `proximo_nro_recibo`, `dias_alerta_vencimiento`, `logo_url`, `pin_recepcion` (default `'2026'`), `pin_admin` (default `'1234'`), `pedir_pin_inicio` (default `true`), `perfiles_operadores`, `color_tema`, `tema_visual`, `rol_actual`.
+  - Si `pedir_pin_inicio === false`, el arranque inicial entra directo en `MODO RECEPCIÓN` sin mostrar el modal de PIN.
 - `recibos`:
   - Agrega campo opcional `cobrado_por` (por defecto `'Recepción'`).
 - `actividades`:

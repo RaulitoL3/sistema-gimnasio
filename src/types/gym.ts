@@ -20,8 +20,11 @@ export interface ConfiguracionGym {
   logo_url?: string;
   pin_recepcion?: string;
   pin_admin?: string;
+  pedir_pin_inicio?: boolean;
   rol_actual?: 'ADMIN' | 'RECEPCION';
   perfiles_operadores?: string[];
+  color_tema?: string;
+  tema_visual?: 'CLARO' | 'OSCURO';
   supabase_url?: string;
   supabase_anon_key?: string;
 }
@@ -106,7 +109,10 @@ export interface ActividadLog {
 }
 
 export interface AlumnoConEstado extends Alumno {
+  nombre_completo: string;
+  horario_nombre?: string;
   ultima_membresia?: Membresia;
+  membresias_historial: Membresia[];
   estado_vigencia: EstadoVigencia;
   dias_restantes: number | null;
   saldo_total_pendiente: number;

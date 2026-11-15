@@ -385,6 +385,7 @@ function crearDatosIniciales() {
     rol_actual: 'RECEPCION', // ADMIN | RECEPCION
     pin_recepcion: '2026',
     pin_admin: '1234',
+    pedir_pin_inicio: true,
     perfiles_operadores: [...DEFAULT_PERFILES_OPERADORES],
     supabase_url: '',
     supabase_anon_key: ''
@@ -403,8 +404,8 @@ function crearDatosIniciales() {
 
 class GymStore {
   constructor() {
-    this.state = this.loadState();
     this.listeners = [];
+    this.state = this.loadState();
     this.recalcularTodasLasMembresias();
   }
 
@@ -476,8 +477,33 @@ class GymStore {
   }
 
   asegurarHorariosYValoresPorDefecto(objState) {
-    if (!objState) return;
-    if (objState.configuracion) {
+    if (!objState || typeof objState !== 'object') return;
+    const cfgBase = {
+      id: 'cfg-1',
+      nombre_academia: 'ACADEMIA ARTES MARCIALES',
+      subtitulo: 'Muay Thai • Boxeo • Jiu-Jitsu • MMA',
+      telefono: '',
+      direccion: '',
+      moneda: 'S/',
+      precio_inscripcion: 30.00,
+      color_tema: 'ROJO',
+      tema_visual: 'CLARO',
+      logo_url: '',
+      serie_recibo: '001',
+      proximo_nro_recibo: 1,
+      dias_alerta_vencimiento: 5,
+      rol_actual: 'RECEPCION',
+      pin_recepcion: '2026',
+      pin_admin: '1234',
+      pedir_pin_inicio: true,
+      perfiles_operadores: [...DEFAULT_PERFILES_OPERADORES],
+      supabase_url: '',
+      supabase_anon_key: ''
+    };
+    if (!objState.configuracion || typeof objState.configuracion !== 'object') {
+      objState.configuracion = { ...cfgBase };
+    } else {
+      objState.configuracion = { ...cfgBase, ...objState.configuracion };
       if (objState.configuracion.precio_inscripcion === undefined) {
         objState.configuracion.precio_inscripcion = 30.00;
       }
@@ -493,9 +519,18 @@ class GymStore {
       if (!objState.configuracion.pin_admin) {
         objState.configuracion.pin_admin = '1234';
       }
+      if (objState.configuracion.pedir_pin_inicio === undefined) {
+        objState.configuracion.pedir_pin_inicio = true;
+      }
       if (!Array.isArray(objState.configuracion.perfiles_operadores) || objState.configuracion.perfiles_operadores.length === 0) {
         objState.configuracion.perfiles_operadores = [...DEFAULT_PERFILES_OPERADORES];
       }
+    }
+    if (!Array.isArray(objState.alumnos)) objState.alumnos = [];
+    if (!Array.isArray(objState.membresias)) objState.membresias = [];
+    if (!Array.isArray(objState.recibos)) objState.recibos = [];
+    if (!Array.isArray(objState.planes) || objState.planes.length === 0) {
+      objState.planes = crearDatosIniciales().planes;
     }
     if (!Array.isArray(objState.actividades)) {
       objState.actividades = [];
@@ -536,12 +571,16 @@ class GymStore {
       console.error('Error cargando estado local:', e);
     }
     const initial = crearDatosIniciales();
+    this.isFreshInitialState = true;
     this.saveState(initial, false);
     return initial;
   }
 
   saveState(newState = this.state, syncCloud = true) {
     this.state = newState;
+    if (syncCloud) {
+      this.isFreshInitialState = false;
+    }
     if (this.state?.configuracion?.rol_actual) {
       try {
         localStorage.setItem('dojo_gym_device_role', this.state.configuracion.rol_actual);
@@ -559,6 +598,7 @@ class GymStore {
   }
 
   aplicarEstadoRemotoSinRebote(remoteState) {
+    this.isFreshInitialState = false;
     this.asegurarHorariosYValoresPorDefecto(remoteState);
     this.state = remoteState;
     this.recalcularTodasLasMembresias();
@@ -583,6 +623,10 @@ class GymStore {
   recalcularMembresia(membresiaId) {
     const mem = this.state.membresias.find((m) => m.id === membresiaId);
     if (!mem) return;
+    if (mem.estado_pago === 'ANULADO') {
+      mem.saldo_pendiente = 0;
+      return;
+    }
 
     const recibosValidos = this.state.recibos.filter(
       (r) => r.membresia_id === membresiaId && !r.anulado
@@ -631,14 +675,14 @@ class GymStore {
       alumnoId, // Si viene vacío, se crea un nuevo alumno
       nombres,
       apellidos,
-      telefono_whatsapp = '',
-      contacto_emergencia = '',
-      telefono_emergencia = '',
-      grado_cinturon = 'Principiante / Blanco',
-      disciplina_principal = 'General',
+      telefono_whatsapp,
+      contacto_emergencia,
+      telefono_emergencia,
+      grado_cinturon,
+      disciplina_principal,
       horario_id = null,
       horario_texto = '',
-      notas_alumno = '',
+      notas_alumno,
       // Datos de Membresía e Inscripción
       tipo_operacion = 'MENSUALIDAD', // 'INSCRIPCION_Y_MENSUALIDAD' | 'SOLO_INSCRIPCION' | 'MENSUALIDAD'
       incluye_inscripcion = false,
@@ -658,6 +702,25 @@ class GymStore {
       cobrado_por = 'Recepción'
     } = payload;
 
+    const totalPagarNum = Number(Number(total_a_pagar).toFixed(2));
+    const abonadoNum = Number(Number(monto_abonado).toFixed(2));
+    if (!Number.isFinite(totalPagarNum) || totalPagarNum < 0) {
+      throw new Error('El total a pagar debe ser un monto numérico válido.');
+    }
+    if (!Number.isFinite(abonadoNum) || abonadoNum <= 0) {
+      throw new Error('El monto abonado hoy debe ser mayor a 0.');
+    }
+    if (abonadoNum > totalPagarNum + 0.009) {
+      throw new Error('El monto abonado hoy no puede superar el total a pagar.');
+    }
+
+    const nroReciboFormateado = formatearNumeroRecibo(
+      numero_recibo || this.state.configuracion.proximo_nro_recibo
+    );
+    if (this.existeNumeroRecibo(nroReciboFormateado)) {
+      throw new Error(`El N° de recibo #${nroReciboFormateado} ya está registrado en otro recibo activo.`);
+    }
+
     const cobraInscripcion =
       Boolean(incluye_inscripcion) ||
       tipo_operacion === 'SOLO_INSCRIPCION' ||
@@ -674,13 +737,21 @@ class GymStore {
     if (targetAlumnoId) {
       alumnoObj = this.state.alumnos.find((a) => a.id === targetAlumnoId);
       if (alumnoObj) {
-        if (nombres) alumnoObj.nombres = nombres.trim();
-        if (apellidos) alumnoObj.apellidos = apellidos.trim();
-        if (telefono_whatsapp !== undefined) alumnoObj.telefono_whatsapp = telefono_whatsapp.trim();
-        if (contacto_emergencia !== undefined) alumnoObj.contacto_emergencia = contacto_emergencia.trim();
-        if (telefono_emergencia !== undefined) alumnoObj.telefono_emergencia = telefono_emergencia.trim();
-        if (grado_cinturon) alumnoObj.grado_cinturon = grado_cinturon;
-        if (disciplina_principal) alumnoObj.disciplina_principal = disciplina_principal;
+        if (nombres && String(nombres).trim()) alumnoObj.nombres = String(nombres).trim();
+        if (apellidos && String(apellidos).trim()) alumnoObj.apellidos = String(apellidos).trim();
+        if (telefono_whatsapp !== undefined && String(telefono_whatsapp).trim() !== '') {
+          alumnoObj.telefono_whatsapp = String(telefono_whatsapp).trim();
+        }
+        if (contacto_emergencia !== undefined && String(contacto_emergencia).trim() !== '') {
+          alumnoObj.contacto_emergencia = String(contacto_emergencia).trim();
+        }
+        if (telefono_emergencia !== undefined && String(telefono_emergencia).trim() !== '') {
+          alumnoObj.telefono_emergencia = String(telefono_emergencia).trim();
+        }
+        if (grado_cinturon && String(grado_cinturon).trim()) alumnoObj.grado_cinturon = String(grado_cinturon).trim();
+        if (disciplina_principal && String(disciplina_principal).trim()) {
+          alumnoObj.disciplina_principal = String(disciplina_principal).trim();
+        }
         if (horario_id) alumnoObj.horario_id = horario_id;
         if (textoHorarioFinal) alumnoObj.horario_texto = textoHorarioFinal;
         if (cobraInscripcion) {
@@ -712,8 +783,6 @@ class GymStore {
       this.state.alumnos.unshift(alumnoObj);
     }
 
-    const totalPagarNum = Number(Number(total_a_pagar).toFixed(2));
-    const abonadoNum = Number(Number(monto_abonado).toFixed(2));
     const saldoNum = Math.max(0, Number((totalPagarNum - abonadoNum).toFixed(2)));
     const estadoPago = saldoNum <= 0.009 ? 'PAGADO' : 'PARCIAL';
 
@@ -741,10 +810,6 @@ class GymStore {
       notas: observacion || '',
       created_at: new Date().toISOString()
     };
-
-    const nroReciboFormateado = formatearNumeroRecibo(
-      numero_recibo || this.state.configuracion.proximo_nro_recibo
-    );
 
     const reciboId = generarUUID();
     const nuevoRecibo = {
@@ -778,10 +843,15 @@ class GymStore {
     const moneda = this.state.configuracion.moneda || 'S/';
     const nombreCompletoLog = `${alumnoObj.nombres} ${alumnoObj.apellidos}`.trim();
     const rolLabel = this.getRolDispositivoActual() === 'ADMIN' ? 'Admin' : 'Recepción';
+    const operadorSesion = this.getOperadorActual();
+    const actorLog =
+      operadorSesion.toLowerCase() !== nuevoRecibo.cobrado_por.toLowerCase()
+        ? `${operadorSesion} (Cobró: ${nuevoRecibo.cobrado_por} • ${rolLabel})`
+        : `${nuevoRecibo.cobrado_por} (${rolLabel})`;
     this.registrarActividad(
       'Cobro registrado',
       `Recibo N° ${nroReciboFormateado} - ${nombreCompletoLog} (${moneda} ${abonadoNum.toFixed(2)} - ${metodo_pago})`,
-      `${nuevoRecibo.cobrado_por} (${rolLabel})`
+      actorLog
     );
     this.saveState();
 
@@ -800,12 +870,25 @@ class GymStore {
   cobrarSaldoMembresia({ membresia_id, numero_recibo, monto_abonado, metodo_pago, observacion = '', cobrado_por = 'Recepción' }) {
     const mem = this.state.membresias.find((m) => m.id === membresia_id);
     if (!mem) throw new Error('Membresía no encontrada');
+    if (mem.estado_pago === 'ANULADO') throw new Error('Esta membresía está anulada.');
+
+    this.recalcularMembresia(mem.id);
+    const moneda = this.state.configuracion.moneda || 'S/';
+    const abonadoNum = Number(Number(monto_abonado).toFixed(2));
+    if (!Number.isFinite(abonadoNum) || abonadoNum <= 0) {
+      throw new Error('Ingresa un monto válido mayor a 0.');
+    }
+    if (abonadoNum > Number(mem.saldo_pendiente) + 0.009) {
+      throw new Error(`El abono supera el saldo pendiente actual (${moneda} ${Number(mem.saldo_pendiente).toFixed(2)}).`);
+    }
 
     const alumno = this.state.alumnos.find((a) => a.id === mem.alumno_id);
-    const abonadoNum = Number(Number(monto_abonado).toFixed(2));
     const nroReciboFormateado = formatearNumeroRecibo(
       numero_recibo || this.state.configuracion.proximo_nro_recibo
     );
+    if (this.existeNumeroRecibo(nroReciboFormateado)) {
+      throw new Error(`El N° de recibo #${nroReciboFormateado} ya está registrado en otro recibo activo.`);
+    }
 
     const nuevoSaldoEstimado = Math.max(0, Number((mem.saldo_pendiente - abonadoNum).toFixed(2)));
 
@@ -821,7 +904,7 @@ class GymStore {
         observacion.trim() ||
         (nuevoSaldoEstimado === 0
           ? `Cancelación de saldo - ${mem.concepto}`
-          : `Abono parcial a cuenta - ${mem.concepto} (Resta ${this.state.configuracion.moneda} ${nuevoSaldoEstimado.toFixed(2)})`),
+          : `Abono parcial a cuenta - ${mem.concepto} (Resta ${moneda} ${nuevoSaldoEstimado.toFixed(2)})`),
       cobrado_por: (cobrado_por || 'Recepción').trim() || 'Recepción',
       anulado: false,
       created_at: new Date().toISOString()
@@ -835,13 +918,17 @@ class GymStore {
     }
 
     this.recalcularMembresia(mem.id);
-    const moneda = this.state.configuracion.moneda || 'S/';
     const nombreAlumno = alumno ? `${alumno.nombres} ${alumno.apellidos}`.trim() : 'Alumno';
     const rolLabel = this.getRolDispositivoActual() === 'ADMIN' ? 'Admin' : 'Recepción';
+    const operadorSesion = this.getOperadorActual();
+    const actorLog =
+      operadorSesion.toLowerCase() !== nuevoRecibo.cobrado_por.toLowerCase()
+        ? `${operadorSesion} (Cobró: ${nuevoRecibo.cobrado_por} • ${rolLabel})`
+        : `${nuevoRecibo.cobrado_por} (${rolLabel})`;
     this.registrarActividad(
       'Cobro de saldo',
       `Recibo N° ${nroReciboFormateado} - ${nombreAlumno} (${moneda} ${abonadoNum.toFixed(2)})`,
-      `${nuevoRecibo.cobrado_por} (${rolLabel})`
+      actorLog
     );
     this.saveState();
 
@@ -856,6 +943,9 @@ class GymStore {
   toggleAnularRecibo(reciboId) {
     const rec = this.state.recibos.find((r) => r.id === reciboId);
     if (!rec) return null;
+    if (rec.anulado && this.existeNumeroRecibo(rec.numero_recibo, rec.id)) {
+      throw new Error(`No se puede reactivar: el N° de recibo #${rec.numero_recibo} ya está en uso en otro recibo activo.`);
+    }
     rec.anulado = !rec.anulado;
     this.recalcularMembresia(rec.membresia_id);
     this.registrarActividad(
@@ -1117,8 +1207,10 @@ class GymStore {
         .filter((m) => m.alumno_id === alumno.id && m.estado_pago !== 'ANULADO')
         .sort((a, b) => (a.fecha_fin < b.fecha_fin ? 1 : -1));
 
+      const hoyISO = getLocalDateISO();
       const memsMensuales = memsAlumno.filter((m) => m.tipo_operacion !== 'SOLO_INSCRIPCION');
-      const ultimaMembresia = memsMensuales[0] || null;
+      const memVigenteHoy = memsMensuales.find((m) => m.fecha_inicio <= hoyISO && m.fecha_fin >= hoyISO);
+      const ultimaMembresia = memVigenteHoy || memsMensuales[0] || null;
       const saldoTotalPendiente = memsAlumno.reduce((acc, m) => acc + Number(m.saldo_pendiente || 0), 0);
 
       // Resolver horario del alumno
@@ -1199,12 +1291,23 @@ class GymStore {
     });
   }
 
-  // Limpiar datos de demostración para empezar desde cero con el gimnasio real
+  // Limpiar solo los 4 alumnos y registros de demostración, conservando alumnos reales
   limpiarDatosParaProduccion() {
-    this.state.alumnos = [];
-    this.state.membresias = [];
-    this.state.recibos = [];
-    this.state.configuracion.proximo_nro_recibo = 1;
+    const demoAluIds = new Set(['alu-1', 'alu-2', 'alu-3', 'alu-4']);
+    const demoMemIds = new Set(['mem-1', 'mem-2', 'mem-3', 'mem-4']);
+    const demoRecIds = new Set(['rec-1', 'rec-2', 'rec-3', 'rec-4']);
+
+    this.state.alumnos = (this.state.alumnos || []).filter((a) => !demoAluIds.has(a.id));
+    this.state.membresias = (this.state.membresias || []).filter(
+      (m) => !demoMemIds.has(m.id) && !demoAluIds.has(m.alumno_id)
+    );
+    this.state.recibos = (this.state.recibos || []).filter(
+      (r) => !demoRecIds.has(r.id) && !demoAluIds.has(r.alumno_id) && !demoMemIds.has(r.membresia_id)
+    );
+    if (this.state.recibos.length === 0) {
+      this.state.configuracion.proximo_nro_recibo = 1;
+    }
+    this.registrarActividad('Datos de ejemplo eliminados', 'Se retiraron los 4 registros de demostración');
     this.saveState();
   }
 

@@ -15,7 +15,7 @@
   />
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
-  <link rel="stylesheet" href="./src/css/styles.css?v=7" />
+  <link rel="stylesheet" href="./src/css/styles.css?v=8" />
 </head>
 <body class="light-theme bg-slate-950 text-slate-100 min-h-screen selection:bg-red-600 selection:text-white" data-brand="ROJO">
 
@@ -182,6 +182,12 @@
 
           <!-- Botones rápidos en barra superior -->
           <div class="flex items-center gap-2.5">
+            <span
+              id="badge-cloud-sync-mobile"
+              class="lg:hidden inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30"
+            >
+              ☁️ Conectado
+            </span>
             <button
               id="btn-toggle-tema-mobile"
               type="button"
@@ -2048,11 +2054,11 @@
   <div id="toast-container" class="fixed bottom-20 lg:bottom-5 right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
   <!-- SCRIPTS MODULARES DE LA APLICACIÓN -->
-  <script src="./src/js/cloudConfig.js?v=7"></script>
-  <script src="./src/js/store.js?v=7"></script>
-  <script src="./src/js/receiptGenerator.js?v=7"></script>
-  <script src="./src/js/excelExporter.js?v=7"></script>
-  <script src="./src/js/supabaseSync.js?v=7"></script>
-  <script src="./src/js/app.js?v=7"></script>
+  <script src="./src/js/cloudConfig.js?v=8"></script>
+  <script src="./src/js/store.js?v=8"></script>
+  <script src="./src/js/receiptGenerator.js?v=8"></script>
+  <script src="./src/js/excelExporter.js?v=8"></script>
+  <script src="./src/js/supabaseSync.js?v=8"></script>
+  <script src="./src/js/app.js?v=8"></script>
 </body>
 </html>

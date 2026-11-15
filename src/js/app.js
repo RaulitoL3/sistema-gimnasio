@@ -36,6 +36,15 @@
   let adminInactivityTimer = null;
   const ADMIN_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
 
+  function escapeHTML(val) {
+    return String(val ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
   function mostrarToast(mensaje, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
@@ -47,7 +56,7 @@
     };
     const toast = document.createElement('div');
     toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all duration-300 ${colores[tipo] || colores.success}`;
-    toast.innerHTML = `<span>${mensaje}</span>`;
+    toast.innerHTML = `<span>${escapeHTML(mensaje)}</span>`;
     container.appendChild(toast);
     setTimeout(() => {
       toast.style.opacity = '0';
@@ -74,6 +83,12 @@
     if (!esAdmin()) return;
     adminInactivityTimer = setTimeout(() => {
       if (esAdmin()) {
+        store.registrarActividad(
+          'Auto-bloqueo por inactividad',
+          'Sesión Admin cerrada tras 5 min sin uso',
+          null,
+          true
+        );
         store.setRolDispositivoActual('RECEPCION');
         if (tabActual === 'configuracion' || tabActual === 'planes') {
           cambiarTab('dashboard');
@@ -200,10 +215,14 @@
   }
 
   function verificarAccesoInicial() {
+    const pedirPin = store.state.configuracion.pedir_pin_inicio !== false;
+    if (!pedirPin) {
+      sessionStorage.setItem('gym_acceso_recepcion_ok', 'true');
+    }
     const yaVerificado = sessionStorage.getItem('gym_acceso_recepcion_ok') === 'true';
     store.setRolDispositivoActual('RECEPCION');
     poblarSelectoresOperadores();
-    if (!yaVerificado) {
+    if (!yaVerificado && pedirPin) {
       const errEl = document.getElementById('acceso-inicial-error');
       const inputEl = document.getElementById('acceso-inicial-pin');
       if (errEl) errEl.classList.add('hidden');
@@ -357,7 +376,7 @@
       horarios
         .map((h) => {
           const count = store.state.alumnos.filter((a) => a.horario_id === h.id).length;
-          return `<option value="${h.id}">🕒 ${h.hora} (${h.dias}) — ${h.nombre} [${count}]</option>`;
+          return `<option value="${escapeHTML(h.id)}">🕒 ${escapeHTML(h.hora)} (${escapeHTML(h.dias)}) — ${escapeHTML(h.nombre)} [${count}]</option>`;
         })
         .join('') +
       `<option value="SIN_HORARIO">⚪ Sin horario asignado</option>`;
@@ -495,11 +514,11 @@
             <div class="p-4 hover:bg-slate-800/40 transition flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-extrabold text-sm sm:text-base text-white">${alu.nombre_completo}</span>
+                  <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(alu.nombre_completo)}</span>
                   ${badgeHtml}
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${mem ? `${mem.concepto} • Vence el: <b class="text-slate-200">${formatDatePE(mem.fecha_fin)}</b>` : ''}
+                  ${mem ? `${escapeHTML(mem.concepto)} • Vence el: <b class="text-slate-200">${formatDatePE(mem.fecha_fin)}</b>` : ''}
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -544,19 +563,19 @@
             apellidos: '',
             nombre_completo: 'Alumno'
           };
-          const waLink = generarLinkWhatsAppRecordatorio(alu, store.state.configuracion, 'SALDO');
+          const waLink = generarLinkWhatsAppRecordatorio(alu, store.state.configuracion, 'SALDO', mem);
 
           return `
             <div class="p-4 hover:bg-slate-800/40 transition flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-extrabold text-sm sm:text-base text-white">${alu.nombre_completo}</span>
+                  <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(alu.nombre_completo)}</span>
                   <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">
                     ⚠️ Debe ${moneda} ${Number(mem.saldo_pendiente).toFixed(2)}
                   </span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${mem.concepto} • Total: ${moneda} ${Number(mem.total_a_pagar).toFixed(2)} (Ya pagó: ${moneda} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
+                  ${escapeHTML(mem.concepto)} • Total: ${moneda} ${Number(mem.total_a_pagar).toFixed(2)} (Ya pagó: ${moneda} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
                 </p>
               </div>
               <div class="flex items-center gap-2">
@@ -606,9 +625,9 @@
             (act) => `
             <div class="px-5 py-3 flex flex-wrap items-center justify-between gap-2 text-xs hover:bg-slate-800/40">
               <div class="flex items-center gap-2.5 min-w-0">
-                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-bold text-slate-300 whitespace-nowrap">${act.actor || 'Sistema'}</span>
-                <span class="font-extrabold text-white">${act.accion}</span>
-                <span class="text-slate-400 truncate">${act.detalle || ''}</span>
+                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-bold text-slate-300 whitespace-nowrap">${escapeHTML(act.actor || 'Sistema')}</span>
+                <span class="font-extrabold text-white">${escapeHTML(act.accion)}</span>
+                <span class="text-slate-400 truncate">${escapeHTML(act.detalle || '')}</span>
               </div>
               <span class="text-slate-400 tabular-nums whitespace-nowrap">${formatDateTimePE(act.fecha)}</span>
             </div>`
@@ -632,7 +651,7 @@
     return `
       <tr class="${claseAnulado} transition">
         <td class="py-3.5 px-4 font-mono font-black text-emerald-400 tabular-nums">
-          #${r.numero_recibo}
+          #${escapeHTML(r.numero_recibo)}
         </td>
         ${
           !compacto
@@ -642,13 +661,13 @@
         <td class="py-3.5 px-4">
           <button
             type="button"
-            onclick="window.AppUI.abrirHistorialAlumno('${r.alumno_id}')"
+            onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(r.alumno_id)}')"
             class="font-extrabold text-white hover:text-red-400 text-left transition cursor-pointer"
           >
-            ${r.nombre_completo}
+            ${escapeHTML(r.nombre_completo)}
           </button>
         </td>
-        <td class="py-3.5 px-4 text-xs font-semibold text-slate-300">${m.concepto || 'Membresía'}</td>
+        <td class="py-3.5 px-4 text-xs font-semibold text-slate-300">${escapeHTML(m.concepto || 'Membresía')}</td>
         <td class="py-3.5 px-4 text-xs font-bold text-slate-200 tabular-nums whitespace-nowrap">${formatDatePE(m.fecha_inicio)}</td>
         <td class="py-3.5 px-4 text-xs font-bold text-red-300 tabular-nums whitespace-nowrap">${
           m.tipo_operacion === 'SOLO_INSCRIPCION'
@@ -662,14 +681,14 @@
           !compacto
             ? `<td class="py-3.5 px-4 text-center">
                 <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
-                  ${METODO_LABELS[r.metodo_pago] || r.metodo_pago}
+                  ${METODO_LABELS[r.metodo_pago] || escapeHTML(r.metodo_pago)}
                 </span>
               </td>`
             : ''
         }
         <td class="py-3.5 px-4 text-center whitespace-nowrap">
           <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800/80 text-sky-300 border border-slate-700/80">
-            👤 ${r.cobrado_por || 'Recepción'}
+            👤 ${escapeHTML(r.cobrado_por || 'Recepción')}
           </span>
         </td>
         <td class="py-3.5 px-4 text-center whitespace-nowrap">
@@ -894,21 +913,21 @@
                 <!-- Avatar de color de cinturón + Nombre Grande -->
                 <div class="flex items-center gap-3.5">
                   <div class="w-14 h-14 rounded-2xl border-2 flex items-center justify-center font-black text-lg flex-shrink-0 shadow-sm ${belt.bg}">
-                    ${iniciales}
+                    ${escapeHTML(iniciales)}
                   </div>
                   <div class="min-w-0 flex-1">
                     <button
                       type="button"
-                      onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                      onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
                       class="font-black text-base sm:text-lg text-white hover:text-red-400 text-left truncate block w-full cursor-pointer"
                     >
-                      ${a.nombre_completo}
+                      ${escapeHTML(a.nombre_completo)}
                     </button>
-                    <p class="text-xs font-bold text-slate-400 mt-0.5">${belt.label}</p>
-                    <p class="text-xs font-bold text-sky-400 mt-0.5 truncate">🕒 ${a.horario_texto || 'Sin horario asignado'}</p>
+                    <p class="text-xs font-bold text-slate-400 mt-0.5">${escapeHTML(belt.label)}</p>
+                    <p class="text-xs font-bold text-sky-400 mt-0.5 truncate">🕒 ${escapeHTML(a.horario_texto || 'Sin horario asignado')}</p>
                     ${
                       a.telefono_whatsapp
-                        ? `<p class="text-xs text-slate-400 tabular-nums mt-0.5">📱 WhatsApp: <b>${a.telefono_whatsapp}</b></p>`
+                        ? `<p class="text-xs text-slate-400 tabular-nums mt-0.5">📱 WhatsApp: <b>${escapeHTML(a.telefono_whatsapp)}</b></p>`
                         : ''
                     }
                   </div>
@@ -918,7 +937,7 @@
                 <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2 text-xs">
                   <div class="flex items-center justify-between">
                     <span class="text-slate-400 font-semibold">Último Plan:</span>
-                    <span class="font-extrabold text-white">${mem ? mem.concepto : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Matrícula / Inscripción' : '—'}</span>
+                    <span class="font-extrabold text-white">${mem ? escapeHTML(mem.concepto) : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Matrícula / Inscripción' : '—'}</span>
                   </div>
                   <div class="flex items-center justify-between">
                     <span class="text-slate-400 font-semibold">Vigencia del Mes:</span>
@@ -930,8 +949,8 @@
                     <span class="text-slate-400 font-bold">Lo que debe (Saldo):</span>
                     ${
                       a.saldo_total_pendiente > 0
-                        ? `<span class="text-sm font-black text-amber-400 tabular-nums">⚠️ Debe ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</span>`
-                        : `<span class="font-extrabold text-emerald-400">✅ No debe nada (${moneda} 0.00)</span>`
+                        ? `<span class="text-sm font-black text-amber-400 tabular-nums">⚠️ Debe ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</span>`
+                        : `<span class="font-extrabold text-emerald-400">✅ No debe nada (${escapeHTML(moneda)} 0.00)</span>`
                     }
                   </div>
                 </div>
@@ -941,14 +960,14 @@
               <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                  onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
                   class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
                 >
                   📄 Ficha (${a.total_membresias})
                 </button>
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirModalEditarAlumno('${a.id}')"
+                  onclick="window.AppUI.abrirModalEditarAlumno('${escapeHTML(a.id)}')"
                   title="Cambiar Horario, Cinturón o Datos del Alumno"
                   class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
                 >
@@ -958,7 +977,7 @@
                   memConDeuda
                     ? `<button
                         type="button"
-                        onclick="window.AppUI.abrirModalCobrarSaldo('${memConDeuda.id}')"
+                        onclick="window.AppUI.abrirModalCobrarSaldo('${escapeHTML(memConDeuda.id)}')"
                         class="keep-white-text py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-black text-white cursor-pointer"
                       >
                         💰 Deuda
@@ -967,7 +986,7 @@
                 }
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirModalRenovar('${a.id}')"
+                  onclick="window.AppUI.abrirModalRenovar('${escapeHTML(a.id)}')"
                   class="keep-white-text flex-1 py-2 px-3 rounded-xl brand-bg text-xs font-black text-white cursor-pointer"
                 >
                   ${a.estado_vigencia === 'SOLO_INSCRITO' ? '🥊 Cobrar 1er Mes' : '🥊 Cobrar Mes'}
@@ -1002,7 +1021,7 @@
 
           const saldoHtml =
             a.saldo_total_pendiente > 0
-              ? `<span class="font-black text-amber-400 tabular-nums">Debe ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</span>`
+              ? `<span class="font-black text-amber-400 tabular-nums">Debe ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</span>`
               : `<span class="text-emerald-400 font-bold tabular-nums">No debe nada</span>`;
 
           return `
@@ -1011,24 +1030,24 @@
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                    onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
                     class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
                   >
-                    ${a.nombre_completo}
+                    ${escapeHTML(a.nombre_completo)}
                   </button>
                   ${badgeInscrito}
                 </div>
                 <span class="text-[11px] text-slate-400">${a.total_membresias} registro(s)</span>
               </td>
               <td class="py-3.5 px-4 text-xs">
-                <div class="font-semibold text-slate-200">${a.grado_cinturon || 'Principiante'}</div>
-                <div class="text-[11px] font-bold text-sky-400 mt-0.5">🕒 ${a.horario_texto || 'Sin horario'}</div>
+                <div class="font-semibold text-slate-200">${escapeHTML(a.grado_cinturon || 'Principiante')}</div>
+                <div class="text-[11px] font-bold text-sky-400 mt-0.5">🕒 ${escapeHTML(a.horario_texto || 'Sin horario')}</div>
               </td>
               <td class="py-3.5 px-4 text-xs text-slate-300 tabular-nums">
-                <div>${a.telefono_whatsapp || '—'}</div>
-                ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${a.contacto_emergencia}</div>` : ''}
+                <div>${a.telefono_whatsapp ? escapeHTML(a.telefono_whatsapp) : '—'}</div>
+                ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${escapeHTML(a.contacto_emergencia)}</div>` : ''}
               </td>
-              <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? mem.concepto : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : '—'}</td>
+              <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? escapeHTML(mem.concepto) : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : '—'}</td>
               <td class="py-3.5 px-4 text-xs font-semibold text-slate-200 tabular-nums">${mem ? formatDatePE(mem.fecha_inicio) : '—'}</td>
               <td class="py-3.5 px-4 text-xs font-semibold text-red-300 tabular-nums">${mem ? formatDatePE(mem.fecha_fin) : '—'}</td>
               <td class="py-3.5 px-4 text-center whitespace-nowrap">${badgeVigencia}</td>
@@ -1037,7 +1056,7 @@
                 <div class="inline-flex items-center gap-1.5">
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirModalEditarAlumno('${a.id}')"
+                    onclick="window.AppUI.abrirModalEditarAlumno('${escapeHTML(a.id)}')"
                     title="Cambiar horario, cinturón o datos"
                     class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
                   >
@@ -1045,14 +1064,14 @@
                   </button>
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirHistorialAlumno('${a.id}')"
+                    onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
                     class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
                   >
                     Ver Ficha
                   </button>
                   <button
                     type="button"
-                    onclick="window.AppUI.abrirModalRenovar('${a.id}')"
+                    onclick="window.AppUI.abrirModalRenovar('${escapeHTML(a.id)}')"
                     class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
                   >
                     ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
@@ -1093,31 +1112,31 @@
         <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-2">
           <div class="flex items-center gap-2.5 min-w-0">
             <span class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs font-black flex-shrink-0 ${belt.bg}">
-              ${obtenerIniciales(alu.nombres, alu.apellidos)}
+              ${escapeHTML(obtenerIniciales(alu.nombres, alu.apellidos))}
             </span>
             <div class="min-w-0">
               <div class="flex items-center gap-2 flex-wrap">
                 <button
                   type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${alu.id}')"
+                  onclick="window.AppUI.abrirHistorialAlumno('${escapeHTML(alu.id)}')"
                   class="font-bold text-xs sm:text-sm text-white hover:text-red-400 truncate cursor-pointer"
                 >
-                  ${alu.nombre_completo}
+                  ${escapeHTML(alu.nombre_completo)}
                 </button>
                 ${badgeEstado}
                 ${
                   alu.saldo_total_pendiente > 0
-                    ? `<span class="text-[11px] font-black text-amber-400 tabular-nums">⚠️ Debe ${moneda}${alu.saldo_total_pendiente.toFixed(0)}</span>`
+                    ? `<span class="text-[11px] font-black text-amber-400 tabular-nums">⚠️ Debe ${escapeHTML(moneda)}${alu.saldo_total_pendiente.toFixed(0)}</span>`
                     : ''
                 }
               </div>
-              <p class="text-[11px] text-slate-400">${belt.label} ${alu.telefono_whatsapp ? `• 📱 ${alu.telefono_whatsapp}` : ''}</p>
+              <p class="text-[11px] text-slate-400">${escapeHTML(belt.label)} ${alu.telefono_whatsapp ? `• 📱 ${escapeHTML(alu.telefono_whatsapp)}` : ''}</p>
             </div>
           </div>
           <div class="flex items-center gap-1.5">
             <button
               type="button"
-              onclick="window.AppUI.abrirModalEditarAlumno('${alu.id}')"
+              onclick="window.AppUI.abrirModalEditarAlumno('${escapeHTML(alu.id)}')"
               title="Cambiar de horario o editar datos"
               class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
             >
@@ -1125,7 +1144,7 @@
             </button>
             <button
               type="button"
-              onclick="window.AppUI.abrirModalRenovar('${alu.id}')"
+              onclick="window.AppUI.abrirModalRenovar('${escapeHTML(alu.id)}')"
               class="keep-white-text px-3 py-1.5 rounded-lg brand-bg text-xs font-bold text-white cursor-pointer"
             >
               ${alu.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
@@ -1151,16 +1170,16 @@
               <div>
                 <div class="flex flex-wrap items-center gap-2">
                   <span class="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
-                    🥋 ${h.disciplina || 'General'}
+                    🥋 ${escapeHTML(h.disciplina || 'General')}
                   </span>
                   <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                    📅 ${h.dias}
+                    📅 ${escapeHTML(h.dias)}
                   </span>
                   <span class="text-xs font-black px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    🕒 ${h.hora}
+                    🕒 ${escapeHTML(h.hora)}
                   </span>
                 </div>
-                <h4 class="font-black text-base sm:text-lg text-white mt-2">${h.nombre}</h4>
+                <h4 class="font-black text-base sm:text-lg text-white mt-2">${escapeHTML(h.nombre)}</h4>
               </div>
 
               <!-- Contadores del Grupo -->
@@ -1199,7 +1218,7 @@
             <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
               <button
                 type="button"
-                onclick="window.AppUI.inscribirEnHorario('${h.id}')"
+                onclick="window.AppUI.inscribirEnHorario('${escapeHTML(h.id)}')"
                 class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
               >
                 + Inscribir Alumno en este Turno
@@ -1207,14 +1226,14 @@
               <div class="flex items-center gap-2">
                 <button
                   type="button"
-                  onclick="window.AppUI.editarHorario('${h.id}')"
+                  onclick="window.AppUI.editarHorario('${escapeHTML(h.id)}')"
                   class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
                 >
                   Editar Horario
                 </button>
                 <button
                   type="button"
-                  onclick="window.AppUI.eliminarHorario('${h.id}')"
+                  onclick="window.AppUI.eliminarHorario('${escapeHTML(h.id)}')"
                   class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
                 >
                   Eliminar
@@ -1265,24 +1284,24 @@
           <div>
             <div class="flex items-center justify-between gap-2">
               <span class="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
-                ${p.disciplina}
+                ${escapeHTML(p.disciplina)}
               </span>
-              <span class="text-xs font-bold text-slate-400 tabular-nums">${p.duracion_dias} días</span>
+              <span class="text-xs font-bold text-slate-400 tabular-nums">${Number(p.duracion_dias)} días</span>
             </div>
-            <h4 class="font-black text-base text-white mt-2.5">${p.nombre}</h4>
-            <p class="text-2xl font-black text-emerald-400 mt-1 tabular-nums">${moneda} ${Number(p.precio_sugerido).toFixed(2)}</p>
+            <h4 class="font-black text-base text-white mt-2.5">${escapeHTML(p.nombre)}</h4>
+            <p class="text-2xl font-black text-emerald-400 mt-1 tabular-nums">${escapeHTML(moneda)} ${Number(p.precio_sugerido).toFixed(2)}</p>
           </div>
           <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
             <button
               type="button"
-              onclick="window.AppUI.editarPlan('${p.id}')"
+              onclick="window.AppUI.editarPlan('${escapeHTML(p.id)}')"
               class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
             >
               Editar Precio
             </button>
             <button
               type="button"
-              onclick="window.AppUI.eliminarPlan('${p.id}')"
+              onclick="window.AppUI.eliminarPlan('${escapeHTML(p.id)}')"
               class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
             >
               Eliminar
@@ -1298,6 +1317,17 @@
   // 5. RENDER CONFIGURACIÓN
   // =========================================================================
   function renderConfiguracion() {
+    const activeEl = document.activeElement;
+    if (
+      tabActual === 'configuracion' &&
+      activeEl &&
+      activeEl.matches('input, textarea, select') &&
+      (document.getElementById('form-configuracion')?.contains(activeEl) ||
+        activeEl.id === 'cfg-supabase-url' ||
+        activeEl.id === 'cfg-supabase-key')
+    ) {
+      return;
+    }
     const cfg = store.state.configuracion;
     document.getElementById('cfg-nombre').value = cfg.nombre_academia || '';
     document.getElementById('cfg-subtitulo').value = cfg.subtitulo || '';
@@ -1344,7 +1374,7 @@
       planes
         .map(
           (p) =>
-            `<option value="${p.id}">${p.nombre} — ${moneda} ${Number(p.precio_sugerido).toFixed(2)} (${p.duracion_dias} días)</option>`
+            `<option value="${escapeHTML(p.id)}">${escapeHTML(p.nombre)} — ${escapeHTML(moneda)} ${Number(p.precio_sugerido).toFixed(2)} (${Number(p.duracion_dias)} días)</option>`
         )
         .join('') + `<option value="PERSONALIZADO">✍️ Otro monto / Plan personalizado</option>`;
 
@@ -1355,7 +1385,7 @@
         horarios
           .map(
             (h) =>
-              `<option value="${h.id}">🕒 ${h.hora} (${h.dias}) — ${h.nombre}</option>`
+              `<option value="${escapeHTML(h.id)}">🕒 ${escapeHTML(h.hora)} (${escapeHTML(h.dias)}) — ${escapeHTML(h.nombre)}</option>`
           )
           .join('') + `<option value="">-- Sin horario fijo / Horario libre --</option>`;
     }
@@ -1367,7 +1397,7 @@
       alumnos
         .map(
           (a) =>
-            `<option value="${a.id}">${a.nombre_completo} (${
+            `<option value="${escapeHTML(a.id)}">${escapeHTML(a.nombre_completo)} (${
               a.ultima_membresia
                 ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
                 : a.estado_vigencia === 'SOLO_INSCRITO'
@@ -1392,7 +1422,7 @@
       : alumnos.slice(0, 12);
 
     if (filtrados.length === 0) {
-      lista.innerHTML = `<div class="p-3 text-xs text-slate-400">No se encontraron alumnos con "${filtro}".</div>`;
+      lista.innerHTML = `<div class="p-3 text-xs text-slate-400">No se encontraron alumnos con "${escapeHTML(filtro)}".</div>`;
       lista.classList.remove('hidden');
       return;
     }
@@ -1408,14 +1438,14 @@
         return `
           <button
             type="button"
-            data-pick-alumno="${a.id}"
+            data-pick-alumno="${escapeHTML(a.id)}"
             class="w-full text-left px-3.5 py-2.5 hover:bg-slate-800/60 transition flex items-center justify-between gap-2 cursor-pointer"
           >
             <div>
-              <span class="block text-xs sm:text-sm font-extrabold text-white">${a.nombre_completo}</span>
-              <span class="block text-[11px] text-slate-400">${a.horario_texto || 'Sin horario'} • ${a.telefono_whatsapp || 'Sin celular'}</span>
+              <span class="block text-xs sm:text-sm font-extrabold text-white">${escapeHTML(a.nombre_completo)}</span>
+              <span class="block text-[11px] text-slate-400">${escapeHTML(a.horario_texto || 'Sin horario')} • ${escapeHTML(a.telefono_whatsapp || 'Sin celular')}</span>
             </div>
-            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 whitespace-nowrap">${estadoTexto}</span>
+            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 whitespace-nowrap">${escapeHTML(estadoTexto)}</span>
           </button>`;
       })
       .join('');
@@ -1501,18 +1531,26 @@
     aplicarPlanSeleccionado();
   }
 
-  function aplicarPlanSeleccionado() {
+  function aplicarPlanSeleccionado(conservarAbonoManual = false) {
     const planId = document.getElementById('pago-select-plan')?.value;
     const plan = store.state.planes.find((p) => p.id === planId);
     const fechaInicio = document.getElementById('pago-fecha-inicio')?.value || getLocalDateISO();
     const montoInscripcion = Number(document.getElementById('pago-monto-inscripcion')?.value || 0);
+    const inputAbonado = document.getElementById('pago-monto-abonado');
+    const conservarManual =
+      conservarAbonoManual === true &&
+      inputAbonado &&
+      inputAbonado.value !== '' &&
+      Number(inputAbonado.value) !== ultimoTotalSincronizado;
 
     if (tipoOperacionPago === 'SOLO_INSCRIPCION') {
       document.getElementById('pago-concepto').value = 'Inscripción / Matrícula en el Sistema';
       document.getElementById('pago-fecha-fin').value = fechaInicio;
       const total = montoInscripcion.toFixed(2);
       document.getElementById('pago-total-pagar').value = total;
-      document.getElementById('pago-monto-abonado').value = total;
+      if (!conservarManual && inputAbonado) {
+        inputAbonado.value = total;
+      }
       ultimoTotalSincronizado = Number(total);
     } else if (plan) {
       const precioPlan = Number(plan.precio_sugerido || 0);
@@ -1521,14 +1559,18 @@
         document.getElementById('pago-fecha-fin').value = calcularFechaFin(fechaInicio, plan.duracion_dias);
         const total = (montoInscripcion + precioPlan).toFixed(2);
         document.getElementById('pago-total-pagar').value = total;
-        document.getElementById('pago-monto-abonado').value = total;
+        if (!conservarManual && inputAbonado) {
+          inputAbonado.value = total;
+        }
         ultimoTotalSincronizado = Number(total);
       } else {
         document.getElementById('pago-concepto').value = plan.nombre;
         document.getElementById('pago-fecha-fin').value = calcularFechaFin(fechaInicio, plan.duracion_dias);
         const total = precioPlan.toFixed(2);
         document.getElementById('pago-total-pagar').value = total;
-        document.getElementById('pago-monto-abonado').value = total;
+        if (!conservarManual && inputAbonado) {
+          inputAbonado.value = total;
+        }
         ultimoTotalSincronizado = Number(total);
       }
     } else if (planId === 'PERSONALIZADO') {
@@ -1600,7 +1642,7 @@
           .map((m) => {
             const alu = store.state.alumnos.find((a) => a.id === m.alumno_id);
             const nombre = alu ? `${alu.nombres} ${alu.apellidos}` : 'Alumno';
-            return `<option value="${m.id}">${nombre} — Debe ${moneda} ${Number(m.saldo_pendiente).toFixed(2)} (${m.concepto})</option>`;
+            return `<option value="${escapeHTML(m.id)}">${escapeHTML(nombre)} — Debe ${escapeHTML(moneda)} ${Number(m.saldo_pendiente).toFixed(2)} (${escapeHTML(m.concepto)})</option>`;
           })
           .join('');
       }
@@ -1825,12 +1867,14 @@
             <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-extrabold text-sm text-white">${m.concepto}</span>
+                  <span class="font-extrabold text-sm text-white">${escapeHTML(m.concepto)}</span>
                   <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ${
                     m.estado_pago === 'PAGADO'
                       ? 'bg-emerald-500/20 text-emerald-400'
+                      : m.estado_pago === 'ANULADO'
+                      ? 'bg-red-500/20 text-red-400'
                       : 'bg-amber-500/20 text-amber-300'
-                  }">${m.estado_pago === 'PAGADO' ? 'PAGADO COMPLETO' : 'DEBE SALDO'}</span>
+                  }">${m.estado_pago === 'PAGADO' ? 'PAGADO COMPLETO' : m.estado_pago === 'ANULADO' ? 'ANULADO' : 'DEBE SALDO'}</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-1 tabular-nums">
                   ${
@@ -1841,15 +1885,15 @@
                 </p>
               </div>
               <div class="text-right tabular-nums">
-                <div class="text-xs text-slate-300">Total a Pagar: <b>${moneda} ${Number(m.total_a_pagar).toFixed(2)}</b></div>
+                <div class="text-xs text-slate-300">Total a Pagar: <b>${escapeHTML(moneda)} ${Number(m.total_a_pagar).toFixed(2)}</b></div>
                 <div class="text-xs ${Number(m.saldo_pendiente) > 0 ? 'text-amber-400 font-black' : 'text-emerald-400 font-bold'}">
-                  Lo que debe: ${moneda} ${Number(m.saldo_pendiente).toFixed(2)}
+                  Lo que debe: ${escapeHTML(moneda)} ${Number(m.saldo_pendiente).toFixed(2)}
                 </div>
                 ${
                   Number(m.saldo_pendiente) > 0
                     ? `<button
                         type="button"
-                        onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalCobrarSaldo('${m.id}')"
+                        onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalCobrarSaldo('${escapeHTML(m.id)}')"
                         class="keep-white-text mt-1.5 px-3 py-1 rounded-lg bg-amber-600 text-white font-black text-xs cursor-pointer"
                       >
                         Cobrar lo que debe
@@ -1871,17 +1915,17 @@
               r.anulado ? 'opacity-50 line-through' : ''
             }">
               <div class="flex items-center gap-3">
-                <span class="font-mono font-black text-sm text-emerald-400 tabular-nums">#${r.numero_recibo}</span>
+                <span class="font-mono font-black text-sm text-emerald-400 tabular-nums">#${escapeHTML(r.numero_recibo)}</span>
                 <div>
-                  <p class="text-xs font-bold text-white">${r.observacion || r.membresia?.concepto}</p>
-                  <p class="text-[11px] text-slate-400 tabular-nums">${formatDateTimePE(r.fecha_pago)} • ${METODO_LABELS[r.metodo_pago] || r.metodo_pago}</p>
+                  <p class="text-xs font-bold text-white">${escapeHTML(r.observacion || r.membresia?.concepto || '')}</p>
+                  <p class="text-[11px] text-slate-400 tabular-nums">${formatDateTimePE(r.fecha_pago)} • ${escapeHTML(METODO_LABELS[r.metodo_pago] || r.metodo_pago)}</p>
                 </div>
               </div>
               <div class="flex items-center gap-2">
-                <span class="font-black text-sm text-emerald-400 tabular-nums">${moneda} ${Number(r.monto_abonado).toFixed(2)}</span>
+                <span class="font-black text-sm text-emerald-400 tabular-nums">${escapeHTML(moneda)} ${Number(r.monto_abonado).toFixed(2)}</span>
                 <button
                   type="button"
-                  onclick="window.AppUI.verComprobanteDigital('${r.id}')"
+                  onclick="window.AppUI.verComprobanteDigital('${escapeHTML(r.id)}')"
                   class="keep-white-text px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
                 >
                   Ver Recibo
@@ -1896,14 +1940,14 @@
         <div class="flex flex-wrap gap-2">
           <button
             type="button"
-            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${alu.id}')"
+            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${escapeHTML(alu.id)}')"
             class="keep-white-text px-4 py-2.5 rounded-xl brand-bg text-white font-extrabold text-xs sm:text-sm cursor-pointer"
           >
             + Cobrar Nueva Mensualidad
           </button>
           <button
             type="button"
-            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalEditarAlumno('${alu.id}')"
+            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalEditarAlumno('${escapeHTML(alu.id)}')"
             class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs sm:text-sm cursor-pointer"
           >
             ✏️ Cambiar Horario / Cinturón / Datos
@@ -1911,7 +1955,7 @@
         </div>
         <button
           type="button"
-          onclick="window.AppUI.eliminarAlumnoConfirm('${alu.id}')"
+          onclick="window.AppUI.eliminarAlumnoConfirm('${escapeHTML(alu.id)}')"
           class="text-xs font-bold text-red-400 hover:text-red-300 cursor-pointer"
         >
           Eliminar Alumno
@@ -1944,7 +1988,7 @@
         horarios
           .map(
             (h) =>
-              `<option value="${h.id}">🕒 ${h.hora} (${h.dias}) — ${h.nombre}</option>`
+              `<option value="${escapeHTML(h.id)}">🕒 ${escapeHTML(h.hora)} (${escapeHTML(h.dias)}) — ${escapeHTML(h.nombre)}</option>`
           )
           .join('') + `<option value="">-- Sin horario asignado --</option>`;
       selectHorario.value = alu.horario_id || '';
@@ -2010,6 +2054,11 @@
   }
 
   function editarPlan(planId) {
+    if (!esAdmin()) {
+      mostrarToast('Solo el Administrador puede editar planes o precios', 'warning');
+      abrirModal('modal-login-admin');
+      return;
+    }
     const p = store.state.planes.find((x) => x.id === planId);
     if (!p) return;
     document.getElementById('contenedor-form-plan')?.classList.remove('hidden');
@@ -2033,6 +2082,11 @@
   }
 
   function eliminarPlan(planId) {
+    if (!esAdmin()) {
+      mostrarToast('Solo el Administrador puede eliminar planes', 'warning');
+      abrirModal('modal-login-admin');
+      return;
+    }
     if (!confirm('¿Deseas eliminar este plan del catálogo?')) return;
     store.eliminarPlan(planId);
     mostrarToast('Plan eliminado del catálogo', 'info');
@@ -2044,12 +2098,16 @@
       abrirModal('modal-login-admin');
       return;
     }
-    const rec = store.toggleAnularRecibo(reciboId);
-    if (!rec) return;
-    mostrarToast(
-      rec.anulado ? `Recibo #${rec.numero_recibo} anulado. Saldo recalculado.` : `Recibo #${rec.numero_recibo} reactivado.`,
-      rec.anulado ? 'warning' : 'success'
-    );
+    try {
+      const rec = store.toggleAnularRecibo(reciboId);
+      if (!rec) return;
+      mostrarToast(
+        rec.anulado ? `Recibo #${rec.numero_recibo} anulado. Saldo recalculado.` : `Recibo #${rec.numero_recibo} reactivado.`,
+        rec.anulado ? 'warning' : 'success'
+      );
+    } catch (err) {
+      mostrarToast(err?.message || 'No se pudo cambiar el estado del recibo', 'error');
+    }
   }
 
   function eliminarAlumnoConfirm(alumnoId) {
@@ -2123,7 +2181,7 @@
       .slice(0, 4);
 
     if (alumnosMatch.length === 0 && recibosMatch.length === 0) {
-      resultsBox.innerHTML = `<div class="p-4 text-sm text-slate-400 text-center font-medium">Sin resultados para "${query}"</div>`;
+      resultsBox.innerHTML = `<div class="p-4 text-sm text-slate-400 text-center font-medium">Sin resultados para "${escapeHTML(query)}"</div>`;
       resultsBox.classList.remove('hidden');
       return;
     }
@@ -2150,25 +2208,25 @@
             <div class="p-3.5 hover:bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
               <div>
                 <div class="flex items-center gap-2">
-                  <span class="font-extrabold text-sm sm:text-base text-white">${a.nombre_completo}</span>
+                  <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(a.nombre_completo)}</span>
                   <span class="text-xs font-extrabold">${semaforo}</span>
                 </div>
                 <p class="text-xs text-slate-400 tabular-nums mt-0.5">
-                  ${mem ? `${mem.concepto} • Vence: ${formatDatePE(mem.fecha_fin)}` : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Inscrito (Pendiente 1ra Mensualidad)' : 'Sin membresía'}
-                  ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Lo que debe: ${moneda} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
+                  ${mem ? `${escapeHTML(mem.concepto)} • Vence: ${formatDatePE(mem.fecha_fin)}` : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Inscrito (Pendiente 1ra Mensualidad)' : 'Sin membresía'}
+                  ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Lo que debe: ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
                 </p>
               </div>
               <div class="flex items-center gap-1.5">
                 <button
                   type="button"
-                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirHistorialAlumno('${a.id}')"
+                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirHistorialAlumno('${escapeHTML(a.id)}')"
                   class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white cursor-pointer"
                 >
                   Ver Ficha
                 </button>
                 <button
                   type="button"
-                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${a.id}')"
+                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${escapeHTML(a.id)}')"
                   class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
                 >
                   ${a.estado_vigencia === 'SOLO_INSCRITO' ? '+ 1er Mes' : 'Cobrar Mes'}
@@ -2186,15 +2244,15 @@
           (r) => `
           <div class="p-3.5 hover:bg-slate-800/40 border-b border-slate-800 flex items-center justify-between gap-2">
             <div>
-              <span class="font-mono font-black text-sm text-emerald-400">#${r.numero_recibo}</span>
-              <span class="text-sm font-extrabold text-white ml-2">${r.nombre_completo}</span>
+              <span class="font-mono font-black text-sm text-emerald-400">#${escapeHTML(r.numero_recibo)}</span>
+              <span class="text-sm font-extrabold text-white ml-2">${escapeHTML(r.nombre_completo)}</span>
               <p class="text-xs text-slate-400 tabular-nums">
-                ${r.membresia?.concepto} • Pagó: ${moneda} ${Number(r.monto_abonado).toFixed(2)}
+                ${escapeHTML(r.membresia?.concepto || '')} • Pagó: ${escapeHTML(moneda)} ${Number(r.monto_abonado).toFixed(2)}
               </p>
             </div>
             <button
               type="button"
-              onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.verComprobanteDigital('${r.id}')"
+              onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.verComprobanteDigital('${escapeHTML(r.id)}')"
               class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold cursor-pointer"
             >
               Ver Recibo
@@ -2342,13 +2400,13 @@
       const alu = store.getAlumnosConEstado().find((a) => a.id === aluId);
       if (alu?.ultima_membresia) {
         document.getElementById('pago-fecha-inicio').value = alu.ultima_membresia.fecha_fin;
-        aplicarPlanSeleccionado();
+        aplicarPlanSeleccionado(true);
       }
     });
 
     document.getElementById('btn-renovar-hoy')?.addEventListener('click', () => {
       document.getElementById('pago-fecha-inicio').value = getLocalDateISO();
-      aplicarPlanSeleccionado();
+      aplicarPlanSeleccionado(true);
     });
 
     // Cambio de Plan o Fecha de Inicio recalcula Fecha de Finalización
@@ -2399,14 +2457,12 @@
         return;
       }
 
-      const resultado = store.registrarInscripcionOPago({
+      const soloPagoExistente =
+        modoModalPago === 'EXISTENTE' &&
+        document.getElementById('bloque-datos-personales-form')?.classList.contains('hidden');
+
+      const payloadPago = {
         alumnoId,
-        nombres: document.getElementById('pago-nombres').value,
-        apellidos: document.getElementById('pago-apellidos').value,
-        telefono_whatsapp: document.getElementById('pago-whatsapp').value,
-        grado_cinturon: document.getElementById('pago-grado').value,
-        horario_id: document.getElementById('pago-horario')?.value || null,
-        contacto_emergencia: document.getElementById('pago-emergencia').value,
         tipo_operacion: tipoOperacionPago,
         incluye_inscripcion: tipoOperacionPago !== 'MENSUALIDAD',
         monto_inscripcion: document.getElementById('pago-monto-inscripcion')?.value || 0,
@@ -2420,13 +2476,28 @@
         metodo_pago: document.getElementById('pago-metodo').value,
         cobrado_por: document.getElementById('pago-cobrado-por')?.value || 'Recepción',
         observacion: document.getElementById('pago-observacion').value
-      });
+      };
 
-      cerrarModal('modal-nuevo-pago');
-      mostrarToast(`Recibo #${resultado.recibo.numero_recibo} guardado correctamente`);
+      if (!soloPagoExistente) {
+        payloadPago.nombres = document.getElementById('pago-nombres').value;
+        payloadPago.apellidos = document.getElementById('pago-apellidos').value;
+        payloadPago.telefono_whatsapp = document.getElementById('pago-whatsapp').value;
+        payloadPago.grado_cinturon = document.getElementById('pago-grado').value;
+        payloadPago.horario_id = document.getElementById('pago-horario')?.value || null;
+        payloadPago.contacto_emergencia = document.getElementById('pago-emergencia').value;
+      }
 
-      if (submitMode === 'digital') {
-        verComprobanteDigital(resultado.recibo.id);
+      try {
+        const resultado = store.registrarInscripcionOPago(payloadPago);
+
+        cerrarModal('modal-nuevo-pago');
+        mostrarToast(`Recibo #${resultado.recibo.numero_recibo} guardado correctamente`);
+
+        if (submitMode === 'digital') {
+          verComprobanteDigital(resultado.recibo.id);
+        }
+      } catch (err) {
+        mostrarToast(err?.message || 'Revisa los montos y el número de recibo antes de guardar', 'error');
       }
     });
 
@@ -2450,18 +2521,22 @@
     // Submit Formulario Cobrar Saldo Pendiente
     document.getElementById('form-cobrar-saldo')?.addEventListener('submit', (e) => {
       e.preventDefault();
-      const resultado = store.cobrarSaldoMembresia({
-        membresia_id: document.getElementById('saldo-membresia-id').value,
-        numero_recibo: document.getElementById('saldo-numero-recibo').value,
-        monto_abonado: document.getElementById('saldo-monto-abonar').value,
-        metodo_pago: document.getElementById('saldo-metodo-pago').value,
-        cobrado_por: document.getElementById('saldo-cobrado-por')?.value || 'Recepción',
-        observacion: document.getElementById('saldo-observacion').value
-      });
+      try {
+        const resultado = store.cobrarSaldoMembresia({
+          membresia_id: document.getElementById('saldo-membresia-id').value,
+          numero_recibo: document.getElementById('saldo-numero-recibo').value,
+          monto_abonado: document.getElementById('saldo-monto-abonar').value,
+          metodo_pago: document.getElementById('saldo-metodo-pago').value,
+          cobrado_por: document.getElementById('saldo-cobrado-por')?.value || 'Recepción',
+          observacion: document.getElementById('saldo-observacion').value
+        });
 
-      cerrarModal('modal-cobrar-saldo');
-      mostrarToast(`Saldo cobrado en Recibo #${resultado.recibo.numero_recibo}`);
-      verComprobanteDigital(resultado.recibo.id);
+        cerrarModal('modal-cobrar-saldo');
+        mostrarToast(`Saldo cobrado en Recibo #${resultado.recibo.numero_recibo}`);
+        verComprobanteDigital(resultado.recibo.id);
+      } catch (err) {
+        mostrarToast(err?.message || 'No se pudo registrar el abono de saldo', 'error');
+      }
     });
 
     // Botones del Visor de Comprobante Digital
@@ -2486,6 +2561,30 @@
       if (!reciboActualEnVisor) return;
       const canvas = document.getElementById('canvas-comprobante');
       const waUrl = generarLinkWhatsAppRecibo(reciboActualEnVisor, store.state.configuracion);
+      const esMovil = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+
+      if (esMovil && canvas && typeof navigator.share === 'function' && typeof navigator.canShare === 'function') {
+        try {
+          const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+          if (blob) {
+            const file = new File([blob], `recibo-${reciboActualEnVisor.numero_recibo}.png`, {
+              type: 'image/png'
+            });
+            if (navigator.canShare({ files: [file] })) {
+              await navigator.share({
+                files: [file],
+                title: `Recibo #${reciboActualEnVisor.numero_recibo}`,
+                text: `Comprobante de pago - ${reciboActualEnVisor.nombre_completo}`
+              });
+              mostrarToast('✅ Comprobante compartido desde tu dispositivo');
+              return;
+            }
+          }
+        } catch (shareErr) {
+          if (shareErr?.name === 'AbortError') return;
+        }
+      }
+
       try {
         await copiarCanvasAlPortapapeles(canvas);
         mostrarToast('✅ Imagen copiada al portapapeles. Abriendo WhatsApp...');
@@ -2682,6 +2781,11 @@
     // Gestión de Planes
     document.getElementById('form-plan')?.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede crear o editar planes', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       store.guardarPlan({
         id: document.getElementById('plan-id').value || null,
         nombre: document.getElementById('plan-nombre').value,
@@ -2700,6 +2804,11 @@
       if (!box) return;
       const estaOculto = box.classList.contains('hidden');
       if (estaOculto) {
+        if (!esAdmin()) {
+          mostrarToast('Solo el Administrador puede agregar o editar planes', 'warning');
+          abrirModal('modal-login-admin');
+          return;
+        }
         box.classList.remove('hidden');
         document.getElementById('plan-nombre')?.focus();
       } else {
@@ -2710,6 +2819,11 @@
     // Configuración de la Academia
     document.getElementById('form-configuracion')?.addEventListener('submit', (e) => {
       e.preventDefault();
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede guardar la configuración', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       store.actualizarConfiguracion({
         nombre_academia: document.getElementById('cfg-nombre').value.trim(),
         subtitulo: document.getElementById('cfg-subtitulo').value.trim(),
@@ -2873,6 +2987,11 @@
 
     // Conexión Supabase Cloud
     document.getElementById('btn-test-supabase')?.addEventListener('click', async () => {
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede probar o modificar Supabase Cloud', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       const url = document.getElementById('cfg-supabase-url').value.trim();
       const key = document.getElementById('cfg-supabase-key').value.trim();
       store.actualizarConfiguracion({ supabase_url: url, supabase_anon_key: key });
@@ -2894,19 +3013,52 @@
     document.getElementById('input-restore-json')?.addEventListener('change', (e) => {
       const file = e.target.files?.[0];
       if (!file) return;
+      if (!esAdmin()) {
+        e.target.value = '';
+        mostrarToast('Solo el Administrador puede restaurar copias de seguridad', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       const reader = new FileReader();
       reader.onload = (ev) => {
+        const snapshotPrevio = JSON.parse(JSON.stringify(store.state));
         try {
           const parsed = JSON.parse(ev.target.result);
-          if (parsed && Array.isArray(parsed.alumnos) && Array.isArray(parsed.recibos)) {
-            store.saveState(parsed);
-            store.recalcularTodasLasMembresias();
-            mostrarToast('Copia de seguridad restaurada con éxito');
-          } else {
-            mostrarToast('El archivo JSON no tiene el formato del sistema', 'error');
+          if (
+            !parsed ||
+            typeof parsed !== 'object' ||
+            !Array.isArray(parsed.alumnos) ||
+            !Array.isArray(parsed.recibos) ||
+            (parsed.membresias !== undefined && !Array.isArray(parsed.membresias)) ||
+            (parsed.planes !== undefined && !Array.isArray(parsed.planes)) ||
+            (parsed.horarios !== undefined && !Array.isArray(parsed.horarios))
+          ) {
+            mostrarToast('El archivo JSON no tiene un esquema válido del sistema', 'error');
+            return;
           }
+
+          const copiaValidada = JSON.parse(JSON.stringify(parsed));
+          if (!Array.isArray(copiaValidada.membresias)) copiaValidada.membresias = [];
+
+          const rolLocal = store.state.configuracion?.rol_actual || 'ADMIN';
+          const operadorLocal = store.getOperadorActual();
+          store.asegurarHorariosYValoresPorDefecto(copiaValidada);
+          copiaValidada.configuracion.rol_actual = rolLocal;
+          copiaValidada.configuracion.operador_actual = operadorLocal;
+
+          store.isFreshInitialState = false;
+          store.saveState(copiaValidada);
+          store.recalcularTodasLasMembresias();
+          mostrarToast('Copia de seguridad restaurada y normalizada con éxito');
         } catch (err) {
-          mostrarToast('Error al leer el archivo JSON', 'error');
+          try {
+            store.saveState(snapshotPrevio);
+          } catch (rollbackErr) {
+            console.error('Error revirtiendo snapshot tras falla de restauración:', rollbackErr);
+          }
+          mostrarToast('Error al validar o aplicar el archivo JSON. Se mantuvo el estado previo.', 'error');
+        } finally {
+          e.target.value = '';
         }
       };
       reader.readAsText(file);
@@ -2914,17 +3066,27 @@
 
     // Limpiar datos de ejemplo para producción
     document.getElementById('btn-limpiar-produccion')?.addEventListener('click', () => {
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede limpiar los datos de ejemplo', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       if (
         !confirm(
-          '¿Deseas borrar los 4 alumnos y recibos de ejemplo para empezar tu numeración limpia desde el Recibo #000001?'
+          '¿Deseas eliminar únicamente los 4 alumnos, membresías y recibos de ejemplo (conservando cualquier registro real)? Si no quedan recibos, el correlativo volverá al #000001.'
         )
       )
         return;
       store.limpiarDatosParaProduccion();
-      mostrarToast('Sistema limpio y listo para operar desde el Recibo #000001');
+      mostrarToast('Datos de demostración eliminados. Registros reales conservados.');
     });
 
     document.getElementById('btn-restaurar-demo')?.addEventListener('click', () => {
+      if (!esAdmin()) {
+        mostrarToast('Solo el Administrador puede restaurar datos de ejemplo', 'warning');
+        abrirModal('modal-login-admin');
+        return;
+      }
       if (!confirm('¿Restaurar los datos de demostración?')) return;
       store.restaurarDatosDemo();
       mostrarToast('Datos de ejemplo restaurados');
