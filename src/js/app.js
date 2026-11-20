@@ -27,6 +27,32 @@
 
   const { probarConexionSupabase, subirDatosASupabase } = global.SupabaseSync;
 
+  const {
+    escapeHTML,
+    safeId,
+    toastContent,
+    optionsOperadoresFiltro,
+    emptyState,
+    alertaVencimientoItem,
+    alertaSaldoItem,
+    auditoriaItem,
+    filaRecibo,
+    tarjetaAlumno,
+    filaAlumnoTabla,
+    filaAlumnoHorario,
+    grupoHorarioCard,
+    bloqueSinHorarioCard,
+    tarjetaPlan,
+    optionsPlanes,
+    optionsHorarios,
+    optionsAlumnos,
+    optionsDeudores,
+    sugerenciasAlumnosLista,
+    bannerVencimientoAnterior,
+    historialAlumnoContenido,
+    busquedaGlobalContenido
+  } = global.UITemplates;
+
   let tabActual = 'dashboard';
   let vistaAlumnosModo = 'TARJETAS'; // 'TARJETAS' | 'TABLA'
   let modoModalPago = 'NUEVO'; // 'NUEVO' | 'EXISTENTE'
@@ -37,38 +63,16 @@
   let configFormDirty = false;
   const ADMIN_INACTIVITY_MS = 5 * 60 * 1000; // 5 minutos
 
-  function escapeHTML(val) {
-    return String(val ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
-  }
-
-  function safeId(val) {
-    if (global.GymStore && typeof global.GymStore.sanitizarId === 'function') {
-      return global.GymStore.sanitizarId(val);
-    }
-    return String(val ?? '').replace(/[^a-zA-Z0-9_-]/g, '');
-  }
-
   function mostrarToast(mensaje, tipo = 'success') {
     const container = document.getElementById('toast-container');
     if (!container) return;
-    const colores = {
-      success: 'bg-emerald-600 border-emerald-400 text-white keep-white-text',
-      warning: 'bg-amber-500 border-amber-300 text-slate-950',
-      error: 'bg-red-600 border-red-400 text-white keep-white-text',
-      info: 'bg-sky-600 border-sky-400 text-white keep-white-text'
-    };
     const toast = document.createElement('div');
-    toast.className = `pointer-events-auto px-4 py-3 rounded-xl border shadow-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all duration-300 ${colores[tipo] || colores.success}`;
-    toast.innerHTML = `<span>${escapeHTML(mensaje)}</span>`;
+    toast.classList.add('ui-toast');
+    toast.dataset.tone = ['success', 'warning', 'error', 'info'].includes(tipo) ? tipo : 'success';
+    toast.innerHTML = toastContent(mensaje);
     container.appendChild(toast);
     setTimeout(() => {
-      toast.style.opacity = '0';
-      toast.style.transform = 'translateY(8px)';
+      toast.dataset.closing = 'true';
       setTimeout(() => toast.remove(), 300);
     }, 3400);
   }
@@ -134,6 +138,17 @@
     });
   }
 
+  function renderEmptyTableRow(tbody, colSpan, text) {
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = colSpan;
+    td.innerHTML = emptyState({ text });
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+  }
+
   function poblarSelectoresOperadores() {
     const perfiles = obtenerPerfilesOperadores();
     const operadorActual = store.getOperadorActual();
@@ -146,7 +161,7 @@
 
       agregarOpcionesSelect(selAcceso, [
         ...perfiles.map((p) => ({ value: p, text: p })),
-        { value: 'OTRO', text: '✏️ Otro nombre (escribir)...' }
+        { value: 'OTRO', text: '✏️ Otro nombre (escribir)…' }
       ]);
 
       if (valorPrevio === 'OTRO') {
@@ -204,21 +219,7 @@
     const filtroOp = document.getElementById('filtro-recibos-operador');
     if (filtroOp) {
       const previoFiltro = filtroOp.value || 'TODOS';
-      const operadoresCaja = [...perfiles];
-      (store.state.recibos || []).forEach((r) => {
-        const cob = String(r.cobrado_por || '').trim();
-        if (cob && !operadoresCaja.some((x) => x.toLowerCase() === cob.toLowerCase())) {
-          operadoresCaja.push(cob);
-        }
-      });
-      agregarOpcionesSelect(filtroOp, [
-        { value: 'TODOS', text: 'Todos los operadores' },
-        ...operadoresCaja.map((p) => ({ value: p, text: `👤 ${p}` }))
-      ]);
-      const matchOption = Array.from(filtroOp.options).find(
-        (opt) => opt.value.toLowerCase() === previoFiltro.toLowerCase()
-      );
-      filtroOp.value = matchOption ? matchOption.value : 'TODOS';
+      filtroOp.innerHTML = optionsOperadoresFiltro(perfiles, store.state.recibos || [], previoFiltro);
     }
   }
 
@@ -259,47 +260,21 @@
   }
 
   /**
-   * Devuelve colores e iniciales según el cinturón/grado del alumno
-   */
-  function obtenerEstiloCinturon(grado = '') {
-    const g = grado.toLowerCase();
-    if (g.includes('azul')) {
-      return { bg: 'bg-blue-600 text-white border-blue-400', label: '🔵 Cinturón Azul' };
-    }
-    if (g.includes('morado')) {
-      return { bg: 'bg-purple-600 text-white border-purple-400', label: '🟣 Cinturón Morado' };
-    }
-    if (g.includes('marrón') || g.includes('marron')) {
-      return { bg: 'bg-amber-800 text-white border-amber-600', label: '🟤 Cinturón Marrón' };
-    }
-    if (g.includes('negro')) {
-      return { bg: 'bg-slate-950 text-amber-400 border-amber-400', label: '⚫ Cinturón Negro' };
-    }
-    if (g.includes('competidor')) {
-      return { bg: 'bg-red-600 text-white border-red-400', label: '🔴 Competidor' };
-    }
-    if (g.includes('infantil') || g.includes('kids')) {
-      return { bg: 'bg-emerald-600 text-white border-emerald-400', label: '🟢 Infantil / Kids' };
-    }
-    return { bg: 'bg-slate-200 text-slate-800 border-slate-400', label: '⚪ Principiante / Blanco' };
-  }
-
-  function obtenerIniciales(nombres = '', apellidos = '') {
-    const n = (nombres || '').trim().charAt(0).toUpperCase();
-    const a = (apellidos || '').trim().charAt(0).toUpperCase();
-    return (n + a) || '🥋';
-  }
-
-  /**
    * Aplica tema Claro/Oscuro, color de marca y logo de la academia
    */
   function aplicarIdentidadVisual() {
     const cfg = store.state.configuracion;
     const colorTema = cfg.color_tema || 'ROJO';
     const temaVisual = cfg.tema_visual || 'CLARO';
+    const themeVal = temaVisual === 'OSCURO' ? 'dark' : 'light';
 
-    document.body.setAttribute('data-brand', colorTema);
-    document.body.classList.toggle('light-theme', temaVisual === 'CLARO');
+    document.documentElement.dataset.theme = themeVal;
+    document.body.dataset.theme = themeVal;
+    document.body.dataset.brand = colorTema;
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute('content', themeVal === 'dark' ? '#0B0F14' : '#F5F6F8');
+    }
 
     const txtToggle = document.getElementById('texto-toggle-tema');
     if (txtToggle) {
@@ -350,17 +325,9 @@
       if (sec) sec.classList.toggle('hidden', t !== tabName);
     });
 
-    document.querySelectorAll('.nav-tab-btn').forEach((btn) => {
+    document.querySelectorAll('.nav-tab-btn, .mobile-nav-btn').forEach((btn) => {
       const isSelected = btn.getAttribute('data-tab') === tabName;
-      btn.className = isSelected
-        ? 'nav-tab-btn keep-white-text w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-extrabold brand-bg text-white shadow-md whitespace-nowrap transition cursor-pointer'
-        : 'nav-tab-btn w-full flex items-center justify-between gap-3 px-4 py-3.5 rounded-xl text-sm font-bold text-slate-300 hover:bg-slate-800 hover:text-white whitespace-nowrap transition cursor-pointer';
-    });
-
-    document.querySelectorAll('.mobile-nav-btn').forEach((btn) => {
-      const isSelected = btn.getAttribute('data-tab') === tabName;
-      btn.classList.toggle('text-red-500', isSelected);
-      btn.classList.toggle('text-slate-400', !isSelected);
+      btn.dataset.active = isSelected ? 'true' : 'false';
     });
 
     renderTodo();
@@ -382,15 +349,17 @@
     const valorActual = selectFiltro.value || 'TODOS';
     const horarios = store.state.horarios || [];
 
-    selectFiltro.innerHTML =
-      `<option value="TODOS">Todos los horarios (${store.state.alumnos.length})</option>` +
-      horarios
-        .map((h) => {
-          const count = store.state.alumnos.filter((a) => a.horario_id === h.id).length;
-          return `<option value="${escapeHTML(h.id)}">🕒 ${escapeHTML(h.hora)} (${escapeHTML(h.dias)}) — ${escapeHTML(h.nombre)} [${count}]</option>`;
-        })
-        .join('') +
-      `<option value="SIN_HORARIO">⚪ Sin horario asignado</option>`;
+    agregarOpcionesSelect(selectFiltro, [
+      { value: 'TODOS', text: `Todos los horarios (${store.state.alumnos.length})` },
+      ...horarios.map((h) => {
+        const count = store.state.alumnos.filter((a) => a.horario_id === h.id).length;
+        return {
+          value: h.id,
+          text: `🕒 ${h.hora} (${h.dias}) — ${h.nombre} [${count}]`
+        };
+      }),
+      { value: 'SIN_HORARIO', text: '⚪ Sin horario asignado' }
+    ]);
 
     if ([...selectFiltro.options].some((o) => o.value === valorActual)) {
       selectFiltro.value = valorActual;
@@ -422,15 +391,11 @@
     const badgeRol = document.getElementById('badge-rol-actual');
     const btnRol = document.getElementById('btn-cambiar-rol');
     if (badgeRol && btnRol) {
-      if (esAdmin()) {
-        badgeRol.textContent = `🔓 ADMIN • ${operadorActual}`;
-        btnRol.className =
-          'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-red-500/20 hover:bg-red-500/30 text-red-300 border border-red-500/30 flex items-center gap-1 transition cursor-pointer';
-      } else {
-        badgeRol.textContent = `🔒 RECEPCIÓN • ${operadorActual}`;
-        btnRol.className =
-          'text-[11px] font-bold px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/30 flex items-center gap-1 transition cursor-pointer';
-      }
+      const admin = esAdmin();
+      badgeRol.textContent = admin
+        ? `🔓 ADMIN • ${operadorActual}`
+        : `🔒 RECEPCIÓN • ${operadorActual}`;
+      btnRol.dataset.role = admin ? 'ADMIN' : 'RECEPCION';
     }
 
     renderDashboard(moneda);
@@ -503,121 +468,64 @@
     document.getElementById('badge-count-vencimientos').textContent = alertasVencimiento.length;
 
     const contenedorVenc = document.getElementById('dashboard-lista-vencimientos');
-    if (alertasVencimiento.length === 0) {
-      contenedorVenc.innerHTML = `
-        <div class="p-8 text-center text-slate-400 text-sm font-medium">
-          🎉 ¡Excelente! Todos los alumnos están al día con sus mensualidades.
-        </div>`;
-    } else {
-      contenedorVenc.innerHTML = alertasVencimiento
-        .map((alu) => {
-          const mem = alu.ultima_membresia;
-          const esVencido = alu.dias_restantes < 0;
-          const badgeHtml = esVencido
-            ? `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">🔴 Venció hace ${Math.abs(alu.dias_restantes)} día(s)</span>`
-            : alu.dias_restantes === 0
-            ? `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">🟡 Vence HOY</span>`
-            : `<span class="text-xs font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30">🟡 Vence en ${alu.dias_restantes} día(s)</span>`;
-
-          const waLink = generarLinkWhatsAppRecordatorio(alu, store.state.configuracion, 'VENCIMIENTO');
-
-          return `
-            <div class="p-4 hover:bg-slate-800/40 transition flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(alu.nombre_completo)}</span>
-                  ${badgeHtml}
-                </div>
-                <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${mem ? `${escapeHTML(mem.concepto)} • Vence el: <b class="text-slate-200">${formatDatePE(mem.fecha_fin)}</b>` : ''}
-                </p>
-              </div>
-              <div class="flex items-center gap-2">
-                <a
-                  href="${waLink}"
-                  target="_blank"
-                  rel="noopener"
-                  title="Enviar recordatorio por WhatsApp"
-                  class="keep-white-text px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <i data-lucide="message-circle" class="w-4 h-4"></i>
-                  <span>Avisar</span>
-                </a>
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirModalRenovar('${safeId(alu.id)}')"
-                  class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-white text-xs font-extrabold cursor-pointer"
-                >
-                  Cobrar Mes
-                </button>
-              </div>
-            </div>`;
-        })
-        .join('');
+    if (contenedorVenc) {
+      if (alertasVencimiento.length === 0) {
+        contenedorVenc.innerHTML = emptyState({
+          text: '🎉 ¡Excelente! Todos los alumnos están al día con sus mensualidades.'
+        });
+      } else {
+        const helpersVenc = {
+          formatDatePE,
+          generarLinkWhatsAppRecordatorio,
+          config: store.state.configuracion
+        };
+        contenedorVenc.innerHTML = alertasVencimiento
+          .map((alu) => alertaVencimientoItem(alu, helpersVenc))
+          .join('');
+      }
     }
 
     // Bandeja 2: Alumnos con Saldo Pendiente ("Lo que deben")
     document.getElementById('badge-count-saldos').textContent = membresiasConSaldo.length;
     const contenedorSaldos = document.getElementById('dashboard-lista-saldos');
 
-    if (membresiasConSaldo.length === 0) {
-      contenedorSaldos.innerHTML = `
-        <div class="p-8 text-center text-slate-400 text-sm font-medium">
-          ✅ Ningún alumno debe saldo pendiente en este momento.
-        </div>`;
-    } else {
-      contenedorSaldos.innerHTML = membresiasConSaldo
-        .map((mem) => {
-          const alu = alumnosConEstado.find((a) => a.id === mem.alumno_id) || {
-            id: mem.alumno_id,
-            nombres: 'Alumno',
-            apellidos: '',
-            nombre_completo: 'Alumno'
-          };
-          const waLink = generarLinkWhatsAppRecordatorio(alu, store.state.configuracion, 'SALDO', mem);
-
-          return `
-            <div class="p-4 hover:bg-slate-800/40 transition flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center gap-2 flex-wrap">
-                  <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(alu.nombre_completo)}</span>
-                  <span class="text-xs font-black px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">
-                    ⚠️ Debe ${escapeHTML(moneda)} ${Number(mem.saldo_pendiente).toFixed(2)}
-                  </span>
-                </div>
-                <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${escapeHTML(mem.concepto)} • Total: ${escapeHTML(moneda)} ${Number(mem.total_a_pagar).toFixed(2)} (Ya pagó: ${escapeHTML(moneda)} ${Number(mem.monto_pagado_acumulado).toFixed(2)})
-                </p>
-              </div>
-              <div class="flex items-center gap-2">
-                <a
-                  href="${waLink}"
-                  target="_blank"
-                  rel="noopener"
-                  class="keep-white-text px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"
-                >
-                  <i data-lucide="message-circle" class="w-4 h-4"></i>
-                  <span>WhatsApp</span>
-                </a>
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirModalCobrarSaldo('${safeId(mem.id)}')"
-                  class="keep-white-text px-3.5 py-2 rounded-xl bg-amber-600 hover:bg-amber-500 text-white text-xs font-extrabold cursor-pointer"
-                >
-                  Cobrar Saldo
-                </button>
-              </div>
-            </div>`;
-        })
-        .join('');
+    if (contenedorSaldos) {
+      if (membresiasConSaldo.length === 0) {
+        contenedorSaldos.innerHTML = emptyState({
+          text: '✅ Ningún alumno debe saldo pendiente en este momento.'
+        });
+      } else {
+        const helpersSaldo = {
+          generarLinkWhatsAppRecordatorio,
+          config: store.state.configuracion
+        };
+        contenedorSaldos.innerHTML = membresiasConSaldo
+          .map((mem) => {
+            const alu = alumnosConEstado.find((a) => a.id === mem.alumno_id) || {
+              id: mem.alumno_id,
+              nombres: 'Alumno',
+              apellidos: '',
+              nombre_completo: 'Alumno'
+            };
+            return alertaSaldoItem(mem, alu, moneda, helpersSaldo);
+          })
+          .join('');
+      }
     }
 
     // Tabla Últimos Recibos en Dashboard
     const ultimosRecibos = store.getRecibosDetallados().slice(0, 8);
     const tbodyUltimos = document.getElementById('dashboard-ultimos-recibos');
-    tbodyUltimos.innerHTML = ultimosRecibos
-      .map((r) => crearFilaReciboHTML(r, moneda, true))
-      .join('');
+    if (tbodyUltimos) {
+      if (ultimosRecibos.length === 0) {
+        renderEmptyTableRow(tbodyUltimos, 10, 'Aún no hay recibos registrados.');
+      } else {
+        const helpersRecibo = { formatDatePE, formatDateTimePE, METODO_LABELS };
+        tbodyUltimos.innerHTML = ultimosRecibos
+          .map((r) => filaRecibo(r, moneda, true, helpersRecibo))
+          .join('');
+      }
+    }
 
     // Bitácora de Auditoría en vivo (visible para saber quién realizó cada cambio)
     const bloqueAudit = document.getElementById('bloque-auditoria-admin');
@@ -626,128 +534,17 @@
       bloqueAudit.classList.remove('hidden');
       const actividades = (store.state.actividades || []).slice(0, 25);
       if (actividades.length === 0) {
-        listaAudit.innerHTML = `
-          <div class="p-6 text-center text-xs text-slate-400">
-            Aún no hay movimientos registrados en la bitácora de esta sesión.
-          </div>`;
+        listaAudit.innerHTML = emptyState({
+          text: 'Aún no hay movimientos registrados en la bitácora de esta sesión.'
+        });
       } else {
         listaAudit.innerHTML = actividades
-          .map(
-            (act) => `
-            <div class="px-5 py-3 flex flex-wrap items-center justify-between gap-2 text-xs hover:bg-slate-800/40">
-              <div class="flex items-center gap-2.5 min-w-0">
-                <span class="px-2 py-0.5 rounded-md bg-slate-800 border border-slate-700 font-bold text-slate-300 whitespace-nowrap">${escapeHTML(act.actor || 'Sistema')}</span>
-                <span class="font-extrabold text-white">${escapeHTML(act.accion)}</span>
-                <span class="text-slate-400 truncate">${escapeHTML(act.detalle || '')}</span>
-              </div>
-              <span class="text-slate-400 tabular-nums whitespace-nowrap">${formatDateTimePE(act.fecha)}</span>
-            </div>`
-          )
+          .map((act) => auditoriaItem(act, { formatDateTimePE }))
           .join('');
       }
     }
-  }
 
-  function crearFilaReciboHTML(r, moneda, compacto = false) {
-    const m = r.membresia || {};
-    const saldo = Number(m.saldo_pendiente || 0);
-    const claseAnulado = r.anulado ? 'opacity-50 line-through bg-red-950/20' : 'hover:bg-slate-800/40';
-
-    const badgeSaldo = r.anulado
-      ? `<span class="text-xs font-bold text-red-400">ANULADO</span>`
-      : saldo > 0
-      ? `<span class="inline-flex items-center gap-1 text-xs font-black text-amber-400 tabular-nums">Debe ${escapeHTML(moneda)} ${saldo.toFixed(2)}</span>`
-      : `<span class="text-xs font-bold text-emerald-400 tabular-nums">No debe nada</span>`;
-
-    return `
-      <tr class="${claseAnulado} transition">
-        <td class="py-3.5 px-4 font-mono font-black text-emerald-400 tabular-nums">
-          #${escapeHTML(r.numero_recibo)}
-        </td>
-        ${
-          !compacto
-            ? `<td class="py-3.5 px-4 text-xs font-medium text-slate-300 tabular-nums whitespace-nowrap">${formatDateTimePE(r.fecha_pago)}</td>`
-            : ''
-        }
-        <td class="py-3.5 px-4">
-          <button
-            type="button"
-            onclick="window.AppUI.abrirHistorialAlumno('${safeId(r.alumno_id)}')"
-            class="font-extrabold text-white hover:text-red-400 text-left transition cursor-pointer"
-          >
-            ${escapeHTML(r.nombre_completo)}
-          </button>
-        </td>
-        <td class="py-3.5 px-4 text-xs font-semibold text-slate-300">${escapeHTML(m.concepto || 'Membresía')}</td>
-        <td class="py-3.5 px-4 text-xs font-bold text-slate-200 tabular-nums whitespace-nowrap">${formatDatePE(m.fecha_inicio)}</td>
-        <td class="py-3.5 px-4 text-xs font-bold text-red-300 tabular-nums whitespace-nowrap">${
-          m.tipo_operacion === 'SOLO_INSCRIPCION'
-            ? `<span class="text-xs font-extrabold text-emerald-400">PAGO ÚNICO (INSCRITO)</span>`
-            : formatDatePE(m.fecha_fin)
-        }</td>
-        <td class="py-3.5 px-4 text-right font-bold text-slate-200 tabular-nums whitespace-nowrap">${escapeHTML(moneda)} ${Number(m.total_a_pagar || 0).toFixed(2)}</td>
-        <td class="py-3.5 px-4 text-right font-black text-emerald-400 tabular-nums whitespace-nowrap">${escapeHTML(moneda)} ${Number(r.monto_abonado || 0).toFixed(2)}</td>
-        <td class="py-3.5 px-4 text-right tabular-nums whitespace-nowrap">${badgeSaldo}</td>
-        ${
-          !compacto
-            ? `<td class="py-3.5 px-4 text-center">
-                <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 border border-slate-700">
-                  ${METODO_LABELS[r.metodo_pago] || escapeHTML(r.metodo_pago)}
-                </span>
-              </td>`
-            : ''
-        }
-        <td class="py-3.5 px-4 text-center whitespace-nowrap">
-          <span class="text-xs font-bold px-2.5 py-1 rounded-lg bg-slate-800/80 text-sky-300 border border-slate-700/80">
-            👤 ${escapeHTML(r.cobrado_por || 'Recepción')}
-          </span>
-        </td>
-        <td class="py-3.5 px-4 text-center whitespace-nowrap">
-          <div class="inline-flex items-center gap-1.5">
-            <button
-              type="button"
-              onclick="window.AppUI.verComprobanteDigital('${safeId(r.id)}')"
-              title="Ver Comprobante Digital / Enviar por WhatsApp"
-              class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
-            >
-              Recibo Digital
-            </button>
-            ${
-              !r.anulado && saldo > 0
-                ? `<button
-                    type="button"
-                    onclick="window.AppUI.abrirModalCobrarSaldo('${safeId(m.id)}')"
-                    title="Cobrar lo que debe de esta membresía"
-                    class="keep-white-text px-3 py-1.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-bold text-white cursor-pointer"
-                  >
-                    Cobrar Saldo
-                  </button>`
-                : ''
-            }
-            ${
-              !compacto
-                ? `<button
-                    type="button"
-                    onclick="window.AppUI.abrirModalEditarRecibo('${safeId(r.id)}')"
-                    title="Editar recibo o corregir fechas/montos (Admin)"
-                    class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-sky-300 cursor-pointer"
-                  >
-                    ✏️ Editar
-                  </button>
-                  <button
-                    type="button"
-                    onclick="window.AppUI.anularOReactivarRecibo('${safeId(r.id)}')"
-                    title="${r.anulado ? 'Reactivar recibo' : 'Anular recibo'}"
-                    class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-red-950/60 text-xs font-bold text-slate-400 hover:text-red-300 cursor-pointer"
-                  >
-                    ${r.anulado ? 'Reactivar' : 'Anular'}
-                  </button>`
-                : ''
-            }
-          </div>
-        </td>
-      </tr>
-    `;
+    refreshIcons();
   }
 
   // =========================================================================
@@ -799,16 +596,14 @@
     if (!tbody) return;
 
     if (filtrados.length === 0) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="12" class="py-10 text-center text-slate-400 text-sm font-medium">
-            No se encontraron recibos con esos filtros.
-          </td>
-        </tr>`;
+      renderEmptyTableRow(tbody, 12, 'No se encontraron recibos con esos filtros.');
+      refreshIcons();
       return;
     }
 
-    tbody.innerHTML = filtrados.map((r) => crearFilaReciboHTML(r, moneda, false)).join('');
+    const helpersRecibo = { formatDatePE, formatDateTimePE, METODO_LABELS };
+    tbody.innerHTML = filtrados.map((r) => filaRecibo(r, moneda, false, helpersRecibo)).join('');
+    refreshIcons();
   }
 
   // =========================================================================
@@ -853,17 +648,11 @@
     const contTarjetas = document.getElementById('contenedor-alumnos-tarjetas');
     const contTabla = document.getElementById('contenedor-alumnos-tabla');
 
-    if (modo === 'TARJETAS') {
-      if (btnTarjetas) btnTarjetas.className = 'px-3 py-1.5 rounded-lg text-xs font-extrabold brand-bg text-white keep-white-text cursor-pointer';
-      if (btnTabla) btnTabla.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer';
-      contTarjetas?.classList.remove('hidden');
-      contTabla?.classList.add('hidden');
-    } else {
-      if (btnTabla) btnTabla.className = 'px-3 py-1.5 rounded-lg text-xs font-extrabold brand-bg text-white keep-white-text cursor-pointer';
-      if (btnTarjetas) btnTarjetas.className = 'px-3 py-1.5 rounded-lg text-xs font-bold text-slate-400 hover:text-white cursor-pointer';
-      contTabla?.classList.remove('hidden');
-      contTarjetas?.classList.add('hidden');
-    }
+    const esTarjetas = modo === 'TARJETAS';
+    if (btnTarjetas) btnTarjetas.dataset.active = esTarjetas ? 'true' : 'false';
+    if (btnTabla) btnTabla.dataset.active = esTarjetas ? 'false' : 'true';
+    contTarjetas?.classList.toggle('hidden', !esTarjetas);
+    contTabla?.classList.toggle('hidden', esTarjetas);
   }
 
   function renderTablaAlumnos(moneda) {
@@ -873,252 +662,28 @@
 
     if (alumnos.length === 0) {
       if (gridTarjetas) {
-        gridTarjetas.innerHTML = `
-          <div class="col-span-full bg-slate-900 border border-slate-800 rounded-2xl p-10 text-center text-slate-400 text-sm font-medium">
-            No se encontraron alumnos con ese criterio de búsqueda o horario.
-          </div>`;
+        gridTarjetas.innerHTML = emptyState({
+          text: 'No se encontraron alumnos con ese criterio de búsqueda o horario.'
+        });
+        if (gridTarjetas.firstElementChild) {
+          gridTarjetas.firstElementChild.style.gridColumn = '1 / -1';
+        }
       }
       if (tbody) {
-        tbody.innerHTML = `
-          <tr>
-            <td colspan="9" class="py-10 text-center text-slate-400 text-sm">
-              No se encontraron alumnos con ese criterio.
-            </td>
-          </tr>`;
+        renderEmptyTableRow(tbody, 9, 'No se encontraron alumnos con ese criterio.');
       }
+      refreshIcons();
       return;
     }
 
-    // 1. Renderizar Tarjetas Visuales Grandes con Avatar de Cinturón, Horario y Estado Gigante
+    const helpersAlumno = { formatDatePE };
     if (gridTarjetas) {
-      gridTarjetas.innerHTML = alumnos
-        .map((a) => {
-          const mem = a.ultima_membresia;
-          const belt = obtenerEstiloCinturon(a.grado_cinturon);
-          const iniciales = obtenerIniciales(a.nombres, a.apellidos);
-
-          let estadoBannerClass = 'bg-slate-800 text-slate-300 border-slate-700';
-          let estadoBannerTexto = '⚪ SIN MENSUALIDAD ACTIVA';
-
-          if (a.estado_vigencia === 'ACTIVO') {
-            estadoBannerClass = 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30';
-            estadoBannerTexto =
-              a.saldo_total_pendiente > 0
-                ? `🟢 VIGENTE (${a.dias_restantes}d) • ⚠️ DEBE SALDO`
-                : `🟢 VIGENTE • SIN DEUDA (${a.dias_restantes}d)`;
-          } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
-            estadoBannerClass = 'bg-sky-500/15 text-sky-400 border-sky-500/30';
-            estadoBannerTexto = a.proxima_membresia
-              ? `⏳ INICIA EL ${formatDatePE(a.proxima_membresia.fecha_inicio)}${a.saldo_total_pendiente > 0 ? ' • ⚠️ DEBE SALDO' : ''}`
-              : `🎓 INSCRITO • FALTA PAGAR 1ER MES`;
-          } else if (a.estado_vigencia === 'POR_VENCER') {
-            estadoBannerClass = 'bg-amber-500/15 text-amber-400 border-amber-500/30';
-            estadoBannerTexto = `🟡 POR VENCER • En ${a.dias_restantes} día(s)${a.saldo_total_pendiente > 0 ? ' • ⚠️ DEBE' : ''}`;
-          } else if (a.estado_vigencia === 'VENCIDO') {
-            estadoBannerClass = 'bg-red-500/15 text-red-400 border-red-500/30';
-            estadoBannerTexto = a.proxima_membresia
-              ? `🔴 HUECO SIN VIGENCIA • PRÓX. ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
-              : `🔴 MENSUALIDAD VENCIDA • Hace ${Math.abs(a.dias_restantes)} día(s)`;
-          }
-
-          const memConDeuda = a.membresias_historial?.find((m) => Number(m.saldo_pendiente) > 0);
-
-          return `
-            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between gap-4 shadow-sm hover:shadow-md transition">
-              <div class="space-y-3.5">
-                <!-- Estado Gigante Arriba -->
-                <div class="flex items-center justify-between gap-2">
-                  <span class="text-xs font-black px-3 py-1 rounded-full border ${estadoBannerClass}">
-                    ${estadoBannerTexto}
-                  </span>
-                  <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-emerald-500/15 text-emerald-400">
-                    ${a.inscripcion_pagada !== false ? '🎓 Inscrito' : '⚠️ Sin Inscripción'}
-                  </span>
-                </div>
-
-                <!-- Avatar de color de cinturón + Nombre Grande -->
-                <div class="flex items-center gap-3.5">
-                  <div class="w-14 h-14 rounded-2xl border-2 flex items-center justify-center font-black text-lg flex-shrink-0 shadow-sm ${belt.bg}">
-                    ${escapeHTML(iniciales)}
-                  </div>
-                  <div class="min-w-0 flex-1">
-                    <button
-                      type="button"
-                      onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
-                      class="font-black text-base sm:text-lg text-white hover:text-red-400 text-left truncate block w-full cursor-pointer"
-                    >
-                      ${escapeHTML(a.nombre_completo)}
-                    </button>
-                    <p class="text-xs font-bold text-slate-400 mt-0.5">${escapeHTML(belt.label)}</p>
-                    <p class="text-xs font-bold text-sky-400 mt-0.5 truncate">🕒 ${escapeHTML(a.horario_texto || 'Sin horario asignado')}</p>
-                    ${
-                      a.telefono_whatsapp
-                        ? `<p class="text-xs text-slate-400 tabular-nums mt-0.5">📱 WhatsApp: <b>${escapeHTML(a.telefono_whatsapp)}</b></p>`
-                        : ''
-                    }
-                  </div>
-                </div>
-
-                <!-- Caja de Fechas y "Lo que debe" en lenguaje sencillo -->
-                <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2 text-xs">
-                  <div class="flex items-center justify-between">
-                    <span class="text-slate-400 font-semibold">Último Plan:</span>
-                    <span class="font-extrabold text-white">${mem ? escapeHTML(mem.concepto) : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Matrícula / Inscripción' : '—'}</span>
-                  </div>
-                  <div class="flex items-center justify-between">
-                    <span class="text-slate-400 font-semibold">Vigencia del Mes:</span>
-                    <span class="font-bold text-slate-200 tabular-nums text-right">
-                      ${
-                        mem
-                          ? `${formatDatePE(mem.fecha_inicio)} al <b class="text-red-400">${formatDatePE(mem.fecha_fin)}</b>${
-                              a.proxima_membresia && a.proxima_membresia.id !== mem.id
-                                ? `<br><span class="text-sky-400">⏳ Próx: ${formatDatePE(a.proxima_membresia.fecha_inicio)} al ${formatDatePE(a.proxima_membresia.fecha_fin)}</span>`
-                                : ''
-                            }`
-                          : 'Pendiente de iniciar mes'
-                      }
-                    </span>
-                  </div>
-                  <div class="flex items-center justify-between pt-1.5 border-t border-slate-800">
-                    <span class="text-slate-400 font-bold">Lo que debe (Saldo):</span>
-                    ${
-                      a.saldo_total_pendiente > 0
-                        ? `<span class="text-sm font-black text-amber-400 tabular-nums">⚠️ Debe ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</span>`
-                        : `<span class="font-extrabold text-emerald-400">✅ No debe nada (${escapeHTML(moneda)} 0.00)</span>`
-                    }
-                  </div>
-                </div>
-              </div>
-
-              <!-- Botones Grandes de Acción en la Tarjeta -->
-              <div class="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-800">
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
-                  class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
-                >
-                  📄 Ficha (${a.total_membresias})
-                </button>
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirModalEditarAlumno('${safeId(a.id)}')"
-                  title="Cambiar Horario, Cinturón o Datos del Alumno"
-                  class="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-extrabold text-slate-200 cursor-pointer"
-                >
-                  ✏️ Horario / Datos
-                </button>
-                ${
-                  memConDeuda
-                    ? `<button
-                        type="button"
-                        onclick="window.AppUI.abrirModalCobrarSaldo('${safeId(memConDeuda.id)}')"
-                        class="keep-white-text py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-xs font-black text-white cursor-pointer"
-                      >
-                        💰 Deuda
-                      </button>`
-                    : ''
-                }
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirModalRenovar('${safeId(a.id)}')"
-                  class="keep-white-text flex-1 py-2 px-3 rounded-xl brand-bg text-xs font-black text-white cursor-pointer"
-                >
-                  ${a.estado_vigencia === 'SOLO_INSCRITO' && !a.proxima_membresia ? '🥊 Cobrar 1er Mes' : '🥊 Cobrar Mes'}
-                </button>
-              </div>
-            </div>
-          `;
-        })
-        .join('');
+      gridTarjetas.innerHTML = alumnos.map((a) => tarjetaAlumno(a, moneda, helpersAlumno)).join('');
     }
-
-    // 2. Renderizar también la Tabla Clásica
     if (tbody) {
-      tbody.innerHTML = alumnos
-        .map((a) => {
-          const mem = a.ultima_membresia;
-          let badgeVigencia = `<span class="text-xs px-2.5 py-1 rounded-full bg-slate-800 text-slate-400">Sin membresía</span>`;
-          if (a.estado_vigencia === 'ACTIVO') {
-            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 tabular-nums">🟢 Vigente (${a.dias_restantes}d)</span>`;
-          } else if (a.estado_vigencia === 'SOLO_INSCRITO') {
-            badgeVigencia = a.proxima_membresia
-              ? `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 tabular-nums">⏳ Inicia ${formatDatePE(a.proxima_membresia.fecha_inicio)}</span>`
-              : `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30">🎓 Inscrito (Falta 1er Mes)</span>`;
-          } else if (a.estado_vigencia === 'POR_VENCER') {
-            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 tabular-nums">🟡 Vence en ${a.dias_restantes}d</span>`;
-          } else if (a.estado_vigencia === 'VENCIDO') {
-            badgeVigencia = `<span class="text-xs font-bold px-2.5 py-1 rounded-full bg-red-500/20 text-red-400 border border-red-500/30 tabular-nums">🔴 Vencido (${Math.abs(a.dias_restantes)}d)</span>`;
-          }
-
-          const badgeInscrito =
-            a.inscripcion_pagada !== false
-              ? `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/25">🎓 Inscrito</span>`
-              : `<span class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/25">⚠️ Sin inscripción</span>`;
-
-          const saldoHtml =
-            a.saldo_total_pendiente > 0
-              ? `<span class="font-black text-amber-400 tabular-nums">Debe ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</span>`
-              : `<span class="text-emerald-400 font-bold tabular-nums">No debe nada</span>`;
-
-          return `
-            <tr class="hover:bg-slate-800/40 transition">
-              <td class="py-3.5 px-4">
-                <div class="flex items-center gap-1.5 flex-wrap">
-                  <button
-                    type="button"
-                    onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
-                    class="font-bold text-white hover:text-red-400 text-left block cursor-pointer"
-                  >
-                    ${escapeHTML(a.nombre_completo)}
-                  </button>
-                  ${badgeInscrito}
-                </div>
-                <span class="text-[11px] text-slate-400">${a.total_membresias} registro(s)</span>
-              </td>
-              <td class="py-3.5 px-4 text-xs">
-                <div class="font-semibold text-slate-200">${escapeHTML(a.grado_cinturon || 'Principiante')}</div>
-                <div class="text-[11px] font-bold text-sky-400 mt-0.5">🕒 ${escapeHTML(a.horario_texto || 'Sin horario')}</div>
-              </td>
-              <td class="py-3.5 px-4 text-xs text-slate-300 tabular-nums">
-                <div>${a.telefono_whatsapp ? escapeHTML(a.telefono_whatsapp) : '—'}</div>
-                ${a.contacto_emergencia ? `<div class="text-[11px] text-slate-400">Emerg: ${escapeHTML(a.contacto_emergencia)}</div>` : ''}
-              </td>
-              <td class="py-3.5 px-4 text-xs font-semibold text-slate-200">${mem ? escapeHTML(mem.concepto) : a.estado_vigencia === 'SOLO_INSCRITO' ? 'Solo Inscripción' : '—'}</td>
-              <td class="py-3.5 px-4 text-xs font-semibold text-slate-200 tabular-nums">${mem ? formatDatePE(mem.fecha_inicio) : '—'}</td>
-              <td class="py-3.5 px-4 text-xs font-semibold text-red-300 tabular-nums">${mem ? formatDatePE(mem.fecha_fin) : '—'}</td>
-              <td class="py-3.5 px-4 text-center whitespace-nowrap">${badgeVigencia}</td>
-              <td class="py-3.5 px-4 text-right whitespace-nowrap">${saldoHtml}</td>
-              <td class="py-3.5 px-4 text-center whitespace-nowrap">
-                <div class="inline-flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onclick="window.AppUI.abrirModalEditarAlumno('${safeId(a.id)}')"
-                    title="Cambiar horario, cinturón o datos"
-                    class="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
-                  >
-                    ✏️
-                  </button>
-                  <button
-                    type="button"
-                    onclick="window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
-                    class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
-                  >
-                    Ver Ficha
-                  </button>
-                  <button
-                    type="button"
-                    onclick="window.AppUI.abrirModalRenovar('${safeId(a.id)}')"
-                    class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
-                  >
-                    ${a.estado_vigencia === 'SOLO_INSCRITO' && !a.proxima_membresia ? '+ 1er Mes' : 'Cobrar Mes'}
-                  </button>
-                </div>
-              </td>
-            </tr>
-          `;
-        })
-        .join('');
+      tbody.innerHTML = alumnos.map((a) => filaAlumnoTabla(a, moneda, helpersAlumno)).join('');
     }
+    refreshIcons();
   }
 
   // =========================================================================
@@ -1130,156 +695,12 @@
 
     const horarios = store.state.horarios || [];
     const todosAlumnos = store.getAlumnosConEstado();
-
-    const crearFilaAlumnoHorarioHTML = (alu) => {
-      const belt = obtenerEstiloCinturon(alu.grado_cinturon);
-      let badgeEstado = `<span class="text-[11px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400">Sin plan</span>`;
-      if (alu.estado_vigencia === 'ACTIVO') {
-        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">🟢 Vigente (${alu.dias_restantes}d)</span>`;
-      } else if (alu.estado_vigencia === 'SOLO_INSCRITO') {
-        badgeEstado = alu.proxima_membresia
-          ? `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">⏳ Inicia ${formatDatePE(alu.proxima_membresia.fecha_inicio)}</span>`
-          : `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-400 border border-sky-500/30">🎓 Solo Inscrito</span>`;
-      } else if (alu.estado_vigencia === 'POR_VENCER') {
-        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30">🟡 Vence en ${alu.dias_restantes}d</span>`;
-      } else if (alu.estado_vigencia === 'VENCIDO') {
-        badgeEstado = `<span class="text-[11px] font-extrabold px-2.5 py-0.5 rounded-full bg-red-500/20 text-red-400 border border-red-500/30">🔴 Vencido (${Math.abs(alu.dias_restantes)}d)</span>`;
-      }
-
-      return `
-        <div class="p-3 bg-slate-950 border border-slate-800 rounded-xl flex flex-wrap items-center justify-between gap-2">
-          <div class="flex items-center gap-2.5 min-w-0">
-            <span class="w-8 h-8 rounded-lg border flex items-center justify-center text-xs font-black flex-shrink-0 ${belt.bg}">
-              ${escapeHTML(obtenerIniciales(alu.nombres, alu.apellidos))}
-            </span>
-            <div class="min-w-0">
-              <div class="flex items-center gap-2 flex-wrap">
-                <button
-                  type="button"
-                  onclick="window.AppUI.abrirHistorialAlumno('${safeId(alu.id)}')"
-                  class="font-bold text-xs sm:text-sm text-white hover:text-red-400 truncate cursor-pointer"
-                >
-                  ${escapeHTML(alu.nombre_completo)}
-                </button>
-                ${badgeEstado}
-                ${
-                  alu.saldo_total_pendiente > 0
-                    ? `<span class="text-[11px] font-black text-amber-400 tabular-nums">⚠️ Debe ${escapeHTML(moneda)}${alu.saldo_total_pendiente.toFixed(0)}</span>`
-                    : ''
-                }
-              </div>
-              <p class="text-[11px] text-slate-400">${escapeHTML(belt.label)} ${alu.telefono_whatsapp ? `• 📱 ${escapeHTML(alu.telefono_whatsapp)}` : ''}</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-1.5">
-            <button
-              type="button"
-              onclick="window.AppUI.abrirModalEditarAlumno('${safeId(alu.id)}')"
-              title="Cambiar de horario o editar datos"
-              class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 cursor-pointer"
-            >
-              ✏️ Cambiar Turno
-            </button>
-            <button
-              type="button"
-              onclick="window.AppUI.abrirModalRenovar('${safeId(alu.id)}')"
-              class="keep-white-text px-3 py-1.5 rounded-lg brand-bg text-xs font-bold text-white cursor-pointer"
-            >
-              ${alu.estado_vigencia === 'SOLO_INSCRITO' && !alu.proxima_membresia ? '+ 1er Mes' : 'Cobrar Mes'}
-            </button>
-          </div>
-        </div>
-      `;
-    };
+    const helpersHorario = { formatDatePE };
 
     const tarjetasHorariosHTML = horarios
       .map((h) => {
         const alumnosDelGrupo = todosAlumnos.filter((a) => a.horario_id === h.id);
-        const cantAlDia = alumnosDelGrupo.filter((a) => a.estado_vigencia === 'ACTIVO').length;
-        const cantAlerta = alumnosDelGrupo.filter(
-          (a) => a.estado_vigencia === 'POR_VENCER' || a.estado_vigencia === 'SOLO_INSCRITO'
-        ).length;
-        const cantVencidos = alumnosDelGrupo.filter((a) => a.estado_vigencia === 'VENCIDO').length;
-
-        return `
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
-            <!-- Cabecera del Horario -->
-            <div class="flex flex-wrap items-start justify-between gap-3 pb-3 border-b border-slate-800">
-              <div>
-                <div class="flex flex-wrap items-center gap-2">
-                  <span class="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
-                    🥋 ${escapeHTML(h.disciplina || 'General')}
-                  </span>
-                  <span class="text-xs font-extrabold px-2.5 py-0.5 rounded-lg bg-sky-500/15 text-sky-400 border border-sky-500/30">
-                    📅 ${escapeHTML(h.dias)}
-                  </span>
-                  <span class="text-xs font-black px-2.5 py-0.5 rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                    🕒 ${escapeHTML(h.hora)}
-                  </span>
-                </div>
-                <h4 class="font-black text-base sm:text-lg text-white mt-2">${escapeHTML(h.nombre)}</h4>
-              </div>
-
-              <!-- Contadores del Grupo -->
-              <div class="flex flex-wrap items-center gap-2">
-                <span class="text-xs font-black px-3 py-1 rounded-xl bg-slate-950 border border-slate-800 text-white">
-                  👥 ${alumnosDelGrupo.length} Alumno(s)
-                </span>
-                <span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-400">
-                  🟢 ${cantAlDia} Vigentes
-                </span>
-                ${
-                  cantAlerta > 0
-                    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-amber-500/15 text-amber-400">🟡 ${cantAlerta} Alerta/Insc</span>`
-                    : ''
-                }
-                ${
-                  cantVencidos > 0
-                    ? `<span class="text-xs font-bold px-2.5 py-1 rounded-xl bg-red-500/15 text-red-400">🔴 ${cantVencidos} Vencido(s)</span>`
-                    : ''
-                }
-              </div>
-            </div>
-
-            <!-- Lista de Alumnos en este Horario -->
-            <div class="space-y-2">
-              ${
-                alumnosDelGrupo.length === 0
-                  ? `<div class="p-4 bg-slate-950 border border-slate-800 rounded-xl text-center text-xs text-slate-400">
-                      Aún no hay alumnos asignados a este turno.
-                    </div>`
-                  : alumnosDelGrupo.map(crearFilaAlumnoHorarioHTML).join('')
-              }
-            </div>
-
-            <!-- Pie de acciones del Horario -->
-            <div class="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/80">
-              <button
-                type="button"
-                onclick="window.AppUI.inscribirEnHorario('${safeId(h.id)}')"
-                class="keep-white-text px-3.5 py-2 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
-              >
-                + Inscribir Alumno en este Turno
-              </button>
-              <div class="flex items-center gap-2">
-                <button
-                  type="button"
-                  onclick="window.AppUI.editarHorario('${safeId(h.id)}')"
-                  class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
-                >
-                  Editar Horario
-                </button>
-                <button
-                  type="button"
-                  onclick="window.AppUI.eliminarHorario('${safeId(h.id)}')"
-                  class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
-                >
-                  Eliminar
-                </button>
-              </div>
-            </div>
-          </div>
-        `;
+        return grupoHorarioCard(h, alumnosDelGrupo, moneda, helpersHorario);
       })
       .join('');
 
@@ -1287,25 +708,19 @@
     const alumnosSinHorario = todosAlumnos.filter(
       (a) => !a.horario_id || !horarios.some((h) => h.id === a.horario_id)
     );
+    const bloqueSinHorarioHTML = bloqueSinHorarioCard(alumnosSinHorario, moneda, helpersHorario);
 
-    const bloqueSinHorarioHTML =
-      alumnosSinHorario.length > 0
-        ? `
-          <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
-            <div class="flex items-center justify-between">
-              <div>
-                <h4 class="font-black text-base text-white">⚪ Alumnos Pendientes de Asignar a un Horario (${alumnosSinHorario.length})</h4>
-                <p class="text-xs text-slate-400">Haz clic en "✏️ Cambiar Turno" para elegir en qué horario entrenan</p>
-              </div>
-            </div>
-            <div class="space-y-2">
-              ${alumnosSinHorario.map(crearFilaAlumnoHorarioHTML).join('')}
-            </div>
-          </div>
-        `
-        : '';
-
-    contenedor.innerHTML = tarjetasHorariosHTML + bloqueSinHorarioHTML;
+    if (!tarjetasHorariosHTML && !bloqueSinHorarioHTML) {
+      contenedor.innerHTML = emptyState({
+        text: 'Aún no hay horarios o turnos registrados.'
+      });
+      if (contenedor.firstElementChild) {
+        contenedor.firstElementChild.style.gridColumn = '1 / -1';
+      }
+    } else {
+      contenedor.innerHTML = tarjetasHorariosHTML + bloqueSinHorarioHTML;
+    }
+    refreshIcons();
   }
 
   // =========================================================================
@@ -1315,40 +730,18 @@
     const grid = document.getElementById('lista-planes-grid');
     if (!grid) return;
 
-    grid.innerHTML = store.state.planes
-      .map(
-        (p) => `
-        <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between gap-3">
-          <div>
-            <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-extrabold uppercase px-2.5 py-0.5 rounded-lg bg-red-500/15 text-red-400 border border-red-500/30">
-                ${escapeHTML(p.disciplina)}
-              </span>
-              <span class="text-xs font-bold text-slate-400 tabular-nums">${Number(p.duracion_dias)} días</span>
-            </div>
-            <h4 class="font-black text-base text-white mt-2.5">${escapeHTML(p.nombre)}</h4>
-            <p class="text-2xl font-black text-emerald-400 mt-1 tabular-nums">${escapeHTML(moneda)} ${Number(p.precio_sugerido).toFixed(2)}</p>
-          </div>
-          <div class="flex items-center justify-end gap-2 pt-3 border-t border-slate-800/80">
-            <button
-              type="button"
-              onclick="window.AppUI.editarPlan('${safeId(p.id)}')"
-              class="text-xs font-bold text-sky-400 hover:text-sky-300 px-2.5 py-1 cursor-pointer"
-            >
-              Editar Precio
-            </button>
-            <button
-              type="button"
-              onclick="window.AppUI.eliminarPlan('${safeId(p.id)}')"
-              class="text-xs font-bold text-red-400 hover:text-red-300 px-2.5 py-1 cursor-pointer"
-            >
-              Eliminar
-            </button>
-          </div>
-        </div>
-      `
-      )
-      .join('');
+    const planes = store.state.planes || [];
+    if (planes.length === 0) {
+      grid.innerHTML = emptyState({
+        text: 'No hay planes registrados en el catálogo.'
+      });
+      if (grid.firstElementChild) {
+        grid.firstElementChild.style.gridColumn = '1 / -1';
+      }
+    } else {
+      grid.innerHTML = planes.map((p) => tarjetaPlan(p, moneda)).join('');
+    }
+    refreshIcons();
   }
 
   // =========================================================================
@@ -1400,44 +793,21 @@
     const planes = store.state.planes;
     const moneda = store.state.configuracion.moneda || 'S/';
 
-    selectPlan.innerHTML =
-      planes
-        .map(
-          (p) =>
-            `<option value="${escapeHTML(p.id)}">${escapeHTML(p.nombre)} — ${escapeHTML(moneda)} ${Number(p.precio_sugerido).toFixed(2)} (${Number(p.duracion_dias)} días)</option>`
-        )
-        .join('') + `<option value="PERSONALIZADO">✍️ Otro monto / Plan personalizado</option>`;
+    if (selectPlan) {
+      selectPlan.innerHTML = optionsPlanes(planes, moneda);
+    }
 
     const selectHorario = document.getElementById('pago-horario');
     if (selectHorario) {
       const horarios = store.state.horarios || [];
-      selectHorario.innerHTML =
-        horarios
-          .map(
-            (h) =>
-              `<option value="${escapeHTML(h.id)}">🕒 ${escapeHTML(h.hora)} (${escapeHTML(h.dias)}) — ${escapeHTML(h.nombre)}</option>`
-          )
-          .join('') + `<option value="">-- Sin horario fijo / Horario libre --</option>`;
+      selectHorario.innerHTML = optionsHorarios(horarios, '-- Sin horario fijo / Horario libre --');
     }
 
     const selectAlumno = document.getElementById('pago-select-alumno');
     const alumnos = store.getAlumnosConEstado();
-    selectAlumno.innerHTML =
-      `<option value="">-- Haz clic aquí para elegir al alumno --</option>` +
-      alumnos
-        .map(
-          (a) =>
-            `<option value="${escapeHTML(a.id)}">${escapeHTML(a.nombre_completo)} (${
-              a.proxima_membresia && !a.membresia_vigente && a.estado_vigencia === 'SOLO_INSCRITO'
-                ? `Inicia: ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
-                : a.ultima_membresia
-                ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
-                : a.estado_vigencia === 'SOLO_INSCRITO'
-                ? '🎓 Inscrito - Falta pagar 1er Mes'
-                : 'Sin mensualidad'
-            })</option>`
-        )
-        .join('');
+    if (selectAlumno) {
+      selectAlumno.innerHTML = optionsAlumnos(alumnos, { formatDatePE });
+    }
   }
 
   function renderSugerenciasAlumnosModalPago(filtro = '') {
@@ -1453,38 +823,7 @@
         )
       : alumnos.slice(0, 12);
 
-    if (filtrados.length === 0) {
-      lista.innerHTML = `<div class="p-3 text-xs text-slate-400">No se encontraron alumnos con "${escapeHTML(filtro)}".</div>`;
-      lista.classList.remove('hidden');
-      return;
-    }
-
-    lista.innerHTML = filtrados
-      .slice(0, 15)
-      .map((a) => {
-        const estadoTexto =
-          a.proxima_membresia && !a.membresia_vigente && a.estado_vigencia === 'SOLO_INSCRITO'
-            ? `Inicia: ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
-            : a.ultima_membresia
-            ? `Vence: ${formatDatePE(a.ultima_membresia.fecha_fin)}`
-            : a.estado_vigencia === 'SOLO_INSCRITO'
-            ? '🎓 Inscrito - Sin mensualidad'
-            : 'Sin mensualidad';
-        return `
-          <button
-            type="button"
-            data-pick-alumno="${safeId(a.id)}"
-            class="w-full text-left px-3.5 py-2.5 hover:bg-slate-800/60 transition flex items-center justify-between gap-2 cursor-pointer"
-          >
-            <div>
-              <span class="block text-xs sm:text-sm font-extrabold text-white">${escapeHTML(a.nombre_completo)}</span>
-              <span class="block text-[11px] text-slate-400">${escapeHTML(a.horario_texto || 'Sin horario')} • ${escapeHTML(a.telefono_whatsapp || 'Sin celular')}</span>
-            </div>
-            <span class="text-[11px] font-bold px-2 py-0.5 rounded bg-slate-800 text-slate-200 whitespace-nowrap">${escapeHTML(estadoTexto)}</span>
-          </button>`;
-      })
-      .join('');
-
+    lista.innerHTML = sugerenciasAlumnosLista(filtrados, filtro, { formatDatePE });
     lista.classList.remove('hidden');
   }
 
@@ -1523,8 +862,7 @@
     bloqueRecibo.classList.toggle('hidden', !mostrar);
     bloqueObs.classList.toggle('hidden', !mostrar);
     if (gridMontos) {
-      gridMontos.classList.toggle('sm:grid-cols-3', mostrar);
-      gridMontos.classList.toggle('sm:grid-cols-2', !mostrar);
+      gridMontos.dataset.compact = mostrar ? 'false' : 'true';
     }
     if (btnToggle) {
       btnToggle.textContent = mostrar ? '🔽 Ocultar opciones avanzadas' : '⚙️ Ajustar fechas / recibo / nota';
@@ -1542,8 +880,8 @@
     const bloqueModalidad = document.getElementById('bloque-modalidad-cobro');
 
     if (modo === 'NUEVO') {
-      btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
-      btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer';
+      if (btnNuevo) btnNuevo.dataset.active = 'true';
+      if (btnExistente) btnExistente.dataset.active = 'false';
       bloqueExistente.classList.add('hidden');
       document.getElementById('pago-select-alumno').value = '';
       if (document.getElementById('pago-alumno-id')) document.getElementById('pago-alumno-id').value = '';
@@ -1557,8 +895,8 @@
       toggleMasOpcionesPagoModal(false);
       setTipoOperacionModal('INSCRIPCION_Y_MENSUALIDAD');
     } else {
-      btnExistente.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-extrabold brand-bg text-white keep-white-text transition cursor-pointer';
-      btnNuevo.className = 'py-2.5 px-3 rounded-lg text-xs sm:text-sm font-bold text-slate-400 hover:text-white transition cursor-pointer';
+      if (btnExistente) btnExistente.dataset.active = 'true';
+      if (btnNuevo) btnNuevo.dataset.active = 'false';
       bloqueExistente.classList.remove('hidden');
       if (bloqueDatos && document.getElementById('pago-select-alumno').value) {
         bloqueDatos.classList.add('hidden');
@@ -1573,9 +911,7 @@
     tipoOperacionPago = tipo;
     document.querySelectorAll('.btn-tipo-operacion').forEach((btn) => {
       const esActivo = btn.getAttribute('data-tipo-op') === tipo;
-      btn.className = esActivo
-        ? 'btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-extrabold brand-bg text-white keep-white-text transition cursor-pointer'
-        : 'btn-tipo-operacion py-2.5 px-3 rounded-lg text-xs font-bold text-slate-400 hover:text-white transition cursor-pointer';
+      btn.dataset.active = esActivo ? 'true' : 'false';
     });
 
     const incluyeInscripcion = tipo === 'INSCRIPCION_Y_MENSUALIDAD' || tipo === 'SOLO_INSCRIPCION';
@@ -1663,16 +999,12 @@
 
     txtSaldo.textContent = `${moneda} ${saldo.toFixed(2)}`;
 
-    if (saldo <= 0.009) {
-      caja.className = 'rounded-xl p-3.5 border border-emerald-500/30 bg-emerald-500/10 flex items-center justify-between';
-      txtEstado.className = 'text-xs font-extrabold text-emerald-400';
-      txtEstado.textContent = 'PAGADO COMPLETO (NO DEBE NADA)';
-      txtSaldo.className = 'text-2xl font-black text-emerald-400 tabular-nums';
-    } else {
-      caja.className = 'rounded-xl p-3.5 border border-amber-500/40 bg-amber-500/10 flex items-center justify-between';
-      txtEstado.className = 'text-xs font-extrabold text-amber-400';
-      txtEstado.textContent = 'QUEDA DEBIENDO SALDO';
-      txtSaldo.className = 'text-2xl font-black text-amber-400 tabular-nums';
+    if (caja) {
+      caja.dataset.state = saldo <= 0.009 ? 'paid' : 'debt';
+    }
+    if (txtEstado) {
+      txtEstado.textContent =
+        saldo <= 0.009 ? 'PAGADO COMPLETO (NO DEBE NADA)' : 'QUEDA DEBIENDO SALDO';
     }
 
     const previewPeriodoEl = document.getElementById('texto-preview-periodo-venta');
@@ -1715,13 +1047,7 @@
 
       if (selectorBloque && selectDeudor) {
         selectorBloque.classList.remove('hidden');
-        selectDeudor.innerHTML = memsConDeuda
-          .map((m) => {
-            const alu = store.state.alumnos.find((a) => a.id === m.alumno_id);
-            const nombre = alu ? `${alu.nombres} ${alu.apellidos}` : 'Alumno';
-            return `<option value="${escapeHTML(m.id)}">${escapeHTML(nombre)} — Debe ${escapeHTML(moneda)} ${Number(m.saldo_pendiente).toFixed(2)} (${escapeHTML(m.concepto)})</option>`;
-          })
-          .join('');
+        selectDeudor.innerHTML = optionsDeudores(memsConDeuda, store.state.alumnos, moneda);
       }
       cargarMembresiaEnModalSaldo(memsConDeuda[0].id);
       abrirModal('modal-cobrar-saldo');
@@ -1837,27 +1163,20 @@
     const yaTieneInscripcion = alu.inscripcion_pagada !== false;
     if (badgeInscripcion) {
       badgeInscripcion.classList.remove('hidden');
-      if (yaTieneInscripcion) {
-        badgeInscripcion.className =
-          'text-xs font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
-        badgeInscripcion.textContent = '🎓 Ya tiene Inscripción pagada';
-      } else {
-        badgeInscripcion.className =
-          'text-xs font-bold px-2.5 py-0.5 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30';
-        badgeInscripcion.textContent = '⚠️ Aún no registra Inscripción';
-      }
+      badgeInscripcion.dataset.tone = yaTieneInscripcion ? 'success' : 'warning';
+      badgeInscripcion.textContent = yaTieneInscripcion
+        ? '🎓 Ya tiene Inscripción pagada'
+        : '⚠️ Aún no registra Inscripción';
     }
 
     const memBase = alu.ultimo_contrato || alu.ultima_membresia;
     if (memBase) {
       banner.classList.remove('hidden');
-      let textoBanner = `Último vencimiento: <b class="text-white">${formatDatePE(memBase.fecha_fin)}</b>`;
-      if (alu.membresia_vigente && alu.ultimo_contrato && alu.membresia_vigente.id !== alu.ultimo_contrato.id) {
-        textoBanner = `Vigente hasta: <b class="text-white">${formatDatePE(alu.membresia_vigente.fecha_fin)}</b> • Próx. renovación termina: <b class="text-sky-300">${formatDatePE(alu.ultimo_contrato.fecha_fin)}</b>`;
-      } else if (alu.proxima_membresia && !alu.membresia_vigente) {
-        textoBanner = `Próximo inicio: <b class="text-sky-300">${formatDatePE(alu.proxima_membresia.fecha_inicio)}</b> • Termina: <b class="text-white">${formatDatePE(alu.proxima_membresia.fecha_fin)}</b>`;
-      }
-      document.getElementById('texto-vencimiento-anterior').innerHTML = textoBanner;
+      document.getElementById('texto-vencimiento-anterior').innerHTML = bannerVencimientoAnterior(
+        alu,
+        memBase,
+        { formatDatePE }
+      );
 
       if (memBase.plan_id && store.state.planes.some((p) => p.id === memBase.plan_id)) {
         document.getElementById('pago-select-plan').value = memBase.plan_id;
@@ -1941,120 +1260,15 @@
       .getRecibosDetallados()
       .filter((r) => r.alumno_id === alumnoId);
 
-    const htmlMembresias =
-      alu.membresias_historial.length === 0
-        ? `<p class="text-xs text-slate-400">Sin membresías registradas.</p>`
-        : alu.membresias_historial
-            .map(
-              (m) => `
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-extrabold text-sm text-white">${escapeHTML(m.concepto)}</span>
-                  <span class="text-xs font-bold px-2.5 py-0.5 rounded-full ${
-                    m.estado_pago === 'PAGADO'
-                      ? 'bg-emerald-500/20 text-emerald-400'
-                      : m.estado_pago === 'ANULADO'
-                      ? 'bg-red-500/20 text-red-400'
-                      : 'bg-amber-500/20 text-amber-300'
-                  }">${m.estado_pago === 'PAGADO' ? 'PAGADO COMPLETO' : m.estado_pago === 'ANULADO' ? 'ANULADO' : 'DEBE SALDO'}</span>
-                </div>
-                <p class="text-xs text-slate-400 mt-1 tabular-nums">
-                  ${
-                    m.tipo_operacion === 'SOLO_INSCRIPCION'
-                      ? `Fecha de Inscripción: <b>${formatDatePE(m.fecha_inicio)}</b> • <b class="text-emerald-400">PAGO ÚNICO DE INSCRIPCIÓN</b>`
-                      : `Día que inicia: <b>${formatDatePE(m.fecha_inicio)}</b> • Día que vence: <b class="text-red-300">${formatDatePE(m.fecha_fin)}</b>`
-                  }
-                </p>
-              </div>
-              <div class="text-right tabular-nums">
-                <div class="text-xs text-slate-300">Total a Pagar: <b>${escapeHTML(moneda)} ${Number(m.total_a_pagar).toFixed(2)}</b></div>
-                <div class="text-xs ${Number(m.saldo_pendiente) > 0 ? 'text-amber-400 font-black' : 'text-emerald-400 font-bold'}">
-                  Lo que debe: ${escapeHTML(moneda)} ${Number(m.saldo_pendiente).toFixed(2)}
-                </div>
-                ${
-                  Number(m.saldo_pendiente) > 0
-                    ? `<button
-                        type="button"
-                        onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalCobrarSaldo('${safeId(m.id)}')"
-                        class="keep-white-text mt-1.5 px-3 py-1 rounded-lg bg-amber-600 text-white font-black text-xs cursor-pointer"
-                      >
-                        Cobrar lo que debe
-                      </button>`
-                    : ''
-                }
-              </div>
-            </div>`
-            )
-            .join('');
-
-    const htmlRecibos =
-      recibosAlumno.length === 0
-        ? `<p class="text-xs text-slate-400">Sin recibos emitidos.</p>`
-        : recibosAlumno
-            .map(
-              (r) => `
-            <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 flex flex-wrap items-center justify-between gap-2 ${
-              r.anulado ? 'opacity-50 line-through' : ''
-            }">
-              <div class="flex items-center gap-3">
-                <span class="font-mono font-black text-sm text-emerald-400 tabular-nums">#${escapeHTML(r.numero_recibo)}</span>
-                <div>
-                  <p class="text-xs font-bold text-white">${escapeHTML(r.observacion || r.membresia?.concepto || '')}</p>
-                  <p class="text-[11px] text-slate-400 tabular-nums">${formatDateTimePE(r.fecha_pago)} • ${escapeHTML(METODO_LABELS[r.metodo_pago] || r.metodo_pago)}</p>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <span class="font-black text-sm text-emerald-400 tabular-nums">${escapeHTML(moneda)} ${Number(r.monto_abonado).toFixed(2)}</span>
-                <button
-                  type="button"
-                  onclick="window.AppUI.verComprobanteDigital('${safeId(r.id)}')"
-                  class="keep-white-text px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-xs font-bold text-white cursor-pointer"
-                >
-                  Ver Recibo
-                </button>
-              </div>
-            </div>`
-            )
-            .join('');
-
-    document.getElementById('hist-alumno-contenido').innerHTML = `
-      <div class="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-slate-800">
-        <div class="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalRenovar('${safeId(alu.id)}')"
-            class="keep-white-text px-4 py-2.5 rounded-xl brand-bg text-white font-extrabold text-xs sm:text-sm cursor-pointer"
-          >
-            + Cobrar Nueva Mensualidad
-          </button>
-          <button
-            type="button"
-            onclick="window.AppUI.cerrarModal('modal-historial-alumno'); window.AppUI.abrirModalEditarAlumno('${safeId(alu.id)}')"
-            class="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-extrabold text-xs sm:text-sm cursor-pointer"
-          >
-            ✏️ Cambiar Horario / Cinturón / Datos
-          </button>
-        </div>
-        <button
-          type="button"
-          onclick="window.AppUI.eliminarAlumnoConfirm('${safeId(alu.id)}')"
-          class="text-xs font-bold text-red-400 hover:text-red-300 cursor-pointer"
-        >
-          Eliminar Alumno
-        </button>
-      </div>
-      <div>
-        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">Historial de Inscripción y Mensualidades (${alu.membresias_historial.length})</h4>
-        <div class="space-y-2">${htmlMembresias}</div>
-      </div>
-      <div>
-        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400 mb-2.5">Recibos Emitidos (${recibosAlumno.length})</h4>
-        <div class="space-y-2">${htmlRecibos}</div>
-      </div>
-    `;
+    document.getElementById('hist-alumno-contenido').innerHTML = historialAlumnoContenido(
+      alu,
+      recibosAlumno,
+      moneda,
+      { formatDatePE, formatDateTimePE, METODO_LABELS }
+    );
 
     abrirModal('modal-historial-alumno');
+    refreshIcons();
   }
 
   // =========================================================================
@@ -2067,13 +1281,7 @@
     const selectHorario = document.getElementById('edit-alu-horario');
     if (selectHorario) {
       const horarios = store.state.horarios || [];
-      selectHorario.innerHTML =
-        horarios
-          .map(
-            (h) =>
-              `<option value="${escapeHTML(h.id)}">🕒 ${escapeHTML(h.hora)} (${escapeHTML(h.dias)}) — ${escapeHTML(h.nombre)}</option>`
-          )
-          .join('') + `<option value="">-- Sin horario asignado --</option>`;
+      selectHorario.innerHTML = optionsHorarios(horarios, '-- Sin horario asignado --');
       selectHorario.value = alu.horario_id || '';
     }
 
@@ -2289,101 +1497,10 @@
       .filter((r) => String(r.numero_recibo).toLowerCase().includes(q))
       .slice(0, 4);
 
-    if (alumnosMatch.length === 0 && recibosMatch.length === 0) {
-      resultsBox.innerHTML = `<div class="p-4 text-sm text-slate-400 text-center font-medium">Sin resultados para "${escapeHTML(query)}"</div>`;
-      resultsBox.classList.remove('hidden');
-      return;
-    }
-
-    let html = '';
-
-    if (alumnosMatch.length > 0) {
-      html += `<div class="px-4 py-2 bg-slate-950 text-xs font-extrabold uppercase tracking-wider text-slate-400">Alumnos Encontrados</div>`;
-      html += alumnosMatch
-        .map((a) => {
-          const mem = a.ultima_membresia;
-          const semaforo =
-            a.estado_vigencia === 'ACTIVO'
-              ? '🟢 VIGENTE'
-              : a.estado_vigencia === 'SOLO_INSCRITO'
-              ? a.proxima_membresia
-                ? `⏳ INICIA EL ${formatDatePE(a.proxima_membresia.fecha_inicio)}`
-                : '🎓 SOLO INSCRITO (FALTA 1ER MES)'
-              : a.estado_vigencia === 'POR_VENCER'
-              ? `🟡 VENCE EN ${a.dias_restantes}D`
-              : a.estado_vigencia === 'VENCIDO'
-              ? '🔴 VENCIDO'
-              : '⚪ SIN PLAN';
-
-          return `
-            <div class="p-3.5 hover:bg-slate-800/40 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <div class="flex items-center gap-2">
-                  <span class="font-extrabold text-sm sm:text-base text-white">${escapeHTML(a.nombre_completo)}</span>
-                  <span class="text-xs font-extrabold">${semaforo}</span>
-                </div>
-                <p class="text-xs text-slate-400 tabular-nums mt-0.5">
-                  ${
-                    mem
-                      ? `${escapeHTML(mem.concepto)} • ${
-                          a.proxima_membresia && !a.membresia_vigente && a.estado_vigencia === 'SOLO_INSCRITO'
-                            ? `Inicia: ${formatDatePE(mem.fecha_inicio)} al ${formatDatePE(mem.fecha_fin)}`
-                            : `Vence: ${formatDatePE(mem.fecha_fin)}`
-                        }`
-                      : a.estado_vigencia === 'SOLO_INSCRITO'
-                      ? 'Inscrito (Pendiente 1ra Mensualidad)'
-                      : 'Sin membresía'
-                  }
-                  ${a.saldo_total_pendiente > 0 ? ` • <b class="text-amber-400">Lo que debe: ${escapeHTML(moneda)} ${a.saldo_total_pendiente.toFixed(2)}</b>` : ''}
-                </p>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <button
-                  type="button"
-                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirHistorialAlumno('${safeId(a.id)}')"
-                  class="px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-white cursor-pointer"
-                >
-                  Ver Ficha
-                </button>
-                <button
-                  type="button"
-                  onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.abrirModalRenovar('${safeId(a.id)}')"
-                  class="keep-white-text px-3 py-1.5 rounded-xl brand-bg text-xs font-bold text-white cursor-pointer"
-                >
-                  ${a.estado_vigencia === 'SOLO_INSCRITO' && !a.proxima_membresia ? '+ 1er Mes' : 'Cobrar Mes'}
-                </button>
-              </div>
-            </div>`;
-        })
-        .join('');
-    }
-
-    if (recibosMatch.length > 0) {
-      html += `<div class="px-4 py-2 bg-slate-950 text-xs font-extrabold uppercase tracking-wider text-slate-400">Recibos por Número</div>`;
-      html += recibosMatch
-        .map(
-          (r) => `
-          <div class="p-3.5 hover:bg-slate-800/40 border-b border-slate-800 flex items-center justify-between gap-2">
-            <div>
-              <span class="font-mono font-black text-sm text-emerald-400">#${escapeHTML(r.numero_recibo)}</span>
-              <span class="text-sm font-extrabold text-white ml-2">${escapeHTML(r.nombre_completo)}</span>
-              <p class="text-xs text-slate-400 tabular-nums">
-                ${escapeHTML(r.membresia?.concepto || '')} • Pagó: ${escapeHTML(moneda)} ${Number(r.monto_abonado).toFixed(2)}
-              </p>
-            </div>
-            <button
-              type="button"
-              onclick="document.getElementById('global-search-results').classList.add('hidden'); window.AppUI.verComprobanteDigital('${safeId(r.id)}')"
-              class="keep-white-text px-3 py-1.5 rounded-xl bg-sky-600 text-white text-xs font-bold cursor-pointer"
-            >
-              Ver Recibo
-            </button>
-          </div>`
-        )
-        .join('');
-    }
-
-    resultsBox.innerHTML = html;
+    resultsBox.innerHTML = busquedaGlobalContenido(alumnosMatch, recibosMatch, moneda, {
+      formatDatePE,
+      query
+    });
     resultsBox.classList.remove('hidden');
   }
 
@@ -2392,6 +1509,76 @@
   // =========================================================================
   function initEventListeners() {
     store.subscribe(() => renderTodo());
+
+    // Delegación única para acciones declaradas con [data-action]
+    document.addEventListener('click', (e) => {
+      const actionEl = e.target.closest('[data-action]');
+      if (!actionEl) return;
+
+      const closeModalId = actionEl.getAttribute('data-close-modal');
+      if (closeModalId) cerrarModal(closeModalId);
+
+      if (actionEl.getAttribute('data-close-search') === 'true') {
+        document.getElementById('global-search-results')?.classList.add('hidden');
+      }
+
+      const action = actionEl.getAttribute('data-action');
+      const id = actionEl.getAttribute('data-id') || '';
+      const arg = actionEl.getAttribute('data-arg') || '';
+
+      switch (action) {
+        case 'abrir-accion-directa':
+          abrirModalAccionDirecta(arg);
+          break;
+        case 'cambiar-tab':
+          cambiarTab(arg);
+          break;
+        case 'ver-historial':
+          abrirHistorialAlumno(id);
+          break;
+        case 'renovar-alumno':
+          abrirModalRenovar(id);
+          break;
+        case 'editar-alumno':
+          abrirModalEditarAlumno(id);
+          break;
+        case 'eliminar-alumno':
+          eliminarAlumnoConfirm(id);
+          break;
+        case 'cobrar-saldo':
+          abrirModalCobrarSaldo(id);
+          break;
+        case 'ver-comprobante':
+          verComprobanteDigital(id);
+          break;
+        case 'editar-recibo':
+          abrirModalEditarRecibo(id);
+          break;
+        case 'toggle-anular-recibo':
+          anularOReactivarRecibo(id);
+          break;
+        case 'inscribir-en-horario':
+          inscribirEnHorario(id);
+          break;
+        case 'editar-horario':
+          editarHorario(id);
+          break;
+        case 'eliminar-horario':
+          eliminarHorario(id);
+          break;
+        case 'editar-plan':
+          editarPlan(id);
+          break;
+        case 'eliminar-plan':
+          eliminarPlan(id);
+          break;
+        case 'imprimir-comprobante':
+          window.print();
+          break;
+        default:
+          break;
+      }
+    });
 
     // Navegación por menú lateral y barra móvil inferior
     document.querySelectorAll('.nav-tab-btn').forEach((btn) => {
@@ -2627,7 +1814,7 @@
         cerrarModal('modal-nuevo-pago');
         mostrarToast(
           tieneNube
-            ? `💾 Recibo #${resultado.recibo.numero_recibo} guardado en este equipo • Sincronizando nube...`
+            ? `💾 Recibo #${resultado.recibo.numero_recibo} guardado en este equipo • Sincronizando nube…`
             : `Recibo #${resultado.recibo.numero_recibo} guardado correctamente`
         );
 
@@ -2674,7 +1861,7 @@
         cerrarModal('modal-cobrar-saldo');
         mostrarToast(
           tieneNube
-            ? `💾 Saldo en Recibo #${resultado.recibo.numero_recibo} guardado localmente • Sincronizando nube...`
+            ? `💾 Saldo en Recibo #${resultado.recibo.numero_recibo} guardado localmente • Sincronizando nube…`
             : `Saldo cobrado en Recibo #${resultado.recibo.numero_recibo}`
         );
         verComprobanteDigital(resultado.recibo.id);
@@ -2763,9 +1950,9 @@
 
       try {
         await copiarCanvasAlPortapapeles(canvas);
-        mostrarToast('✅ Imagen copiada al portapapeles. Abriendo WhatsApp...');
+        mostrarToast('✅ Imagen copiada al portapapeles. Abriendo WhatsApp…');
       } catch (err) {
-        mostrarToast('Abriendo WhatsApp con el detalle del recibo...', 'info');
+        mostrarToast('Abriendo WhatsApp con el detalle del recibo…', 'info');
       }
       window.open(waUrl, '_blank', 'noopener');
     });
@@ -3289,7 +2476,7 @@
     });
   }
 
-  // Exponer funciones públicas para eventos inline
+  // Exponer funciones públicas de interfaz por compatibilidad (window.AppUI)
   global.AppUI = {
     cambiarTab,
     abrirModal,

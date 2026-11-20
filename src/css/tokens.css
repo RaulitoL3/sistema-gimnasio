@@ -1,0 +1,410 @@
+/* ==========================================================================
+   DOJO PRECISION — DESIGN TOKENS (LIGHT / DARK + BRAND + SEMANTIC)
+   Arquitectura zero-build basada en CSS Custom Properties nativas.
+   Cero sobrescrituras forzadas o parches sobre utilidades oscuras.
+   ========================================================================== */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  /* 1. Superficies y Lienzo (Modo Claro por defecto para recepción) */
+  --bg-canvas: #F5F6F8;
+  --surface-elevated: #FFFFFF;
+  --surface-secondary: #EEF1F5;
+  --surface-tertiary: #E4E9F0;
+  --surface-hover: #F1F5F9;
+  --surface-overlay: rgba(15, 23, 42, 0.56);
+  --surface-overlay-strong: rgba(15, 23, 42, 0.74);
+
+  /* 2. Bordes */
+  --border-subtle: #DCE2EA;
+  --border-default: #CBD5E1;
+  --border-strong: #94A3B8;
+
+  /* 3. Jerarquía Tipográfica de Texto (WCAG AA+) */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #5B697D;
+  --text-inverse: #FFFFFF;
+
+  /* 4. Controles e Inputs (Explícito para Windows Light) */
+  --input-bg: #FFFFFF;
+  --input-border: #CBD5E1;
+  --input-border-hover: #94A3B8;
+  --input-text: #0F172A;
+  --input-placeholder: #5B697D;
+  --select-bg: #FFFFFF;
+  --select-color: #0F172A;
+
+  /* 5. Sombras Arquitectónicas Limpias */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 2px 6px -1px rgba(15, 23, 42, 0.06), 0 1px 2px -1px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 20px -4px rgba(15, 23, 42, 0.08), 0 2px 6px -2px rgba(15, 23, 42, 0.04);
+  --shadow-lg: 0 20px 36px -8px rgba(15, 23, 42, 0.14), 0 4px 12px -4px rgba(15, 23, 42, 0.06);
+  --shadow-dropdown: 0 14px 28px -6px rgba(15, 23, 42, 0.14), 0 4px 10px -4px rgba(15, 23, 42, 0.06);
+
+  /* 6. Scrollbars */
+  --scrollbar-track: transparent;
+  --scrollbar-thumb: #CBD5E1;
+  --scrollbar-thumb-hover: #94A3B8;
+
+  /* 7. Tokens Semánticos (WCAG AA+ verificado sobre elevado y soft bg) */
+  --status-success-bg: #ECFDF5;
+  --status-success-border: #A7F3D0;
+  --status-success-text: #047857;
+  --status-success-solid: #047857;
+  --status-success-solid-hover: #065F46;
+  --status-success-on-solid: #FFFFFF;
+  --status-success-on-solid-muted: #D1FAE5;
+  --status-success-dot: #10B981;
+
+  --status-warning-bg: #FFFBEB;
+  --status-warning-border: #FDE68A;
+  --status-warning-text: #92400E;
+  --status-warning-solid: #B45309;
+  --status-warning-solid-hover: #92400E;
+  --status-warning-on-solid: #FFFFFF;
+  --status-warning-on-solid-muted: #FEF3C7;
+  --status-warning-dot: #F59E0B;
+
+  --status-danger-bg: #FEF2F2;
+  --status-danger-border: #FECACA;
+  --status-danger-text: #B91C1C;
+  --status-danger-solid: #DC2626;
+  --status-danger-solid-hover: #B91C1C;
+  --status-danger-on-solid: #FFFFFF;
+  --status-danger-on-solid-muted: #FEE2E2;
+  --status-danger-dot: #EF4444;
+
+  --status-info-bg: #F0F9FF;
+  --status-info-border: #BAE6FD;
+  --status-info-text: #0369A1;
+  --status-info-solid: #0369A1;
+  --status-info-solid-hover: #075985;
+  --status-info-on-solid: #FFFFFF;
+  --status-info-on-solid-muted: #E0F2FE;
+  --status-info-dot: #0EA5E9;
+
+  --status-neutral-bg: #EEF1F5;
+  --status-neutral-border: #CBD5E1;
+  --status-neutral-text: #334155;
+  --status-neutral-solid: #334155;
+  --status-neutral-solid-hover: #1E293B;
+  --status-neutral-on-solid: #FFFFFF;
+  --status-neutral-dot: #64748B;
+
+  /* 8. Tokens de Métodos de Pago (1-clic) */
+  --pay-efectivo-bg: #047857;
+  --pay-efectivo-border: #065F46;
+  --pay-efectivo-fg: #FFFFFF;
+  --pay-efectivo-shadow: 0 4px 12px rgba(4, 120, 87, 0.28);
+
+  --pay-yape-bg: #7C3AED;
+  --pay-yape-border: #5B21B6;
+  --pay-yape-fg: #FFFFFF;
+  --pay-yape-shadow: 0 4px 12px rgba(124, 58, 237, 0.28);
+
+  --pay-transf-bg: #0369A1;
+  --pay-transf-border: #075985;
+  --pay-transf-fg: #FFFFFF;
+  --pay-transf-shadow: 0 4px 12px rgba(3, 105, 161, 0.28);
+
+  --pay-tarjeta-bg: #B45309;
+  --pay-tarjeta-border: #92400E;
+  --pay-tarjeta-fg: #FFFFFF;
+  --pay-tarjeta-shadow: 0 4px 12px rgba(180, 83, 9, 0.28);
+
+  /* 9. Tokens de Cinturones / Categorías */
+  --belt-white-bg: #F1F5F9;
+  --belt-white-fg: #0F172A;
+  --belt-white-border: #94A3B8;
+
+  --belt-blue-bg: #1D4ED8;
+  --belt-blue-fg: #FFFFFF;
+  --belt-blue-border: #60A5FA;
+
+  --belt-purple-bg: #6D28D9;
+  --belt-purple-fg: #FFFFFF;
+  --belt-purple-border: #A78BFA;
+
+  --belt-brown-bg: #78350F;
+  --belt-brown-fg: #FFFFFF;
+  --belt-brown-border: #D97706;
+
+  --belt-black-bg: #0F172A;
+  --belt-black-fg: #FBBF24;
+  --belt-black-border: #F59E0B;
+
+  --belt-competitor-bg: #B91C1C;
+  --belt-competitor-fg: #FFFFFF;
+  --belt-competitor-border: #F87171;
+
+  --belt-kids-bg: #047857;
+  --belt-kids-fg: #FFFFFF;
+  --belt-kids-border: #34D399;
+
+  /* 10. Tipografía */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+
+  --text-xs: 0.75rem;      /* 12px */
+  --text-sm: 0.875rem;     /* 14px */
+  --text-base: 1rem;       /* 16px */
+  --text-lg: 1.125rem;     /* 18px */
+  --text-xl: 1.25rem;      /* 20px */
+  --text-2xl: 1.5rem;      /* 24px */
+  --text-3xl: 1.875rem;    /* 30px */
+
+  /* 11. Escala Espacial (Base 4px) */
+  --space-0-5: 0.125rem;   /* 2px */
+  --space-1: 0.25rem;      /* 4px */
+  --space-1-5: 0.375rem;   /* 6px */
+  --space-2: 0.5rem;       /* 8px */
+  --space-2-5: 0.625rem;   /* 10px */
+  --space-3: 0.75rem;      /* 12px */
+  --space-3-5: 0.875rem;   /* 14px */
+  --space-4: 1rem;         /* 16px */
+  --space-5: 1.25rem;      /* 20px */
+  --space-6: 1.5rem;       /* 24px */
+  --space-8: 2rem;         /* 32px */
+  --space-10: 2.5rem;      /* 40px */
+  --space-12: 3rem;        /* 48px */
+
+  /* 12. Radios Arquitectónicos */
+  --radius-xs: 0.375rem;   /* 6px */
+  --radius-sm: 0.5rem;     /* 8px */
+  --radius-md: 0.75rem;    /* 12px */
+  --radius-lg: 1rem;       /* 16px */
+  --radius-pill: 9999px;
+
+  /* 13. Geometría de Layout y Accesibilidad Táctil */
+  --sidebar-width: 18rem;       /* 288px */
+  --topbar-height: 4.5rem;      /* 72px */
+  --container-max: 80rem;       /* 1280px */
+  --mobile-nav-height: 4.25rem; /* 68px */
+  --touch-min: 2.75rem;         /* 44px */
+
+  /* 14. Movimiento */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --duration-fast: 150ms;
+  --duration-base: 200ms;
+  --duration-slow: 280ms;
+
+  /* 15. Capas Z-Index */
+  --z-sticky: 30;
+  --z-sidebar: 40;
+  --z-dropdown: 50;
+  --z-modal: 60;
+  --z-modal-critical: 70;
+  --z-toast: 80;
+
+  /* 16. Marca por Defecto (ROJO - Light) */
+  --brand-accent: #DC2626;
+  --brand-accent-hover: #B91C1C;
+  --brand-accent-active: #991B1B;
+  --brand-accent-soft: #FEF2F2;
+  --brand-accent-border: #FECACA;
+  --brand-accent-text: #B91C1C;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #FEE2E2;
+
+  --focus-ring: var(--brand-accent);
+  --focus-ring-offset: 2px;
+}
+
+/* ==========================================================================
+   TEMA OSCURO NATIVO ([data-theme="dark"])
+   ========================================================================== */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-canvas: #0B0F14;
+  --surface-elevated: #121821;
+  --surface-secondary: #17202C;
+  --surface-tertiary: #1E293B;
+  --surface-hover: #1B2533;
+  --surface-overlay: rgba(4, 7, 11, 0.78);
+  --surface-overlay-strong: rgba(4, 7, 11, 0.90);
+
+  --border-subtle: #243041;
+  --border-default: #334155;
+  --border-strong: #475569;
+
+  --text-primary: #F1F5F9;
+  --text-secondary: #CBD5E1;
+  --text-muted: #94A3B8;
+  --text-inverse: #0B0F14;
+
+  /* Explícito para controles nativos en Windows Dark */
+  --input-bg: #0E141C;
+  --input-border: #334155;
+  --input-border-hover: #475569;
+  --input-text: #F1F5F9;
+  --input-placeholder: #94A3B8;
+  --select-bg: #0E141C;
+  --select-color: #F1F5F9;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.30);
+  --shadow-sm: 0 2px 8px -1px rgba(0, 0, 0, 0.40), 0 1px 3px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 10px 24px -4px rgba(0, 0, 0, 0.50), 0 4px 10px -2px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 24px 44px -8px rgba(0, 0, 0, 0.65), 0 8px 16px -4px rgba(0, 0, 0, 0.40);
+  --shadow-dropdown: 0 16px 32px -6px rgba(0, 0, 0, 0.58), 0 4px 12px -2px rgba(0, 0, 0, 0.35);
+
+  --scrollbar-thumb: #2D3B4E;
+  --scrollbar-thumb-hover: #475569;
+
+  /* Tokens Semánticos Dark Mode */
+  --status-success-bg: rgba(16, 185, 129, 0.14);
+  --status-success-border: rgba(52, 211, 153, 0.32);
+  --status-success-text: #6EE7B7;
+  --status-success-solid: #047857;
+  --status-success-solid-hover: #065F46;
+  --status-success-on-solid: #FFFFFF;
+  --status-success-on-solid-muted: #D1FAE5;
+  --status-success-dot: #34D399;
+
+  --status-warning-bg: rgba(245, 158, 11, 0.14);
+  --status-warning-border: rgba(251, 191, 36, 0.34);
+  --status-warning-text: #FCD34D;
+  --status-warning-solid: #D97706;
+  --status-warning-solid-hover: #F59E0B;
+  --status-warning-on-solid: #0B0F14;
+  --status-warning-on-solid-muted: #0F172A;
+  --status-warning-dot: #FBBF24;
+
+  --status-danger-bg: rgba(239, 68, 68, 0.14);
+  --status-danger-border: rgba(248, 113, 113, 0.34);
+  --status-danger-text: #FCA5A5;
+  --status-danger-solid: #DC2626;
+  --status-danger-solid-hover: #B91C1C;
+  --status-danger-on-solid: #FFFFFF;
+  --status-danger-on-solid-muted: #FEE2E2;
+  --status-danger-dot: #F87171;
+
+  --status-info-bg: rgba(14, 165, 233, 0.14);
+  --status-info-border: rgba(56, 189, 248, 0.34);
+  --status-info-text: #7DD3FC;
+  --status-info-solid: #0369A1;
+  --status-info-solid-hover: #075985;
+  --status-info-on-solid: #FFFFFF;
+  --status-info-on-solid-muted: #E0F2FE;
+  --status-info-dot: #38BDF8;
+
+  --status-neutral-bg: #1E293B;
+  --status-neutral-border: #334155;
+  --status-neutral-text: #CBD5E1;
+  --status-neutral-solid: #334155;
+  --status-neutral-solid-hover: #475569;
+  --status-neutral-on-solid: #F8FAFC;
+  --status-neutral-dot: #94A3B8;
+
+  /* Métodos de pago en Dark Mode */
+  --pay-efectivo-border: #34D399;
+  --pay-yape-border: #A78BFA;
+  --pay-transf-border: #38BDF8;
+  --pay-tarjeta-bg: #D97706;
+  --pay-tarjeta-border: #FBBF24;
+  --pay-tarjeta-fg: #0B0F14;
+}
+
+/* ==========================================================================
+   PALETAS DE MARCA ([data-brand]) EN LIGHT Y DARK (WCAG AA+)
+   Soporta colocación en <html>, <body> o contenedores independientes.
+   ========================================================================== */
+
+/* ROJO */
+[data-brand="ROJO"] {
+  --brand-accent: #DC2626;
+  --brand-accent-hover: #B91C1C;
+  --brand-accent-active: #991B1B;
+  --brand-accent-soft: #FEF2F2;
+  --brand-accent-border: #FECACA;
+  --brand-accent-text: #B91C1C;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #FEE2E2;
+}
+
+[data-theme="dark"] [data-brand="ROJO"],
+[data-theme="dark"][data-brand="ROJO"] {
+  --brand-accent: #DC2626;
+  --brand-accent-hover: #B91C1C;
+  --brand-accent-active: #991B1B;
+  --brand-accent-soft: rgba(220, 38, 38, 0.16);
+  --brand-accent-border: rgba(248, 113, 113, 0.36);
+  --brand-accent-text: #FCA5A5;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #FEE2E2;
+}
+
+/* AZUL */
+[data-brand="AZUL"] {
+  --brand-accent: #2563EB;
+  --brand-accent-hover: #1D4ED8;
+  --brand-accent-active: #1E40AF;
+  --brand-accent-soft: #EFF6FF;
+  --brand-accent-border: #BFDBFE;
+  --brand-accent-text: #1D4ED8;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #DBEAFE;
+}
+
+[data-theme="dark"] [data-brand="AZUL"],
+[data-theme="dark"][data-brand="AZUL"] {
+  --brand-accent: #2563EB;
+  --brand-accent-hover: #1D4ED8;
+  --brand-accent-active: #1E40AF;
+  --brand-accent-soft: rgba(37, 99, 235, 0.18);
+  --brand-accent-border: rgba(96, 165, 250, 0.38);
+  --brand-accent-text: #93C5FD;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #DBEAFE;
+}
+
+/* DORADO */
+[data-brand="DORADO"] {
+  --brand-accent: #B45309;
+  --brand-accent-hover: #92400E;
+  --brand-accent-active: #78350F;
+  --brand-accent-soft: #FFFBEB;
+  --brand-accent-border: #FDE68A;
+  --brand-accent-text: #92400E;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #FEF3C7;
+}
+
+[data-theme="dark"] [data-brand="DORADO"],
+[data-theme="dark"][data-brand="DORADO"] {
+  --brand-accent: #F59E0B;
+  --brand-accent-hover: #FBBF24;
+  --brand-accent-active: #D97706;
+  --brand-accent-soft: rgba(245, 158, 11, 0.16);
+  --brand-accent-border: rgba(251, 191, 36, 0.40);
+  --brand-accent-text: #FCD34D;
+  --brand-on-accent: #0B0F14;
+  --brand-on-accent-muted: #0F172A;
+}
+
+/* ESMERALDA */
+[data-brand="ESMERALDA"] {
+  --brand-accent: #047857;
+  --brand-accent-hover: #065F46;
+  --brand-accent-active: #064E3B;
+  --brand-accent-soft: #ECFDF5;
+  --brand-accent-border: #A7F3D0;
+  --brand-accent-text: #047857;
+  --brand-on-accent: #FFFFFF;
+  --brand-on-accent-muted: #D1FAE5;
+}
+
+[data-theme="dark"] [data-brand="ESMERALDA"],
+[data-theme="dark"][data-brand="ESMERALDA"] {
+  --brand-accent: #10B981;
+  --brand-accent-hover: #34D399;
+  --brand-accent-active: #059669;
+  --brand-accent-soft: rgba(16, 185, 129, 0.16);
+  --brand-accent-border: rgba(52, 211, 153, 0.38);
+  --brand-accent-text: #6EE7B7;
+  --brand-on-accent: #0B0F14;
+  --brand-on-accent-muted: #0F172A;
+}

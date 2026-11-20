@@ -12,10 +12,10 @@
   };
 
   const BRAND_PALETTES = {
-    ROJO: { gradEnd: '#991b1b', accent: '#dc2626', subtext: '#fca5a5' },
-    AZUL: { gradEnd: '#1e40af', accent: '#2563eb', subtext: '#93c5fd' },
-    DORADO: { gradEnd: '#92400e', accent: '#d97706', subtext: '#fde68a' },
-    ESMERALDA: { gradEnd: '#065f46', accent: '#059669', subtext: '#6ee7b7' }
+    ROJO: { gradEnd: '#991B1B', accent: '#DC2626', subtext: '#FCA5A5' },
+    AZUL: { gradEnd: '#1E40AF', accent: '#2563EB', subtext: '#93C5FD' },
+    DORADO: { gradEnd: '#92400E', accent: '#B45309', subtext: '#FCD34D' },
+    ESMERALDA: { gradEnd: '#065F46', accent: '#047857', subtext: '#6EE7B7' }
   };
 
   let cachedLogoUrl = '';
@@ -41,8 +41,8 @@
     const montoAbonado = Number(detalleRecibo.monto_abonado || 0);
     const horarioTexto = membresia.horario_texto || alumno.horario_texto || '';
 
-    // 1. Fondo principal
-    ctx.fillStyle = '#0f172a'; // Slate 900
+    // 1. Fondo principal (Dojo Precision: canvas-dark)
+    ctx.fillStyle = '#0B0F14';
     ctx.fillRect(0, 0, W, H);
 
     // Tarjeta blanca interna
@@ -51,14 +51,14 @@
     const cardW = W - 72;
     const cardH = H - 72;
 
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#FFFFFF';
     roundRect(ctx, cardX, cardY, cardW, cardH, 24);
     ctx.fill();
 
     // Cabecera oscura deportiva con el color personalizado de la academia
     const headerGrad = ctx.createLinearGradient(cardX, cardY, cardX + cardW, cardY + 190);
-    headerGrad.addColorStop(0, '#0f172a');
-    headerGrad.addColorStop(0.6, '#1e293b');
+    headerGrad.addColorStop(0, '#0B0F14');
+    headerGrad.addColorStop(0.6, '#121821');
     headerGrad.addColorStop(1, palette.gradEnd);
     ctx.fillStyle = headerGrad;
     roundRectTop(ctx, cardX, cardY, cardW, 195, 24);
@@ -74,8 +74,8 @@
     ctx.arc(cardX + 68, cardY + 80, 36, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 28px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = 'bold 28px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText('🥋', cardX + 68, cardY + 90);
 
@@ -87,7 +87,7 @@
         ctx.arc(cardX + 68, cardY + 80, 34, 0, Math.PI * 2);
         ctx.closePath();
         ctx.clip();
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(cardX + 34, cardY + 46, 68, 68);
         ctx.drawImage(cachedLogoImg, cardX + 34, cardY + 46, 68, 68);
         ctx.restore();
@@ -104,16 +104,16 @@
 
     // Nombre de la Academia
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '800 26px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '800 26px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText((config.nombre_academia || 'GIMNASIO ARTES MARCIALES').toUpperCase(), cardX + 118, cardY + 68);
 
     ctx.fillStyle = palette.subtext;
-    ctx.font = '600 15px "Inter", system-ui, sans-serif';
+    ctx.font = '600 15px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(config.subtitulo || 'Centro de Entrenamiento & Artes Marciales', cardX + 118, cardY + 95);
 
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '400 13px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#CBD5E1';
+    ctx.font = '400 13px "Plus Jakarta Sans", system-ui, sans-serif';
     const infoContacto = [config.direccion, config.telefono ? `Tel/WhatsApp: ${config.telefono}` : '']
       .filter(Boolean)
       .join('  •  ');
@@ -128,60 +128,60 @@
     roundRect(ctx, badgeX, badgeY, badgeW, badgeH, 10);
     ctx.fill();
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '700 16px "Inter", monospace';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '700 16px "JetBrains Mono", monospace';
     ctx.textAlign = 'center';
     ctx.fillText(`RECIBO N° ${detalleRecibo.numero_recibo}`, badgeX + badgeW / 2, badgeY + 28);
 
     // Estado del recibo (Pagado / Adelanto / Anulado)
     ctx.textAlign = 'left';
     let estadoTexto = 'PAGO COMPLETO';
-    let estadoBg = '#dcfce7';
-    let estadoColor = '#15803d';
+    let estadoBg = '#ECFDF5';
+    let estadoColor = '#047857';
 
     if (detalleRecibo.anulado) {
       estadoTexto = 'RECIBO ANULADO';
-      estadoBg = '#fee2e2';
-      estadoColor = '#b91c1c';
+      estadoBg = '#FEE2E2';
+      estadoColor = '#B91C1C';
     } else if (saldoPendiente > 0) {
       estadoTexto = 'ADELANTO / SALDO PENDIENTE';
-      estadoBg = '#fef3c7';
-      estadoColor = '#b45309';
+      estadoBg = '#FEF3C7';
+      estadoColor = '#92400E';
     }
 
     ctx.fillStyle = estadoBg;
     roundRect(ctx, cardX + 36, cardY + 220, 260, 34, 17);
     ctx.fill();
     ctx.fillStyle = estadoColor;
-    ctx.font = '700 13px "Inter", system-ui, sans-serif';
+    ctx.font = '700 13px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(`●  ${estadoTexto}`, cardX + 52, cardY + 242);
 
     // Fecha de emisión
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#64748b';
-    ctx.font = '500 14px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.font = '500 14px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(`Emitido: ${formatDateTimePE(detalleRecibo.fecha_pago)}`, cardX + cardW - 36, cardY + 242);
 
     // Sección 1: Datos del Alumno
     let y = cardY + 280;
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#f8fafc';
+    ctx.fillStyle = '#F5F6F8';
     roundRect(ctx, cardX + 36, y, cardW - 72, 130, 14);
     ctx.fill();
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = '#DCE2EA';
     ctx.lineWidth = 1.5;
     ctx.stroke();
 
-    ctx.fillStyle = '#64748b';
-    ctx.font = '700 12px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.font = '700 12px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText('ALUMNO / DEPORTISTA (NOMBRES Y APELLIDOS)', cardX + 58, y + 30);
 
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '800 24px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '800 24px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(nombreCompleto || 'Alumno', cardX + 58, y + 64);
 
     ctx.fillStyle = '#475569';
-    ctx.font = '500 14px "Inter", system-ui, sans-serif';
+    ctx.font = '500 14px "Plus Jakarta Sans", system-ui, sans-serif';
     const extraAlumno = [
       alumno.grado_cinturon ? `Grado: ${alumno.grado_cinturon}` : '',
       horarioTexto ? `Horario: ${horarioTexto}` : '',
@@ -193,18 +193,18 @@
 
     // Sección 2: Plan y Periodo de Vigencia (Fecha de Inicio y Fecha de Finalización)
     y += 152;
-    ctx.fillStyle = '#f8fafc';
+    ctx.fillStyle = '#F5F6F8';
     roundRect(ctx, cardX + 36, y, cardW - 72, 165, 14);
     ctx.fill();
-    ctx.strokeStyle = '#e2e8f0';
+    ctx.strokeStyle = '#DCE2EA';
     ctx.stroke();
 
-    ctx.fillStyle = '#64748b';
-    ctx.font = '700 12px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.font = '700 12px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText('PLAN / CONCEPTO DE MEMBRESÍA', cardX + 58, y + 30);
 
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '800 20px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '800 20px "Plus Jakarta Sans", system-ui, sans-serif';
     const textoConcepto =
       membresia.incluye_inscripcion && Number(membresia.monto_inscripcion) > 0 && membresia.tipo_operacion !== 'SOLO_INSCRIPCION'
         ? `${membresia.concepto} (Insc: ${moneda}${Number(membresia.monto_inscripcion).toFixed(0)} + Plan: ${moneda}${Number(membresia.monto_mensualidad).toFixed(0)})`
@@ -216,40 +216,43 @@
     const boxY = y + 80;
 
     // Fecha de Inicio
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = '#FFFFFF';
     roundRect(ctx, cardX + 58, boxY, boxW, 64, 10);
     ctx.fill();
-    ctx.strokeStyle = '#cbd5e1';
+    ctx.strokeStyle = '#CBD5E1';
     ctx.stroke();
 
-    ctx.fillStyle = '#64748b';
-    ctx.font = '700 11px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.font = '700 11px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(
       membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? 'FECHA DE INSCRIPCIÓN' : 'FECHA DE INICIO',
       cardX + 76,
       boxY + 22
     );
-    ctx.fillStyle = '#0f172a';
-    ctx.font = '800 19px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#0F172A';
+    ctx.font = '800 19px "JetBrains Mono", monospace';
     ctx.fillText(formatDatePE(membresia.fecha_inicio), cardX + 76, boxY + 48);
 
     // Fecha de Finalización
     const box2X = cardX + 58 + boxW + 24;
-    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#ecfdf5' : '#fff1f2';
+    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#ECFDF5' : '#FEF2F2';
     roundRect(ctx, box2X, boxY, boxW, 64, 10);
     ctx.fill();
-    ctx.strokeStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#a7f3d0' : '#fecdd3';
+    ctx.strokeStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#A7F3D0' : '#FECACA';
     ctx.stroke();
 
-    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#047857' : '#be123c';
-    ctx.font = '700 11px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#047857' : '#B91C1C';
+    ctx.font = '700 11px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(
       membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? 'TIPO DE REGISTRO' : 'FECHA DE FINALIZACIÓN (VENCIMIENTO)',
       box2X + 18,
       boxY + 22
     );
-    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#065f46' : '#881337';
-    ctx.font = '800 18px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? '#065F46' : '#991B1B';
+    ctx.font =
+      membresia.tipo_operacion === 'SOLO_INSCRIPCION'
+        ? '800 17px "Plus Jakarta Sans", system-ui, sans-serif'
+        : '800 18px "JetBrains Mono", monospace';
     ctx.fillText(
       membresia.tipo_operacion === 'SOLO_INSCRIPCION' ? 'PAGO ÚNICO • INSCRITO' : formatDatePE(membresia.fecha_fin),
       box2X + 18,
@@ -258,32 +261,32 @@
 
     // Sección 3: Desglose Financiero (Total a Pagar, Monto Abonado hoy, Saldo Pendiente)
     y += 188;
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#121821';
     roundRect(ctx, cardX + 36, y, cardW - 72, 215, 16);
     ctx.fill();
 
     // Fila 1: Total a Pagar de la Membresía
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '600 15px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '600 15px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('Total a Pagar (Membresía):', cardX + 64, y + 42);
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = '700 18px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#F1F5F9';
+    ctx.font = '700 18px "JetBrains Mono", monospace';
     ctx.fillText(`${moneda} ${totalPagar.toFixed(2)}`, cardX + cardW - 64, y + 42);
 
     // Fila 2: Método de Pago
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '600 15px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#94A3B8';
+    ctx.font = '600 15px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText('Método de Pago:', cardX + 64, y + 76);
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = '700 15px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#7DD3FC';
+    ctx.font = '700 15px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText(METODO_LABELS[detalleRecibo.metodo_pago] || detalleRecibo.metodo_pago, cardX + cardW - 64, y + 76);
 
     // Línea divisoria
-    ctx.strokeStyle = '#334155';
+    ctx.strokeStyle = '#243041';
     ctx.beginPath();
     ctx.moveTo(cardX + 64, y + 98);
     ctx.lineTo(cardX + cardW - 64, y + 98);
@@ -291,36 +294,36 @@
 
     // Fila 3 Destacada: MONTO PAGADO EN ESTE RECIBO
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '800 18px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#FFFFFF';
+    ctx.font = '800 18px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText('MONTO ABONADO (ESTE RECIBO):', cardX + 64, y + 138);
     ctx.textAlign = 'right';
-    ctx.fillStyle = '#4ade80';
-    ctx.font = '800 28px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#6EE7B7';
+    ctx.font = '800 28px "JetBrains Mono", monospace';
     ctx.fillText(`${moneda} ${montoAbonado.toFixed(2)}`, cardX + cardW - 64, y + 140);
 
     // Fila 4: Saldo Pendiente
     ctx.textAlign = 'left';
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '600 15px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#CBD5E1';
+    ctx.font = '600 15px "Plus Jakarta Sans", system-ui, sans-serif';
     ctx.fillText('Saldo Pendiente por Pagar:', cardX + 64, y + 184);
     ctx.textAlign = 'right';
-    ctx.fillStyle = saldoPendiente > 0 ? '#fbbf24' : '#94a3b8';
-    ctx.font = '800 18px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = saldoPendiente > 0 ? '#FCD34D' : '#94A3B8';
+    ctx.font = '800 18px "JetBrains Mono", monospace';
     ctx.fillText(`${moneda} ${saldoPendiente.toFixed(2)}`, cardX + cardW - 64, y + 184);
 
     // Observación y Pie de Comprobante
     y += 245;
     ctx.textAlign = 'center';
     ctx.fillStyle = '#475569';
-    ctx.font = '500 14px "Inter", system-ui, sans-serif';
+    ctx.font = '500 14px "Plus Jakarta Sans", system-ui, sans-serif';
     const obsText = detalleRecibo.observacion
       ? `Nota: ${detalleRecibo.observacion}`
       : '¡Gracias por entrenar con nosotros! Disciplina, honor y constancia.';
     ctx.fillText(obsText.slice(0, 85), W / 2, y);
 
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '500 12px "Inter", system-ui, sans-serif';
+    ctx.fillStyle = '#64748B';
+    ctx.font = '500 12px "Plus Jakarta Sans", system-ui, sans-serif';
     const cobradoPorTexto = detalleRecibo.cobrado_por || 'Recepción';
     ctx.fillText(
       `Atendido por: ${cobradoPorTexto} • ${config.nombre_academia || 'Gimnasio'} • Recibo N° ${detalleRecibo.numero_recibo}`,

@@ -82,28 +82,23 @@
 
   function actualizarIndicadorCloud(estado, texto) {
     const ids = ['badge-cloud-sync', 'badge-cloud-sync-mobile', 'cloud-sync-indicator'];
-    const estilos = {
-      online: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-      syncing: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
-      local: 'bg-slate-800 text-slate-300 border-slate-700',
-      error: 'bg-red-500/20 text-red-300 border-red-500/30'
-    };
+    const syncState = estado || 'local';
+    const textoSafe = String(texto ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+    const html =
+      global.UITemplates && typeof global.UITemplates.cloudBadgeInner === 'function'
+        ? global.UITemplates.cloudBadgeInner(syncState, texto)
+        : `<span class="ui-cloud-dot" aria-hidden="true"></span><span>${textoSafe}</span>`;
+
     ids.forEach((id) => {
       const badge = document.getElementById(id);
       if (!badge) return;
-      const extraClass = id === 'badge-cloud-sync-mobile' ? 'lg:hidden ' : '';
-      badge.className = `${extraClass}inline-flex items-center gap-1.5 text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${
-        estilos[estado] || estilos.local
-      }`;
-      badge.innerHTML = `<span class="w-2 h-2 rounded-full ${
-        estado === 'online'
-          ? 'bg-emerald-400'
-          : estado === 'syncing'
-          ? 'bg-sky-400 animate-ping'
-          : estado === 'error'
-          ? 'bg-red-400'
-          : 'bg-slate-400'
-      }"></span><span>${texto}</span>`;
+      badge.dataset.syncState = syncState;
+      badge.innerHTML = html;
     });
   }
 
@@ -276,7 +271,7 @@
 
     isUploading = true;
     try {
-      actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando...');
+      actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando…');
       const rolDispositivo = store.getRolDispositivoActual();
       const revAntesDeSubir = store.localRevision || 0;
       const snapshotLocal = JSON.parse(JSON.stringify(store.state));
@@ -335,7 +330,7 @@
             }
           });
           marcarPendienteSync(true);
-          actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando...');
+          actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando…');
           programarSubidaAutomatica(store);
         } else {
           marcarPendienteSync(false);
@@ -440,7 +435,7 @@
     const { url, anonKey } = obtenerCredenciales(store);
     if (!url || !anonKey) return;
     marcarPendienteSync(true);
-    actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando...');
+    actualizarIndicadorCloud('syncing', 'Guardado local • Sincronizando…');
     if (syncTimeout) clearTimeout(syncTimeout);
     syncTimeout = setTimeout(() => {
       subirDatosASupabase(store);
